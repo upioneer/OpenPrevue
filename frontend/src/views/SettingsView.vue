@@ -216,11 +216,95 @@
       </div>
 
       <!-- Tab 3: Audio & Muzak Synthesizer -->
-      <div v-if="activeTab === 'audio'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
+      <div v-if="activeTab === 'audio'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
-          Background Audio & Tape Hiss Emulation
+          Background Audio, RF Headend Filter & Tape Hiss
         </h2>
 
+        <!-- Headend Audio Encoding & Filter Guidance Banner -->
+        <div class="bg-[#000033] border border-[#333366] p-4 space-y-2">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
+              Headend Audio Encoding & Vintage Signal Specs
+            </h3>
+            <span class="text-[10px] text-[#00FF00] font-bold">12 kHz HIGH-SHELF FILTER ACTIVE</span>
+          </div>
+          <p class="text-[11px] text-[#A0A0C0] leading-relaxed">
+            For OpenPrevue setups, encode your audio files to <strong class="text-[#FFFF00]">128–192 kbps MP3</strong> or standard stereo <strong class="text-[#FFFF00]">16-bit 44.1 kHz WAV/OGG</strong> (depending on your audio backend configuration). If you want the full authentic 1990s analog CRT vibe, passing the audio through a mild high-shelf cut filter (around 12 kHz) replicates the classic composite/RF baseband frequency response of 90s cable headends.
+          </p>
+        </div>
+
+        <!-- 1990s RF / Composite Baseband Audio Filter Control Panel -->
+        <div class="bg-[#000033] border border-[#333366] p-4 space-y-4">
+          <div class="flex items-center justify-between border-b border-[#333366] pb-2">
+            <div>
+              <span class="text-xs font-bold text-[#00FFFF] block uppercase">
+                1990s RF / Composite Baseband Audio Filter (DSP Pipeline)
+              </span>
+              <span class="text-[11px] text-[#8888AA]">
+                Simulates cable headend modulator frequency response and analog television speakers.
+              </span>
+            </div>
+            <label class="flex items-center space-x-2 text-xs font-bold text-[#FFFF00] cursor-pointer">
+              <input
+                v-model="audioFilterForm.enabled"
+                @change="handleFilterChange"
+                type="checkbox"
+                class="w-4 h-4 accent-[#00FF00]"
+              />
+              <span>{{ audioFilterForm.enabled ? '[ FILTER ENGAGED ]' : '[ BYPASS ]' }}</span>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">Filter Acoustic Profile:</label>
+              <select
+                v-model="audioFilterForm.profile"
+                @change="handleFilterProfileSelect"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+              >
+                <option value="rf_12khz">1990s Composite / RF Baseband (12 kHz High-Shelf Cut, -8 dB)</option>
+                <option value="crt_mono">1990s CRT TV Internal Speaker (280 Hz HP + 10 kHz LP)</option>
+                <option value="vhs_headend">Cable Headend Modulator (11.5 kHz High-Shelf + 15.7 kHz Notch)</option>
+                <option value="cassette">Vintage Cassette Tape (120 Hz Warm Boost + 8.5 kHz High-Cut)</option>
+                <option value="bypass">Hi-Fi Transparent Bypass (No High-Cut Filter)</option>
+              </select>
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">
+                High-Shelf Cutoff Frequency: {{ (audioFilterForm.cutoffHz / 1000).toFixed(1) }} kHz
+              </label>
+              <input
+                v-model.number="audioFilterForm.cutoffHz"
+                @input="handleFilterChange"
+                type="range"
+                min="8000"
+                max="16000"
+                step="500"
+                class="w-full accent-[#FFFF00]"
+              />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">
+                High-Shelf Cut Gain: {{ audioFilterForm.cutGainDb }} dB
+              </label>
+              <input
+                v-model.number="audioFilterForm.cutGainDb"
+                @input="handleFilterChange"
+                type="range"
+                min="-18"
+                max="0"
+                step="1"
+                class="w-full accent-[#FFFF00]"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Ambient Streams & Volumes -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-1">
             <label class="text-xs text-[#A0A0C0] block">Ambient Muzak Stream Preset:</label>
@@ -270,11 +354,44 @@
               class="px-4 py-2 border text-xs font-black tracking-wider transition-all cursor-pointer"
               :class="isAudioPreviewPlaying
                 ? 'bg-[#FF4444] text-white border-[#FF4444]'
-                : 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_8px_rgba(255,255,0,0.8)]'"
+                : 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_8px_rgba(0,255,0,0.8)]'"
               @click="toggleAudioPreview"
             >
               {{ isAudioPreviewPlaying ? '[ STOP AUDIO GENERATOR ]' : '[ TEST SOUND GENERATOR ]' }}
             </button>
+          </div>
+        </div>
+
+        <!-- Local Audio File Ingestion Player -->
+        <div class="bg-[#000033] border border-[#333366] p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
+              Local Audio Track / Headend File Ingestion (MP3 / WAV / OGG)
+            </h3>
+            <span class="text-[10px] text-[#00FFFF]">DSP FILTER APPLIED LIVE</span>
+          </div>
+
+          <div
+            class="border-2 border-dashed border-[#333366] hover:border-[#00FFFF] p-4 text-center rounded-xs transition-colors cursor-pointer bg-[#000022]/60"
+            @dragover.prevent
+            @drop.prevent="handleAudioDrop"
+            @click="triggerAudioFileInput"
+          >
+            <input
+              ref="audioFileInputRef"
+              type="file"
+              accept=".mp3,.wav,.ogg,.flac"
+              class="hidden"
+              @change="handleAudioFileSelected"
+            />
+            <div class="space-y-1">
+              <div class="text-xs text-[#FFFF00] font-bold">DRAG AND DROP LOCAL AUDIO TRACK HERE</div>
+              <div class="text-[11px] text-[#8888AA]">Plays directly through the active 12 kHz RF headend filter</div>
+            </div>
+          </div>
+
+          <div v-if="audioUploadStatus" class="p-2 text-xs border bg-[#003300] border-[#00FF00] text-[#00FF00]">
+            {{ audioUploadStatus }}
           </div>
         </div>
       </div>
@@ -687,7 +804,7 @@ import {
   updateSetting,
 } from '../api/client'
 import { retroShader, type ShaderConfig } from '../services/retroShader'
-import { audioSynth } from '../services/audioSynth'
+import { audioSynth, type AudioFilterConfig, type AudioFilterProfile } from '../services/audioSynth'
 import { REGIONAL_PRESETS, type RegionalPreset } from '../services/regionalPresets'
 import type { HealthData, SystemSettings } from '../types'
 
@@ -725,12 +842,17 @@ const shaderForm = reactive<ShaderConfig>({
   resolutionScaling: 'native',
 })
 
-// Web Audio State
+// Web Audio State & DSP RF Filter Config
 const isAudioPreviewPlaying = ref(false)
 const tapeHissVol = ref(35)
 const muzakVol = ref(50)
 const muzakStreams = audioSynth.getPlaybackState().streams
 const selectedMuzakStream = ref(muzakStreams[0].url)
+const audioFilterForm = reactive<AudioFilterConfig>(audioSynth.getFilterConfig())
+
+// Audio File Ingestion State
+const audioFileInputRef = ref<HTMLInputElement | null>(null)
+const audioUploadStatus = ref('')
 
 // Ticket Ingestion State
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -780,6 +902,15 @@ function handleShaderChange() {
   retroShader.updateConfig(shaderForm)
 }
 
+function handleFilterChange() {
+  audioSynth.updateFilterConfig(audioFilterForm)
+}
+
+function handleFilterProfileSelect() {
+  audioSynth.setFilterProfile(audioFilterForm.profile as AudioFilterProfile)
+  Object.assign(audioFilterForm, audioSynth.getFilterConfig())
+}
+
 function handleAudioVolumeChange() {
   audioSynth.setTapeHissVolume(tapeHissVol.value)
   audioSynth.setMuzakVolume(muzakVol.value)
@@ -795,6 +926,29 @@ function toggleAudioPreview() {
     audioSynth.startTapeHiss(tapeHissVol.value)
     isAudioPreviewPlaying.value = true
   }
+}
+
+function triggerAudioFileInput() {
+  audioFileInputRef.value?.click()
+}
+
+function handleAudioFileSelected(e: Event) {
+  const target = e.target as HTMLInputElement
+  if (target.files && target.files.length > 0) {
+    playLocalTrack(target.files[0])
+  }
+}
+
+function handleAudioDrop(e: DragEvent) {
+  if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+    playLocalTrack(e.dataTransfer.files[0])
+  }
+}
+
+function playLocalTrack(file: File) {
+  audioSynth.playLocalAudioFile(file, muzakVol.value)
+  audioUploadStatus.value = `[PLAYING LIVE] ${file.name} (${Math.round(file.size / 1024)} KB) via 12 kHz High-Shelf RF Filter`
+  isAudioPreviewPlaying.value = true
 }
 
 function triggerFileInput() {

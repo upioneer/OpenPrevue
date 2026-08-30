@@ -1,4 +1,13 @@
-/** Web Audio analog tape hiss generator and ambient muzak player service. */
+/** Web Audio analog tape hiss generator, RF headend filter, and ambient muzak player service. */
+
+export type AudioFilterProfile = "bypass" | "rf_12khz" | "crt_mono" | "vhs_headend" | "cassette";
+
+export interface AudioFilterConfig {
+  enabled: boolean;
+  profile: AudioFilterProfile;
+  cutoffHz: number; // 8000 - 16000 Hz (default: 12000)
+  cutGainDb: number; // -18 to 0 dB (default: -8)
+}
 
 class AnalogAudioService {
   private audioCtx: AudioContext | null = null;
@@ -9,21 +18,62 @@ class AnalogAudioService {
   private humOsc: OscillatorNode | null = null;
   private isTapeHissPlaying: boolean = false;
   private audioElement: HTMLAudioElement | null = null;
+  private mediaSourceNode: MediaElementAudioSourceNode | null = null;
   private isMuzakPlaying: boolean = false;
 
-  // Curated 90s Weather Channel & Vaporwave ambient jazz streams
+  // DSP Filter Chain Nodes
+  private highPassFilter: BiquadFilterNode | null = null;
+  private peakingFilter: BiquadFilterNode | null = null;
+  private highShelfFilter: BiquadFilterNode | null = null;
+  private lowPassFilter: BiquadFilterNode | null = null;
+
+  private filterConfig: AudioFilterConfig = {
+    enabled: true,
+    profile: "rf_12khz",
+    cutoffHz: 12000,
+    cutGainDb: -8,
+  };
+
+  // Curated 90s Weather Channel, Vaporwave, and Smooth Jazz ambient streams
   private defaultStreams = [
     { name: "90s Weather Channel Jazz", url: "https://stream.zeno.fm/4wt00p9zsz4tv" },
     { name: "Prevue Vintage Muzak FM", url: "https://stream.zeno.fm/752y841vyb8uv" },
-    { name: "Smooth Jazz 24/7", url: "https://streaming.exclusive.radio/er/smoothjazz/icecast.audio" }
+    { name: "Smooth Jazz 24/7", url: "https://streaming.exclusive.radio/er/smoothjazz/icecast.audio" },
   ];
+
+  constructor() {
+    this.loadFilterConfig();
+  }
+
+  private loadFilterConfig(): void {
+    try {
+      const saved = localStorage.getItem("openprevue_audio_filter_config");
+      if (saved) {
+        this.filterConfig = { ...this.filterConfig, ...JSON.parse(saved) };
+      }
+    } catch {
+      // Use defaults
+    }
+  }
+
+  private saveFilterConfig(): void {
+    try {
+      localStorage.setItem("openprevue_audio_filter_config", JSON.stringify(this.filterConfig));
+    } catch {
+      // Ignore
+    }
+  }
 
   public initAudioContext(): void {
     if (!this.audioCtx) {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.audioCtx = new AudioContextClass();
       this.masterGain = this.audioCtx.createGain();
       this.masterGain.connect(this.audioCtx.destination);
+
+      this.initFilterNodes();
     }
 
     if (this.audioCtx.state === "suspended") {
@@ -31,9 +81,136 @@ class AnalogAudioService {
     }
   }
 
+  private initFilterNodes(): void {
+    if (!this.audioCtx || !this.masterGain) return;
+
+    this.highPassFilter = this.audioCtx.createBiquadFilter();
+    this.peakingFilter = this.audioCtx.createBiquadFilter();
+    this.highShelfFilter = this.audioCtx.createBiquadFilter();
+    this.lowPassFilter = this.audioCtx.createBiquadFilter();
+
+    // Chain: HP -> Peak -> HighShelf -> LowPass -> MasterGain
+    this.highPassFilter.connect(this.peakingFilter);
+    this.peakingFilter.connect(this.highShelfFilter);
+    this.highShelfFilter.connect(this.lowPassFilter);
+    this.lowPassFilter.connect(this.masterGain);
+
+    this.applyFilterParameters();
+  }
+
+  public getFilterConfig(): AudioFilterConfig {
+    return { ...this.filterConfig };
+  }
+
+  public updateFilterConfig(newConfig: Partial<AudioFilterConfig>): void {
+    this.filterConfig = { ...this.filterConfig, ...newConfig };
+    this.applyFilterParameters();
+    this.saveFilterConfig();
+  }
+
+  public setFilterProfile(profile: AudioFilterProfile): void {
+    this.filterConfig.profile = profile;
+    if (profile === "bypass") {
+      this.filterConfig.enabled = false;
+    } else {
+      this.filterConfig.enabled = true;
+      if (profile === "rf_12khz") {
+        this.filterConfig.cutoffHz = 12000;
+        this.filterConfig.cutGainDb = -8;
+      } else if (profile === "crt_mono") {
+        this.filterConfig.cutoffHz = 10000;
+        this.filterConfig.cutGainDb = -12;
+      } else if (profile === "vhs_headend") {
+        this.filterConfig.cutoffHz = 11500;
+        this.filterConfig.cutGainDb = -10;
+      } else if (profile === "cassette") {
+        this.filterConfig.cutoffHz = 8500;
+        this.filterConfig.cutGainDb = -9;
+      }
+    }
+    this.applyFilterParameters();
+    this.saveFilterConfig();
+  }
+
+  private applyFilterParameters(): void {
+    if (!this.audioCtx || !this.highShelfFilter || !this.lowPassFilter || !this.highPassFilter || !this.peakingFilter) {
+      return;
+    }
+
+    const t = this.audioCtx.currentTime;
+
+    if (!this.filterConfig.enabled || this.filterConfig.profile === "bypass") {
+      // Flat / Transparent Bypass
+      this.highPassFilter.type = "highpass";
+      this.highPassFilter.frequency.setValueAtTime(10, t);
+      this.peakingFilter.type = "peaking";
+      this.peakingFilter.gain.setValueAtTime(0, t);
+      this.highShelfFilter.type = "highshelf";
+      this.highShelfFilter.frequency.setValueAtTime(12000, t);
+      this.highShelfFilter.gain.setValueAtTime(0, t);
+      this.lowPassFilter.type = "lowpass";
+      this.lowPassFilter.frequency.setValueAtTime(22000, t);
+      return;
+    }
+
+    const profile = this.filterConfig.profile;
+    const cutoff = this.filterConfig.cutoffHz || 12000;
+    const cutGain = this.filterConfig.cutGainDb || -8;
+
+    if (profile === "rf_12khz") {
+      // 1990s Composite / RF Baseband (12 kHz High-Shelf Cut)
+      this.highPassFilter.type = "highpass";
+      this.highPassFilter.frequency.setValueAtTime(20, t);
+      this.peakingFilter.type = "peaking";
+      this.peakingFilter.frequency.setValueAtTime(3200, t);
+      this.peakingFilter.gain.setValueAtTime(1.0, t);
+      this.highShelfFilter.type = "highshelf";
+      this.highShelfFilter.frequency.setValueAtTime(cutoff, t);
+      this.highShelfFilter.gain.setValueAtTime(cutGain, t);
+      this.lowPassFilter.type = "lowpass";
+      this.lowPassFilter.frequency.setValueAtTime(15000, t);
+    } else if (profile === "crt_mono") {
+      // CRT TV Internal 3" Speaker Simulation
+      this.highPassFilter.type = "highpass";
+      this.highPassFilter.frequency.setValueAtTime(280, t);
+      this.peakingFilter.type = "peaking";
+      this.peakingFilter.frequency.setValueAtTime(2400, t);
+      this.peakingFilter.gain.setValueAtTime(3.5, t);
+      this.highShelfFilter.type = "highshelf";
+      this.highShelfFilter.frequency.setValueAtTime(cutoff, t);
+      this.highShelfFilter.gain.setValueAtTime(cutGain, t);
+      this.lowPassFilter.type = "lowpass";
+      this.lowPassFilter.frequency.setValueAtTime(9500, t);
+    } else if (profile === "vhs_headend") {
+      // Cable Headend Modulator with NTSC 15.734 kHz subcarrier notch
+      this.highPassFilter.type = "highpass";
+      this.highPassFilter.frequency.setValueAtTime(45, t);
+      this.peakingFilter.type = "notch";
+      this.peakingFilter.frequency.setValueAtTime(15734, t);
+      this.peakingFilter.Q.setValueAtTime(10, t);
+      this.highShelfFilter.type = "highshelf";
+      this.highShelfFilter.frequency.setValueAtTime(cutoff, t);
+      this.highShelfFilter.gain.setValueAtTime(cutGain, t);
+      this.lowPassFilter.type = "lowpass";
+      this.lowPassFilter.frequency.setValueAtTime(13500, t);
+    } else if (profile === "cassette") {
+      // Analog Type I Cassette Tape
+      this.highPassFilter.type = "highpass";
+      this.highPassFilter.frequency.setValueAtTime(30, t);
+      this.peakingFilter.type = "peaking";
+      this.peakingFilter.frequency.setValueAtTime(120, t);
+      this.peakingFilter.gain.setValueAtTime(3.0, t);
+      this.highShelfFilter.type = "highshelf";
+      this.highShelfFilter.frequency.setValueAtTime(cutoff, t);
+      this.highShelfFilter.gain.setValueAtTime(cutGain, t);
+      this.lowPassFilter.type = "lowpass";
+      this.lowPassFilter.frequency.setValueAtTime(11000, t);
+    }
+  }
+
   public setTapeHissVolume(volumePercent: number): void {
     if (this.hissGain && this.audioCtx) {
-      const vol = Math.max(0, Math.min(1, volumePercent / 100)) * 0.15; // capped for subtle ambient warmth
+      const vol = Math.max(0, Math.min(1, volumePercent / 100)) * 0.15;
       this.hissGain.gain.setValueAtTime(vol, this.audioCtx.currentTime);
     }
     if (this.humGain && this.audioCtx) {
@@ -71,7 +248,7 @@ class AnalogAudioService {
     // Filter noise to simulate vintage magnetic tape head response
     const filter = this.audioCtx.createBiquadFilter();
     filter.type = "bandpass";
-    filter.frequency.value = 1800; // Hz
+    filter.frequency.value = 1800;
     filter.Q.value = 0.7;
 
     this.hissGain = this.audioCtx.createGain();
@@ -125,9 +302,21 @@ class AnalogAudioService {
   }
 
   public playMuzakStream(streamUrl?: string, volumePercent: number = 50): void {
+    this.initAudioContext();
+
     if (!this.audioElement) {
       this.audioElement = new Audio();
       this.audioElement.crossOrigin = "anonymous";
+
+      // Connect media element to Web Audio DSP filter chain
+      if (this.audioCtx && this.highPassFilter && !this.mediaSourceNode) {
+        try {
+          this.mediaSourceNode = this.audioCtx.createMediaElementSource(this.audioElement);
+          this.mediaSourceNode.connect(this.highPassFilter);
+        } catch (e) {
+          console.warn("MediaElementAudioSource direct connect fallback:", e);
+        }
+      }
     }
 
     const url = streamUrl || this.defaultStreams[0].url;
@@ -136,11 +325,44 @@ class AnalogAudioService {
     }
 
     this.audioElement.volume = Math.max(0, Math.min(1, volumePercent / 100));
-    this.audioElement.play().then(() => {
-      this.isMuzakPlaying = true;
-    }).catch(() => {
-      this.isMuzakPlaying = false;
-    });
+    this.audioElement
+      .play()
+      .then(() => {
+        this.isMuzakPlaying = true;
+      })
+      .catch(() => {
+        this.isMuzakPlaying = false;
+      });
+  }
+
+  public playLocalAudioFile(file: File, volumePercent: number = 50): void {
+    this.initAudioContext();
+
+    if (!this.audioElement) {
+      this.audioElement = new Audio();
+      this.audioElement.crossOrigin = "anonymous";
+
+      if (this.audioCtx && this.highPassFilter && !this.mediaSourceNode) {
+        try {
+          this.mediaSourceNode = this.audioCtx.createMediaElementSource(this.audioElement);
+          this.mediaSourceNode.connect(this.highPassFilter);
+        } catch (e) {
+          console.warn("MediaElementAudioSource direct connect fallback:", e);
+        }
+      }
+    }
+
+    const blobUrl = URL.createObjectURL(file);
+    this.audioElement.src = blobUrl;
+    this.audioElement.volume = Math.max(0, Math.min(1, volumePercent / 100));
+    this.audioElement
+      .play()
+      .then(() => {
+        this.isMuzakPlaying = true;
+      })
+      .catch(() => {
+        this.isMuzakPlaying = false;
+      });
   }
 
   public pauseMuzak(): void {
@@ -171,6 +393,7 @@ class AnalogAudioService {
       isTapeHissPlaying: this.isTapeHissPlaying,
       isMuzakPlaying: this.isMuzakPlaying,
       streams: this.defaultStreams,
+      filter: this.filterConfig,
     };
   }
 }
