@@ -7,6 +7,8 @@ from backend.app.providers.ical import ICalEventProvider
 from backend.app.providers.json_ld import JsonLdEventProvider
 from backend.app.providers.mock import MockEventProvider
 from backend.app.providers.seatgeek import SeatGeekProvider
+from backend.app.providers.sports import SportsLeagueProvider
+from backend.app.providers.ticketing import SecondaryTicketingProvider
 from backend.app.providers.ticketmaster import TicketmasterProvider
 
 
@@ -25,6 +27,8 @@ class ProviderRegistry:
         self.register(EventbriteProvider())
         self.register(JsonLdEventProvider())
         self.register(ICalEventProvider())
+        self.register(SportsLeagueProvider())
+        self.register(SecondaryTicketingProvider())
 
     def register(self, provider: BaseProvider) -> None:
         """Register a provider instance."""
