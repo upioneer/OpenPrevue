@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-deep: #000033;
+    --bg-surface: #000080;
+    --text-heading: #FFFF00;
+    --text-body: #E0E0E0;
+    --text-accent: #00FFFF;
+    --text-price: #00FF00;
+    --border-grid: #333366;
+    --status-live: #FF4444;
+    --status-soon: #FFAA00;
+  }
+
+  body {
+    background-color: var(--bg-deep);
+    color: var(--text-body);
+    font-family: 'Share Tech Mono', 'VT323', 'Courier New', monospace;
+    letter-spacing: 0.5px;
+  }
+}
+
+/* Retro text shadows & phosphor bloom */
+.retro-glow-yellow {
+  color: var(--text-heading);
+  text-shadow: 0 0 8px rgba(255, 255, 0, 0.6);
+}
+
+.retro-glow-cyan {
+  color: var(--text-accent);
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+}
+
+.retro-glow-green {
+  color: var(--text-price);
+  text-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+}
+
+/* Classic Prevue Gradient Backgrounds */
+.prevue-gradient {
+  background: linear-gradient(180deg, #000088 0%, #000044 50%, #000022 100%);
+}
+
+.prevue-header-gradient {
+  background: linear-gradient(180deg, #0000AA 0%, #000066 100%);
+}
+
+.prevue-ticker-gradient {
+  background: linear-gradient(180deg, #000055 0%, #000033 100%);
+}
+
+/* CRT Scanline Overlay */
+.scanlines-active::before {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  z-index: 999;
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
+}
+
+/* CRT Screen Vignette / Slight Curvature */
+.crt-screen-active {
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.85);
+}
+
+/* Smooth continuous scrolling */
+.smooth-scroll-container {
+  will-change: transform;
+  transform: translateZ(0);
+}

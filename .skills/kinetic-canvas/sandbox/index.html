@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinetic Canvas: Sandbox Hub</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #050505; color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+            overflow-x: hidden; overflow-y: auto;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+        }
+        .bg-grid {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0;
+            pointer-events: none;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+            -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+        }
+        .content {
+            position: relative; z-index: 1; text-align: center; max-width: 800px; padding: 2rem;
+        }
+        h1 { font-size: 4rem; margin: 0 0 1rem 0; letter-spacing: -2px; }
+        p { color: #888; font-size: 1.2rem; margin: 0 0 3rem 0; line-height: 1.5; }
+        .grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+        }
+        .card {
+            background: rgba(25, 25, 25, 0.6); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px; padding: 2rem; text-align: left; text-decoration: none; color: white;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            transition: all 0.3s ease; display: flex; flex-direction: column; gap: 1rem;
+            position: relative; overflow: hidden;
+        }
+        .card::before {
+            content: ''; position: absolute; inset: 0; z-index: -1;
+            opacity: 0; transition: opacity 0.4s ease; mix-blend-mode: screen;
+        }
+        .card:hover::before { opacity: 1.0; }
+        .card:hover {
+            border-color: rgba(255,255,255,0.3);
+            transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+        }
+        .card h2 { margin: 0; font-size: 1.5rem; }
+        .card p { font-size: 0.95rem; color: #aaa; margin: 0; }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="content">
+        <h1>Kinetic Canvas</h1>
+        <p>Explore the proprietary shader engines and WebGL environments available within the Code Scaffold ecosystem.</p>
+        
+        <div class="grid">
+            <div style="grid-column: 1 / -1; margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2rem;">
+                <h2 style="font-size: 1.2rem; color: #888; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 2px;">Environmental Effects</h2>
+                <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                    <a href="demo-thermalaura.html" class="card" style="--bg: url('assets/demo-thermalaura.jpg') center/cover;">
+                        <style>.card[href="demo-thermalaura.html"]::before { background: var(--bg); }</style>
+                        <h2>Thermal Aura</h2>
+                        <p>Volumetric heat map and fiery gradient fluid.</p>
+                    </a>
+                    <a href="demo-kineticmesh.html" class="card" style="--bg: url('assets/demo-kineticmesh.jpg') center/cover;">
+                        <style>.card[href="demo-kineticmesh.html"]::before { background: var(--bg); }</style>
+                        <h2>Kinetic Mesh</h2>
+                        <p>Ethereal fluid mesh of colorful gradient blobs.</p>
+                    </a>
+                    <a href="demo-kineticfluid.html" class="card" style="--bg: url('assets/demo-kineticfluid.jpg') center/cover;">
+                        <style>.card[href="demo-kineticfluid.html"]::before { background: var(--bg); }</style>
+                        <h2>Kinetic Fluid</h2>
+                        <p>Hyper-realistic liquid metal shader with dynamic specular highlights.</p>
+                    </a>
+                    <a href="demo-orbitalparticles.html" class="card" style="--bg: url('assets/demo-orbitalparticles.jpg') center/cover;">
+                        <style>.card[href="demo-orbitalparticles.html"]::before { background: var(--bg); }</style>
+                        <h2>Orbital Particles</h2>
+                        <p>Gravity-based swarming particle dynamics.</p>
+                    </a>
+                    <a href="demo-quantumplasma.html" class="card" style="--bg: url('assets/demo-quantumplasma.jpg') center/cover;">
+                        <style>.card[href="demo-quantumplasma.html"]::before { background: var(--bg); }</style>
+                        <h2>Quantum Plasma</h2>
+                        <p>Fluid merging metaballs with energy threshold glowing.</p>
+                    </a>
+                    <a href="demo-volumetriclight.html" class="card" style="--bg: url('assets/demo-volumetriclight.jpg') center/cover;">
+                        <style>.card[href="demo-volumetriclight.html"]::before { background: var(--bg); }</style>
+                        <h2>Volumetric Light</h2>
+                        <p>Cinematic god-rays and atmospheric density rendering.</p>
+                    </a>
+                    <a href="demo-vaporring.html" class="card" style="--bg: url('assets/demo-vaporring.jpg') center/cover;">
+                        <style>.card[href="demo-vaporring.html"]::before { background: var(--bg); }</style>
+                        <h2>Vapor Ring</h2>
+                        <p>Toroidal smoke rings moving through space.</p>
+                    </a>
+                </div>
+            </div>
+            <div style="grid-column: 1 / -1; margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2rem;">
+                <h2 style="font-size: 1.2rem; color: #888; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 2px;">Image Filters & Caustics</h2>
+                <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                    <a href="demo-caustics.html" class="card" style="--bg: url('assets/demo-caustics.jpg') center/cover;">
+                        <style>.card[href="demo-caustics.html"]::before { background: var(--bg); }</style>
+                        <h2>Caustic Displacement</h2>
+                        <p>Underwater lighting and light refractions.</p>
+                    </a>
+                    <a href="demo-ribbedglass.html" class="card" style="--bg: url('assets/demo-ribbedglass.jpg') center/cover;">
+                        <style>.card[href="demo-ribbedglass.html"]::before { background: var(--bg); }</style>
+                        <h2>Ribbed Glass Mask</h2>
+                        <p>Vertical optical distortion simulating fluted privacy glass.</p>
+                    </a>
+                    <a href="demo-organicpulp.html" class="card" style="--bg: url('assets/demo-organicpulp.jpg') center/cover;">
+                        <style>.card[href="demo-organicpulp.html"]::before { background: var(--bg); }</style>
+                        <h2>Organic Pulp</h2>
+                        <p>High-fidelity paper texture generation with noise staining.</p>
+                    </a>
+                </div>
+            </div>            <div style="grid-column: 1 / -1; margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2rem;">
+                <h2 style="font-size: 1.2rem; color: #888; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 2px;">Luminescence & Geometric Series</h2>
+                <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                    <a href="demo-crystalline.html" class="card" style="--bg: url('assets/demo-crystalline.jpg') center/cover;">
+                        <style>.card[href="demo-crystalline.html"]::before { background: var(--bg); }</style>
+                        <h2>Crystalline</h2>
+                        <p>Chromatic glass shards with voronoi refraction.</p>
+                    </a>
+                    <a href="demo-crystallinevapor.html" class="card" style="--bg: url('assets/demo-crystallinevapor.jpg') center/cover;">
+                        <style>.card[href="demo-crystallinevapor.html"]::before { background: var(--bg); }</style>
+                        <h2>Crystalline Vapor</h2>
+                        <p>Volumetric smoke dispersion with sharp gem-like cellular edges.</p>
+                    </a>
+                    <a href="demo-fluidaura.html" class="card" style="--bg: url('assets/demo-fluidaura.jpg') center/cover;">
+                        <style>.card[href="demo-fluidaura.html"]::before { background: var(--bg); }</style>
+                        <h2>Fluid Aura</h2>
+                        <p>High-viscosity gradient SDF simulation.</p>
+                    </a>
+                    <a href="demo-halftone.html" class="card" style="--bg: url('assets/demo-halftone.jpg') center/cover;">
+                        <style>.card[href="demo-halftone.html"]::before { background: var(--bg); }</style>
+                        <h2>Geometric Halftone</h2>
+                        <p>Expanding halftone rippling matrices.</p>
+                    </a>
+                    <a href="demo-retrohalftone.html" class="card" style="--bg: url('assets/demo-retrohalftone.jpg') center/cover;">
+                        <style>.card[href="demo-retrohalftone.html"]::before { background: var(--bg); }</style>
+                        <h2>Retro Halftone</h2>
+                        <p>Comic-book style halftone dots generated dynamically on a wave matrix.</p>
+                    </a>
+                    <a href="demo-prism.html" class="card" style="--bg: url('assets/demo-prism.jpg') center/cover;">
+                        <style>.card[href="demo-prism.html"]::before { background: var(--bg); }</style>
+                        <h2>Prism Glass</h2>
+                        <p>Spectral bands of light that warp across surfaces.</p>
+                    </a>
+                    <a href="demo-wireframe.html" class="card" style="--bg: url('assets/demo-wireframe.jpg') center/cover;">
+                        <style>.card[href="demo-wireframe.html"]::before { background: var(--bg); }</style>
+                        <h2>Abyssal Wireframe</h2>
+                        <p>Looping 3D topological mutating wireframes.</p>
+                    </a>
+                    <a href="demo-cellularvoronoi.html" class="card" style="--bg: url('assets/demo-cellularvoronoi.jpg') center/cover;">
+                        <style>.card[href="demo-cellularvoronoi.html"]::before { background: var(--bg); }</style>
+                        <h2>Cellular Voronoi</h2>
+                        <p>Microscopic bio-organic cellular division.</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+

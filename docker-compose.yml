@@ -1,0 +1,39 @@
+services:
+  openprevue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: openprevue:latest
+    container_name: openprevue
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      - TZ=${TZ:-America/Chicago}
+      - PORT=8080
+      - DATA_DIR=/app/data
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DEFAULT_POSTAL_CODE=${DEFAULT_POSTAL_CODE:-70112}
+      - DEFAULT_METRO_LABEL=${DEFAULT_METRO_LABEL:-NEW ORLEANS}
+      - DEFAULT_LATITUDE=${DEFAULT_LATITUDE:-29.9511}
+      - DEFAULT_LONGITUDE=${DEFAULT_LONGITUDE:--90.0715}
+      - DEFAULT_RADIUS_MILES=${DEFAULT_RADIUS_MILES:-35}
+      - TICKETMASTER_API_KEY=${TICKETMASTER_API_KEY:-}
+      - SEATGEEK_CLIENT_ID=${SEATGEEK_CLIENT_ID:-}
+      - SEATGEEK_CLIENT_SECRET=${SEATGEEK_CLIENT_SECRET:-}
+      - EVENTBRITE_API_TOKEN=${EVENTBRITE_API_TOKEN:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/v1/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
