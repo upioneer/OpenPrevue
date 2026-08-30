@@ -1,7 +1,7 @@
 <template>
-  <div class="h-[45%] w-full bg-gradient-to-b from-[#000088] via-[#000044] to-[#000022] border-b-2 border-[#FFFF00] p-3 flex gap-4 overflow-hidden select-none">
+  <div class="h-full w-full bg-gradient-to-b from-[#000088] via-[#000044] to-[#000022] border-b-2 border-[#FFFF00] p-2.5 sm:p-3 flex flex-row gap-2.5 sm:gap-4 overflow-hidden select-none">
     <!-- Left: Event Promo Media Box -->
-    <div class="w-[45%] h-full flex flex-col items-center justify-center bg-[#000022] border-2 border-[#333366] rounded-sm overflow-hidden relative shadow-inner">
+    <div class="w-[38%] sm:w-[45%] h-full flex flex-col items-center justify-center bg-[#000022] border-2 border-[#333366] rounded-sm overflow-hidden relative shadow-inner shrink-0">
       <div v-if="currentEvent?.image_url" class="w-full h-full relative">
         <img
           :src="currentEvent.image_url"
@@ -10,24 +10,24 @@
           @error="handleImageError"
         />
         <div class="absolute inset-0 bg-gradient-to-t from-[#000022] via-transparent to-transparent opacity-60"></div>
-        <div class="absolute bottom-2 left-2 flex items-center space-x-1.5">
-          <div class="bg-[#000080]/80 px-2 py-0.5 text-xs text-[#00FFFF] border border-[#333366]">
-            FEATURED EVENT
+        <div class="absolute bottom-1.5 left-1.5 flex items-center space-x-1">
+          <div class="bg-[#000080]/80 px-1.5 py-0.2 text-[10px] sm:text-xs text-[#00FFFF] border border-[#333366]">
+            FEATURED
           </div>
           <div
             v-if="currentEvent?.has_ticket === 1"
-            class="bg-[#00FF00] text-[#000033] px-2 py-0.5 text-xs font-black border border-[#00FF00] shadow-[0_0_8px_rgba(0,255,0,0.8)]"
+            class="bg-[#00FF00] text-[#000033] px-1.5 py-0.2 text-[10px] sm:text-xs font-black border border-[#00FF00] shadow-[0_0_8px_rgba(0,255,0,0.8)]"
           >
             [TICKET HOLDER]
           </div>
         </div>
       </div>
-      <div v-else class="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-[#000055]">
-        <div class="text-4xl font-black text-[#FFFF00] tracking-widest mb-2">PREVUE</div>
-        <div class="text-xs text-[#00FFFF] uppercase tracking-wider">{{ currentEvent?.category || 'SPOTLIGHT' }}</div>
+      <div v-else class="w-full h-full flex flex-col items-center justify-center p-2 sm:p-4 text-center bg-[#000055]">
+        <div class="text-2xl sm:text-4xl font-black text-[#FFFF00] tracking-widest mb-1 sm:mb-2">PREVUE</div>
+        <div class="text-[10px] sm:text-xs text-[#00FFFF] uppercase tracking-wider">{{ currentEvent?.category || 'SPOTLIGHT' }}</div>
         <div
           v-if="currentEvent?.has_ticket === 1"
-          class="mt-2 bg-[#00FF00] text-[#000033] px-2 py-0.5 text-xs font-black border border-[#00FF00]"
+          class="mt-1 sm:mt-2 bg-[#00FF00] text-[#000033] px-1.5 py-0.2 text-[10px] sm:text-xs font-black border border-[#00FF00]"
         >
           [TICKET HOLDER]
         </div>
@@ -35,70 +35,70 @@
     </div>
 
     <!-- Right: Retro Bulletin Text Details -->
-    <div class="w-[55%] h-full flex flex-col justify-between py-1 pr-2 font-mono">
-      <div class="space-y-2 overflow-hidden">
+    <div class="w-[62%] sm:w-[55%] h-full flex flex-col justify-between py-0.5 pr-1 font-mono overflow-hidden">
+      <div class="space-y-1 sm:space-y-2 overflow-hidden">
         <!-- Top Meta Tag -->
-        <div class="flex items-center justify-between text-xs border-b border-[#333366] pb-1">
-          <div class="flex items-center space-x-2">
-            <span class="text-[#00FFFF] font-bold tracking-wider">
+        <div class="flex items-center justify-between text-[10px] sm:text-xs border-b border-[#333366] pb-1">
+          <div class="flex items-center space-x-1.5 truncate">
+            <span class="text-[#00FFFF] font-bold tracking-wider truncate">
               [ {{ currentEvent?.category?.toUpperCase() || 'EVENT' }} ]
             </span>
             <span
               v-if="currentEvent?.has_ticket === 1"
-              class="bg-[#00FF00] text-[#000033] text-[10px] px-1.5 py-0.2 font-black rounded-xs shadow-[0_0_6px_rgba(0,255,0,0.8)]"
+              class="bg-[#00FF00] text-[#000033] text-[9px] px-1 py-0.2 font-black rounded-xs shadow-[0_0_6px_rgba(0,255,0,0.8)] shrink-0"
             >
               [TICKET OWNED]
             </span>
           </div>
-          <span class="text-[#8888AA] text-[10px]">
-            SPOTLIGHT {{ currentIndex + 1 }} OF {{ featuredEvents.length }}
+          <span class="text-[#8888AA] text-[9px] sm:text-[10px] shrink-0">
+            {{ currentIndex + 1 }}/{{ featuredEvents.length }}
           </span>
         </div>
 
         <!-- Venue Name -->
-        <div class="text-xs text-[#E0E0E0] uppercase tracking-wide">
+        <div class="text-[11px] sm:text-xs text-[#E0E0E0] uppercase tracking-wide truncate">
           VENUE: <span class="text-[#FFFFFF] font-bold">{{ currentEvent?.venue_name || 'LOCAL VENUE' }}</span>
         </div>
 
         <!-- Event Title -->
-        <div class="text-lg md:text-xl font-black text-[#FFFF00] leading-tight line-clamp-2 tracking-wide drop-shadow-md">
+        <div class="text-sm sm:text-base md:text-xl font-black text-[#FFFF00] leading-tight line-clamp-2 tracking-wide drop-shadow-md">
           {{ currentEvent?.title || 'NO FEATURED EVENTS SCHEDULED' }}
         </div>
 
         <!-- Date & Time -->
-        <div class="text-xs text-[#00FFFF] font-semibold">
+        <div class="text-[11px] sm:text-xs text-[#00FFFF] font-semibold truncate">
           DATE: <span class="text-[#FFFFFF]">{{ formattedDate }}</span>
         </div>
 
         <!-- Price Range -->
-        <div class="text-xs text-[#00FF00] font-semibold">
+        <div class="text-[11px] sm:text-xs text-[#00FF00] font-semibold truncate">
           PRICE: <span class="text-[#E0E0E0]">{{ formattedPrice }}</span>
         </div>
 
         <!-- Description Snippet -->
-        <p v-if="currentEvent?.description" class="text-[11px] text-[#A0A0C0] line-clamp-2 leading-relaxed pt-1">
+        <p v-if="currentEvent?.description" class="text-[10px] sm:text-[11px] text-[#A0A0C0] line-clamp-1 sm:line-clamp-2 leading-relaxed pt-0.5">
           {{ currentEvent.description }}
         </p>
       </div>
 
       <!-- Bottom: Ticket QR & Action Bar -->
-      <div class="flex items-center justify-between pt-2 border-t border-[#333366]">
-        <div class="flex items-center space-x-3">
-          <div v-if="qrCodeDataUrl" class="bg-white p-1 rounded-xs border border-[#FFFF00]">
-            <img :src="qrCodeDataUrl" alt="Ticket QR" class="w-12 h-12 object-contain" />
+      <div class="flex items-center justify-between pt-1 sm:pt-2 border-t border-[#333366]">
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <div v-if="qrCodeDataUrl" class="bg-white p-0.5 sm:p-1 rounded-xs border border-[#FFFF00] shrink-0">
+            <img :src="qrCodeDataUrl" alt="Ticket QR" class="w-8 h-8 sm:w-11 sm:h-11 object-contain" />
           </div>
-          <div class="text-[10px] text-[#8888AA] leading-tight">
+          <div class="text-[9px] sm:text-[10px] text-[#8888AA] leading-tight hidden sm:block">
             <span class="text-[#FFFF00] font-bold block">SCAN FOR TICKETS</span>
             <span>DIRECT MOBILE CHECKOUT</span>
           </div>
         </div>
 
         <!-- Rotation Indicator Dots -->
-        <div class="flex space-x-1.5">
+        <div class="flex space-x-1 sm:space-x-1.5">
           <button
             v-for="(_, idx) in featuredEvents"
             :key="idx"
-            class="w-2 h-2 rounded-full transition-all"
+            class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all"
             :class="idx === currentIndex ? 'bg-[#FFFF00] scale-125' : 'bg-[#333366] hover:bg-[#8888AA]'"
             @click="setIndex(idx)"
           ></button>
@@ -163,7 +163,7 @@ async function generateQr(url: string) {
   try {
     qrCodeDataUrl.value = await QRCode.toDataURL(url, {
       margin: 1,
-      width: 64,
+      width: 56,
       color: {
         dark: '#000033',
         light: '#FFFFFF',

@@ -1,15 +1,15 @@
 <template>
   <div
-    class="flex-1 w-full bg-[#000033] flex flex-col overflow-hidden relative select-none font-mono"
+    class="h-full w-full bg-[#000033] flex flex-col overflow-hidden relative select-none font-mono"
     @mouseenter="isPaused = true"
     @mouseleave="isPaused = false"
   >
     <!-- Fixed Column Headers -->
-    <div class="h-8 bg-[#000066] border-b border-[#333366] grid grid-cols-12 text-xs font-bold tracking-wider text-[#FFFF00] px-3 items-center z-10 shadow">
-      <div class="col-span-4 uppercase border-r border-[#333366] pr-2">SOURCE / VENUE</div>
-      <div class="col-span-3 uppercase border-r border-[#333366] px-2 text-[#00FFFF]">TODAY</div>
-      <div class="col-span-3 uppercase border-r border-[#333366] px-2 text-[#00FFFF]">TONIGHT</div>
-      <div class="col-span-2 uppercase pl-2 text-[#00FFFF]">TOMORROW</div>
+    <div class="h-7 sm:h-8 bg-[#000066] border-b border-[#333366] grid grid-cols-12 text-[10px] sm:text-xs font-bold tracking-wider text-[#FFFF00] px-2 sm:px-3 items-center z-10 shadow shrink-0">
+      <div class="col-span-4 uppercase border-r border-[#333366] pr-1 sm:pr-2 truncate">SOURCE / VENUE</div>
+      <div class="col-span-3 uppercase border-r border-[#333366] px-1 sm:px-2 text-[#00FFFF] truncate">TODAY</div>
+      <div class="col-span-3 uppercase border-r border-[#333366] px-1 sm:px-2 text-[#00FFFF] truncate">TONIGHT</div>
+      <div class="col-span-2 uppercase pl-1 sm:pl-2 text-[#00FFFF] truncate">TOMORROW</div>
     </div>
 
     <!-- Scrolling Grid Area -->
@@ -17,27 +17,27 @@
       ref="scrollContainer"
       class="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none relative"
     >
-      <div ref="scrollContent" class="space-y-0.5 py-1">
+      <div ref="scrollContent" class="space-y-0.5 py-0.5">
         <!-- Render double list for seamless continuous infinite looping -->
         <div
           v-for="(venue, idx) in displayedVenues"
           :key="`${venue.id}-${idx}`"
-          class="grid grid-cols-12 text-xs px-3 py-2 border-b border-[#222255] items-center hover:bg-[#000066]/70 transition-colors"
+          class="grid grid-cols-12 text-[11px] sm:text-xs px-2 sm:px-3 py-1.5 sm:py-2 border-b border-[#222255] items-center hover:bg-[#000066]/70 transition-colors"
           :class="idx % 2 === 0 ? 'bg-[#000033]' : 'bg-[#000044]'"
         >
           <!-- Venue Name & Channel Number -->
-          <div class="col-span-4 font-bold text-[#E0E0E0] truncate border-r border-[#333366] pr-2 flex items-center space-x-2">
-            <span class="text-[#8888AA] text-[10px]">{{ String((idx % venues.length) + 1).padStart(2, '0') }}</span>
+          <div class="col-span-4 font-bold text-[#E0E0E0] truncate border-r border-[#333366] pr-1 sm:pr-2 flex items-center space-x-1 sm:space-x-2">
+            <span class="text-[#8888AA] text-[9px] sm:text-[10px] shrink-0">{{ String((idx % venues.length) + 1).padStart(2, '0') }}</span>
             <span class="truncate uppercase text-[#FFFFFF]">{{ venue.name }}</span>
           </div>
 
           <!-- Today Events (< 5 PM) -->
-          <div class="col-span-3 truncate border-r border-[#333366] px-2">
+          <div class="col-span-3 truncate border-r border-[#333366] px-1 sm:px-2">
             <template v-if="getVenueSlotEvents(venue.id, 'today').length > 0">
               <div
                 v-for="evt in getVenueSlotEvents(venue.id, 'today')"
                 :key="evt.id"
-                class="truncate text-[#FFFF00] flex items-center space-x-1.5 group"
+                class="truncate text-[#FFFF00] flex items-center space-x-1 sm:space-x-1.5 group"
               >
                 <!-- Category Color Pip -->
                 <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0" :class="getCategoryColor(evt.category)"></span>
@@ -45,7 +45,7 @@
                 <!-- Ticket Commitment Badge / Toggle Button -->
                 <button
                   type="button"
-                  class="shrink-0 text-[9px] px-1 py-0.2 rounded-xs font-black cursor-pointer transition-all border"
+                  class="shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 rounded-xs font-black cursor-pointer transition-all border"
                   :class="evt.has_ticket === 1
                     ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
                     : 'bg-transparent text-[#555577] border-[#333355] opacity-0 group-hover:opacity-100 hover:text-[#00FFFF] hover:border-[#00FFFF]'"
@@ -65,19 +65,19 @@
                 </span>
 
                 <!-- Event Time -->
-                <span class="text-[#00FFFF] text-[10px] shrink-0">{{ formatEventTime(evt.start_time) }}</span>
+                <span class="text-[#00FFFF] text-[9px] sm:text-[10px] shrink-0">{{ formatEventTime(evt.start_time) }}</span>
               </div>
             </template>
-            <span v-else class="text-[#555577] italic text-[11px]">[ Box Office Open ]</span>
+            <span v-else class="text-[#555577] italic text-[10px] sm:text-[11px]">[ Box Office Open ]</span>
           </div>
 
           <!-- Tonight Events (>= 5 PM) -->
-          <div class="col-span-3 truncate border-r border-[#333366] px-2">
+          <div class="col-span-3 truncate border-r border-[#333366] px-1 sm:px-2">
             <template v-if="getVenueSlotEvents(venue.id, 'tonight').length > 0">
               <div
                 v-for="evt in getVenueSlotEvents(venue.id, 'tonight')"
                 :key="evt.id"
-                class="truncate text-[#FFFF00] flex items-center space-x-1.5 group"
+                class="truncate text-[#FFFF00] flex items-center space-x-1 sm:space-x-1.5 group"
               >
                 <!-- Category Color Pip -->
                 <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0" :class="getCategoryColor(evt.category)"></span>
@@ -85,7 +85,7 @@
                 <!-- Ticket Commitment Badge / Toggle Button -->
                 <button
                   type="button"
-                  class="shrink-0 text-[9px] px-1 py-0.2 rounded-xs font-black cursor-pointer transition-all border"
+                  class="shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 rounded-xs font-black cursor-pointer transition-all border"
                   :class="evt.has_ticket === 1
                     ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
                     : 'bg-transparent text-[#555577] border-[#333355] opacity-0 group-hover:opacity-100 hover:text-[#00FFFF] hover:border-[#00FFFF]'"
@@ -105,19 +105,19 @@
                 </span>
 
                 <!-- Event Time -->
-                <span class="text-[#00FFFF] text-[10px] shrink-0">{{ formatEventTime(evt.start_time) }}</span>
+                <span class="text-[#00FFFF] text-[9px] sm:text-[10px] shrink-0">{{ formatEventTime(evt.start_time) }}</span>
               </div>
             </template>
-            <span v-else class="text-[#555577] italic text-[11px]">[ Closed Tonight ]</span>
+            <span v-else class="text-[#555577] italic text-[10px] sm:text-[11px]">[ Closed Tonight ]</span>
           </div>
 
           <!-- Tomorrow Events -->
-          <div class="col-span-2 truncate pl-2">
+          <div class="col-span-2 truncate pl-1 sm:pl-2">
             <template v-if="getVenueSlotEvents(venue.id, 'tomorrow').length > 0">
               <div
                 v-for="evt in getVenueSlotEvents(venue.id, 'tomorrow')"
                 :key="evt.id"
-                class="truncate text-[#FFFF00] flex items-center space-x-1.5 group"
+                class="truncate text-[#FFFF00] flex items-center space-x-1 sm:space-x-1.5 group"
               >
                 <!-- Category Color Pip -->
                 <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0" :class="getCategoryColor(evt.category)"></span>
@@ -125,7 +125,7 @@
                 <!-- Ticket Commitment Badge / Toggle Button -->
                 <button
                   type="button"
-                  class="shrink-0 text-[9px] px-1 py-0.2 rounded-xs font-black cursor-pointer transition-all border"
+                  class="shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 rounded-xs font-black cursor-pointer transition-all border"
                   :class="evt.has_ticket === 1
                     ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
                     : 'bg-transparent text-[#555577] border-[#333355] opacity-0 group-hover:opacity-100 hover:text-[#00FFFF] hover:border-[#00FFFF]'"
@@ -145,10 +145,10 @@
                 </span>
 
                 <!-- Event Time -->
-                <span class="text-[#00FFFF] text-[10px] shrink-0">{{ formatEventTime(evt.start_time) }}</span>
+                <span class="text-[#00FFFF] text-[9px] sm:text-[10px] shrink-0">{{ formatEventTime(evt.start_time) }}</span>
               </div>
             </template>
-            <span v-else class="text-[#555577] italic text-[11px]">[ No Listings ]</span>
+            <span v-else class="text-[#555577] italic text-[10px] sm:text-[11px]">[ No Listings ]</span>
           </div>
         </div>
       </div>

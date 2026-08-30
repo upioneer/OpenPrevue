@@ -1,24 +1,30 @@
 <template>
   <main class="flex-1 flex flex-col w-full h-full overflow-hidden relative">
-    <!-- Top 45%: Spotlight Pane -->
-    <SpotlightPane
-      :events="events"
-      :rotation-seconds="marqueeRotationSeconds"
-    />
+    <!-- Top Pane: Spotlight Promo (45% Landscape / 34% Portrait) -->
+    <div class="h-[45%] portrait-spotlight-height w-full shrink-0">
+      <SpotlightPane
+        :events="events"
+        :rotation-seconds="marqueeRotationSeconds"
+      />
+    </div>
 
-    <!-- Middle 5-6%: Divider Ribbon -->
-    <DividerRibbon
-      :metro-label="settings?.metro_label || 'NEW ORLEANS'"
-      :radius-miles="settings?.radius_miles || '35'"
-    />
+    <!-- Middle Ribbon: Divider Status Bar (6% Landscape / 5% Portrait) -->
+    <div class="h-[6%] portrait-ribbon-height w-full shrink-0">
+      <DividerRibbon
+        :metro-label="settings?.metro_label || 'NEW ORLEANS'"
+        :radius-miles="settings?.radius_miles || '35'"
+      />
+    </div>
 
-    <!-- Bottom 50%: Timeline Grid -->
-    <TimelineGrid
-      :venues="venues"
-      :events="events"
-      :scroll-speed="scrollSpeed"
-      @ticket-toggled="handleTicketToggled"
-    />
+    <!-- Bottom Pane: Scrolling Timeline Grid (49% Landscape / 61% Portrait) -->
+    <div class="h-[49%] portrait-grid-height w-full flex-1 overflow-hidden">
+      <TimelineGrid
+        :venues="venues"
+        :events="events"
+        :scroll-speed="scrollSpeed"
+        @ticket-toggled="handleTicketToggled"
+      />
+    </div>
   </main>
 </template>
 

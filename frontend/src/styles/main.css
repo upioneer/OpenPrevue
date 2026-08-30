@@ -21,6 +21,9 @@
     letter-spacing: 0.5px;
     margin: 0;
     padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
   }
 }
 
@@ -143,4 +146,27 @@ body.crt-curvature-active {
 .smooth-scroll-container {
   will-change: transform;
   transform: translateZ(0);
+}
+
+/* Vertical / Portrait Display Layout Rules */
+@media (orientation: portrait), (max-aspect-ratio: 1/1) {
+  .portrait-spotlight-height {
+    height: 34% !important;
+  }
+  .portrait-ribbon-height {
+    height: 5% !important;
+  }
+  .portrait-grid-height {
+    height: 61% !important;
+  }
+}
+
+/* Small Raspberry Pi Touchscreen Display (<= 800px width or <= 480px height) */
+@media (max-width: 800px), (max-height: 480px) {
+  .small-screen-text-scale {
+    font-size: 11px !important;
+  }
+  .small-screen-hide {
+    display: none !important;
+  }
 }
