@@ -2,21 +2,26 @@
 
 Self-hosted local event aggregator and interactive retro display system styled after 1990s scrolling cable channel guides.
 
+![OpenPrevue 16:9 Hero Dashboard](./project_details/changelog/v0.14.1/dashboard_landscape.png)
+
 ---
 
 ## Visual Showcase
 
-### Standard 16:9 Retro Cable Guide Display
-![OpenPrevue 16:9 Landscape Dashboard](./project_details/changelog/v0.13.0/dashboard_landscape.png)
+### Standard 16:9 Retro Cable Guide Display (Hero View)
+![OpenPrevue 16:9 Landscape Dashboard](./project_details/changelog/v0.14.1/dashboard_landscape.png)
 
 ### Vertical 9:16 Portrait Kiosk & Wall Display
-![OpenPrevue 9:16 Vertical Portrait Kiosk](./project_details/changelog/v0.13.0/dashboard_portrait.png)
+![OpenPrevue 9:16 Vertical Portrait Kiosk](./project_details/changelog/v0.14.1/dashboard_portrait.png)
 
 ### Small Touchscreen & Raspberry Pi 7" Display
-![OpenPrevue Small Screen Display](./project_details/changelog/v0.13.0/dashboard_small_pi.png)
+![OpenPrevue Small Screen Display](./project_details/changelog/v0.14.1/dashboard_small_pi.png)
+
+### First-Boot Regional Setup Wizard
+![OpenPrevue Setup Wizard Modal](./project_details/changelog/v0.14.1/setup_wizard_modal.png)
 
 ### Settings Control Center & Audio Synthesizer
-![OpenPrevue Settings Control Center](./project_details/changelog/v0.13.0/settings_control_center.png)
+![OpenPrevue Settings Control Center](./project_details/changelog/v0.14.1/settings_control_center.png)
 
 ---
 
@@ -165,7 +170,7 @@ npm run build
 Capture Playwright screenshots:
 
 ```bash
-python project_details/playbooks/capture_screenshots.py --version v0.13.0
+python project_details/playbooks/capture_screenshots.py --version v0.14.1
 ```
 
 ---
