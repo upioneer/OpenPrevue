@@ -1,8 +1,47 @@
 <template>
   <div class="h-full w-full bg-gradient-to-b from-[#000088] via-[#000044] to-[#000022] border-b-2 border-[#FFFF00] p-2.5 sm:p-3 flex flex-row gap-2.5 sm:gap-4 overflow-hidden select-none">
-    <!-- Left: Event Promo Media Box -->
+    <!-- Left: Event Promo Media Box / Sports Matchup Graphic -->
     <div class="w-[38%] sm:w-[45%] h-full flex flex-col items-center justify-center bg-[#000022] border-2 border-[#333366] rounded-sm overflow-hidden relative shadow-inner shrink-0">
-      <div v-if="currentEvent?.image_url" class="w-full h-full relative">
+      
+      <!-- Option A: Authentic Sports Matchup Graphic -->
+      <div v-if="sportsMatchup" class="w-full h-full flex flex-col items-center justify-between p-2 bg-gradient-to-b from-[#000055] via-[#000033] to-[#000011] relative overflow-hidden">
+        <!-- Top League Banner -->
+        <div class="w-full bg-[#000080] border-b border-[#FFFF00] py-0.5 text-center text-[10px] sm:text-xs font-black text-[#FFFF00] tracking-widest uppercase">
+          [ {{ sportsMatchup.league }} ON PREVUE ]
+        </div>
+
+        <!-- Center: Team Logos Split with VS Badge -->
+        <div class="flex items-center justify-around w-full px-2 py-1">
+          <!-- Away Team -->
+          <div class="flex flex-col items-center space-y-1 w-[40%]">
+            <div class="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center" v-html="sportsMatchup.awayTeam.logoSvg"></div>
+            <span class="text-[10px] sm:text-xs font-black text-center text-[#FFFFFF] truncate w-full">
+              {{ sportsMatchup.awayTeam.shortName }}
+            </span>
+          </div>
+
+          <!-- VS Crest -->
+          <div class="flex flex-col items-center justify-center px-1">
+            <span class="bg-[#FFFF00] text-[#000033] px-1.5 py-0.5 text-[9px] sm:text-xs font-black rounded-xs shadow">VS</span>
+          </div>
+
+          <!-- Home Team -->
+          <div class="flex flex-col items-center space-y-1 w-[40%]">
+            <div class="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center" v-html="sportsMatchup.homeTeam.logoSvg"></div>
+            <span class="text-[10px] sm:text-xs font-black text-center text-[#FFFFFF] truncate w-full">
+              {{ sportsMatchup.homeTeam.shortName }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Bottom Matchup Label -->
+        <div class="w-full bg-[#000022] border-t border-[#333366] py-0.5 text-center text-[9px] sm:text-[10px] text-[#00FFFF] truncate px-1">
+          {{ sportsMatchup.awayTeam.name }} @ {{ sportsMatchup.homeTeam.name }}
+        </div>
+      </div>
+
+      <!-- Option B: Standard Image Promo Box -->
+      <div v-else-if="currentEvent?.image_url" class="w-full h-full relative">
         <img
           :src="currentEvent.image_url"
           :alt="currentEvent.title"
@@ -22,6 +61,8 @@
           </div>
         </div>
       </div>
+
+      <!-- Option C: Fallback Prevue Box -->
       <div v-else class="w-full h-full flex flex-col items-center justify-center p-2 sm:p-4 text-center bg-[#000055]">
         <div class="text-2xl sm:text-4xl font-black text-[#FFFF00] tracking-widest mb-1 sm:mb-2">PREVUE</div>
         <div class="text-[10px] sm:text-xs text-[#00FFFF] uppercase tracking-wider">{{ currentEvent?.category || 'SPOTLIGHT' }}</div>
@@ -111,6 +152,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import QRCode from 'qrcode'
+import { parseSportsMatchup } from '../services/sportsAssets'
 import type { EventItem } from '../types'
 
 const props = defineProps<{
@@ -130,6 +172,11 @@ const featuredEvents = computed(() => {
 const currentEvent = computed(() => {
   if (featuredEvents.value.length === 0) return null
   return featuredEvents.value[currentIndex.value % featuredEvents.value.length]
+})
+
+const sportsMatchup = computed(() => {
+  if (!currentEvent.value) return null
+  return parseSportsMatchup(currentEvent.value.title)
 })
 
 const formattedDate = computed(() => {
