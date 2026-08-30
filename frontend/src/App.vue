@@ -6,6 +6,7 @@
       'crt-screen-active': isCrtCurvatureEnabled
     }"
   >
+    <EASBanner />
     <HeaderBar />
     <router-view />
   </div>
@@ -14,6 +15,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import HeaderBar from './components/HeaderBar.vue'
+import EASBanner from './components/EASBanner.vue'
 import { fetchSettings } from './api/client'
 import { wsService } from './services/websocket'
 

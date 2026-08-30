@@ -1,4 +1,4 @@
-"""Async background task scheduler for recurring event ingestion and weather refresh."""
+"""Async background task scheduler for recurring event ingestion, weather refresh, and EAS alerts."""
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -8,6 +8,7 @@ from backend.app.core.logging import logger
 from backend.app.db.session import get_db
 from backend.app.providers.base import GeoPoint
 from backend.app.providers.registry import provider_registry
+from backend.app.services.eas import eas_service
 from backend.app.services.ingestion import ingestion_service
 from backend.app.services.weather import weather_service
 from backend.app.services.websocket import connection_manager
@@ -15,6 +16,7 @@ from backend.app.services.websocket import connection_manager
 scheduler = AsyncIOScheduler()
 JOB_ID_SYNC = "recurring_provider_sync"
 JOB_ID_WEATHER = "recurring_weather_refresh"
+JOB_ID_EAS = "recurring_eas_poll"
 
 
 async def execute_scheduled_sync() -> None:
@@ -55,8 +57,16 @@ async def execute_scheduled_weather_refresh() -> None:
         logger.debug("Scheduled weather refresh error: %s", exc)
 
 
+async def execute_scheduled_eas_poll() -> None:
+    """Execute 5-minute emergency alert polling pass."""
+    try:
+        await eas_service.poll_and_broadcast_alerts()
+    except Exception as exc:
+        logger.debug("Scheduled EAS poll error: %s", exc)
+
+
 async def start_scheduler() -> None:
-    """Start the APScheduler engine with configured sync interval and weather refresh."""
+    """Start the APScheduler engine with configured sync interval, weather refresh, and EAS polling."""
     if scheduler.running:
         return
 
@@ -70,7 +80,7 @@ async def start_scheduler() -> None:
     except Exception:
         pass
 
-    logger.info("Starting background APScheduler with %d-hour sync and 15-minute weather triggers.", interval_hours)
+    logger.info("Starting background APScheduler with %d-hour sync, 15-min weather, and 5-min EAS triggers.", interval_hours)
 
     scheduler.add_job(
         execute_scheduled_sync,
@@ -83,6 +93,13 @@ async def start_scheduler() -> None:
         execute_scheduled_weather_refresh,
         trigger=IntervalTrigger(minutes=15),
         id=JOB_ID_WEATHER,
+        replace_existing=True,
+    )
+
+    scheduler.add_job(
+        execute_scheduled_eas_poll,
+        trigger=IntervalTrigger(minutes=5),
+        id=JOB_ID_EAS,
         replace_existing=True,
     )
 

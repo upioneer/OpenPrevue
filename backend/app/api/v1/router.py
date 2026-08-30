@@ -1,7 +1,18 @@
 """API v1 master router aggregating sub-routers."""
 
 from fastapi import APIRouter
-from backend.app.api.v1.endpoints import events, health, settings, speech, sync, telegram, venues, weather, ws
+from backend.app.api.v1.endpoints import (
+    eas,
+    events,
+    health,
+    settings,
+    speech,
+    sync,
+    telegram,
+    venues,
+    weather,
+    ws,
+)
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -14,3 +25,4 @@ api_router.include_router(weather.router, tags=["Weather"])
 api_router.include_router(ws.router, tags=["WebSocket"])
 api_router.include_router(telegram.router, tags=["Telegram"])
 api_router.include_router(speech.router, tags=["Speech"])
+api_router.include_router(eas.router, tags=["Emergency Alert System"])

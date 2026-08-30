@@ -128,3 +128,20 @@ export async function testSpeechPipeline(): Promise<{
   if (!res.ok) throw new Error(`Failed to test speech pipeline: ${res.statusText}`)
   return res.json()
 }
+
+export async function dispatchEASTestAlert(data: {
+  event_type: string
+  headline: string
+  severity: string
+  area_description: string
+  instruction: string
+  duration_seconds: number
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/eas/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error(`Failed to dispatch EAS test alert: ${res.statusText}`)
+  return res.json()
+}

@@ -356,7 +356,91 @@
         </div>
       </div>
 
-      <!-- Tab 5: Provider Feeds & Health -->
+      <!-- Tab 5: Emergency Alerts (EAS) -->
+      <div v-if="activeTab === 'eas'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
+        <div class="flex items-center justify-between border-b border-[#333366] pb-2">
+          <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
+            Emergency Alert System (EAS) & Public Safety
+          </h2>
+          <span
+            class="text-xs px-2 py-0.5 border font-bold"
+            :class="form.eas_enabled === '1' ? 'border-[#00FF00] text-[#00FF00] bg-[#003300]' : 'border-[#8888AA] text-[#8888AA] bg-[#000022]'"
+          >
+            {{ form.eas_enabled === '1' ? 'EAS ACTIVE' : 'EAS DISABLED' }}
+          </span>
+        </div>
+
+        <div class="space-y-3">
+          <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
+            <input
+              type="checkbox"
+              :checked="form.eas_enabled === '1'"
+              class="accent-[#00FFFF]"
+              @change="toggleEAS"
+            />
+            <span class="font-bold text-[#FFFF00]">Enable Live Emergency Broadcast Ingestion (NWS, USGS, IPAWS)</span>
+          </label>
+          <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
+            <input
+              type="checkbox"
+              :checked="form.eas_sound_enabled === '1'"
+              class="accent-[#00FFFF]"
+              @change="toggleEASSound"
+            />
+            <span>Synthesize 90s Dual-Tone Attention Signal (853 Hz + 960 Hz)</span>
+          </label>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <div class="space-y-1">
+            <label class="text-xs text-[#A0A0C0] block">Toast Display Duration: {{ form.eas_display_duration_seconds }}s</label>
+            <input
+              v-model="form.eas_display_duration_seconds"
+              type="range"
+              min="10"
+              max="120"
+              step="5"
+              class="w-full accent-[#FFFF00]"
+            />
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs text-[#A0A0C0] block">Minimum Severity Threshold:</label>
+            <select
+              v-model="form.eas_severity_threshold"
+              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+            >
+              <option value="All">All Advisories & Warnings</option>
+              <option value="Moderate">Moderate, Severe & Extreme</option>
+              <option value="Severe">Severe & Extreme Threats Only</option>
+              <option value="Extreme">Extreme Imminent Danger Only</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Simulated EAS Broadcast Tester -->
+        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+          <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
+            Test Emergency Alert Broadcast
+          </h3>
+          <p class="text-[11px] text-[#8888AA]">
+            Dispatches a simulated high-priority emergency bulletin to preview the visual toast banner and dual-tone attention signal.
+          </p>
+          <div class="flex items-center space-x-3">
+            <button
+              :disabled="isTestingEAS"
+              class="bg-[#AA0000] hover:bg-[#CC0000] border-2 border-[#FFFF00] text-[#FFFF00] px-4 py-1.5 text-xs font-black uppercase cursor-pointer disabled:opacity-50 transition-colors shadow"
+              @click="handleDispatchEASTest"
+            >
+              {{ isTestingEAS ? '[ BROADCASTING TEST... ]' : '[ DISPATCH SIMULATED EAS ALERT ]' }}
+            </button>
+            <span v-if="easTestMessage" class="text-xs text-[#00FF00] font-bold">
+              {{ easTestMessage }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 6: Provider Feeds & Health -->
       <div v-if="activeTab === 'providers'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
           Ingestion Providers & Circuit Breakers
@@ -398,6 +482,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import {
+  dispatchEASTestAlert,
   fetchHealth,
   fetchSettings,
   fetchSpeechStatus,
@@ -415,15 +500,18 @@ import type { HealthData, SystemSettings } from '../types'
 const activeTab = ref('location')
 const isSyncing = ref(false)
 const isTestingSpeech = ref(false)
+const isTestingEAS = ref(false)
 const saveMessage = ref('')
 const activePairCode = ref('')
 const speechTestResult = ref('')
+const easTestMessage = ref('')
 
 const tabs = [
   { id: 'location', label: '[ LOCATION & DISCOVERY ]' },
   { id: 'display', label: '[ RETRO CRT SHADER ]' },
   { id: 'audio', label: '[ SPOTIFY & MUZAK ]' },
   { id: 'telegram', label: '[ TELEGRAM & SPEECH ]' },
+  { id: 'eas', label: '[ EMERGENCY ALERTS (EAS) ]' },
   { id: 'providers', label: '[ PROVIDER FEEDS ]' },
 ]
 
@@ -446,6 +534,10 @@ const form = reactive<SystemSettings>({
   cassette_tape_hiss: '0',
   groq_api_key: '',
   elevenlabs_api_key: '',
+  eas_enabled: '1',
+  eas_severity_threshold: 'Severe',
+  eas_display_duration_seconds: '30',
+  eas_sound_enabled: '1',
 })
 
 const healthData = ref<HealthData | null>(null)
@@ -496,6 +588,14 @@ function toggleTapeHiss(e: Event) {
   form.cassette_tape_hiss = (e.target as HTMLInputElement).checked ? '1' : '0'
 }
 
+function toggleEAS(e: Event) {
+  form.eas_enabled = (e.target as HTMLInputElement).checked ? '1' : '0'
+}
+
+function toggleEASSound(e: Event) {
+  form.eas_sound_enabled = (e.target as HTMLInputElement).checked ? '1' : '0'
+}
+
 async function handleGeneratePairCode() {
   try {
     const res = await generateTelegramPairCode()
@@ -537,6 +637,27 @@ async function handleTestSpeech() {
     speechTestResult.value = `PROBE FAILED: ${String(err)}`
   } finally {
     isTestingSpeech.value = false
+  }
+}
+
+async function handleDispatchEASTest() {
+  isTestingEAS.value = true
+  easTestMessage.value = ''
+  try {
+    const res = await dispatchEASTestAlert({
+      event_type: 'CIVIL EMERGENCY',
+      headline: 'EMERGENCY BROADCAST SYSTEM TEST - LOCAL AREA',
+      severity: 'Severe',
+      area_description: `${form.metro_label || 'LOCAL'} RECEPTION AREA`,
+      instruction: 'This is a test of the OpenPrevue Emergency Alert System. In a real emergency, official instructions would follow. No action required.',
+      duration_seconds: parseInt(form.eas_display_duration_seconds || '30', 10),
+    })
+    easTestMessage.value = `BROADCAST SENT: ${res.event_type}`
+    setTimeout(() => { easTestMessage.value = '' }, 4000)
+  } catch (err) {
+    easTestMessage.value = `ERROR: ${String(err)}`
+  } finally {
+    isTestingEAS.value = false
   }
 }
 
