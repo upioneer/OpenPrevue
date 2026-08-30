@@ -1,6 +1,7 @@
 """Async background task scheduler for recurring event ingestion, weather refresh, and EAS alerts."""
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.base import STATE_RUNNING, STATE_STOPPED
 from apscheduler.triggers.interval import IntervalTrigger
 
 from backend.app.core.config import settings
@@ -67,6 +68,11 @@ async def execute_scheduled_eas_poll() -> None:
 
 async def start_scheduler() -> None:
     """Start the APScheduler engine with configured sync interval, weather refresh, and EAS polling."""
+    global scheduler
+
+    if scheduler.state == STATE_STOPPED:
+        scheduler = AsyncIOScheduler()
+
     if scheduler.running:
         return
 
@@ -108,6 +114,7 @@ async def start_scheduler() -> None:
 
 def reschedule_sync_interval(interval_hours: int) -> None:
     """Dynamically reschedule the recurring ingestion job when settings update."""
+    global scheduler
     if scheduler.running and scheduler.get_job(JOB_ID_SYNC):
         logger.info("Rescheduling recurring sync job to %d hours.", interval_hours)
         scheduler.reschedule_job(
@@ -118,6 +125,7 @@ def reschedule_sync_interval(interval_hours: int) -> None:
 
 async def shutdown_scheduler() -> None:
     """Gracefully terminate background scheduler."""
+    global scheduler
     if scheduler.running:
         logger.info("Shutting down background APScheduler...")
         scheduler.shutdown(wait=False)
