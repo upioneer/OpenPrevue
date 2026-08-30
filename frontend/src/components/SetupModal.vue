@@ -4,10 +4,10 @@
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 select-none font-mono"
   >
     <div
-      class="w-full max-w-xl bg-gradient-to-b from-[#000088] via-[#000055] to-[#000022] border-2 border-[#FFFF00] rounded-xs shadow-[0_0_24px_rgba(255,255,0,0.5)] overflow-hidden"
+      class="w-full max-w-2xl bg-gradient-to-b from-[#000088] via-[#000055] to-[#000022] border-2 border-[#FFFF00] rounded-xs shadow-[0_0_24px_rgba(255,255,0,0.5)] overflow-hidden max-h-[90vh] flex flex-col"
     >
       <!-- Top Title Bar -->
-      <div class="bg-[#0000AA] border-b-2 border-[#FFFF00] px-4 py-2 flex items-center justify-between">
+      <div class="bg-[#0000AA] border-b-2 border-[#FFFF00] px-4 py-2 flex items-center justify-between shrink-0">
         <div class="flex items-center space-x-2">
           <span class="w-3 h-3 bg-[#FFFF00] inline-block animate-pulse"></span>
           <span class="text-sm font-black text-[#FFFF00] tracking-widest">
@@ -18,7 +18,7 @@
       </div>
 
       <!-- Content Area -->
-      <div class="p-4 sm:p-6 space-y-4 text-xs">
+      <div class="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto">
         <div class="bg-[#000033] border border-[#333366] p-3 text-[#E0E0E0] leading-relaxed">
           <span class="text-[#FFFF00] font-bold block mb-1">WELCOME TO OPENPREVUE 1990S TV GUIDE</span>
           Select your local broadcasting area below. You can pick an instant city preset or enter your custom city name and postal code.
@@ -27,9 +27,9 @@
         <!-- Quick City Presets -->
         <div>
           <label class="block text-[#00FFFF] font-bold uppercase mb-2">QUICK REGIONAL PRESETS:</label>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
             <button
-              v-for="preset in presets"
+              v-for="preset in REGIONAL_PRESETS"
               :key="preset.label"
               type="button"
               class="px-2 py-1.5 border text-[11px] font-bold transition-all text-left truncate cursor-pointer"
@@ -121,6 +121,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { triggerSync, updateSetting } from '../api/client'
+import { REGIONAL_PRESETS, type RegionalPreset } from '../services/regionalPresets'
 
 const props = defineProps<{
   initialSetupCompleted?: string
@@ -134,22 +135,13 @@ const isOpen = ref(false)
 const isSaving = ref(false)
 const selectedPreset = ref('NYC')
 
-const presets = [
-  { label: 'NYC', metro: 'NEW YORK CITY', zip: '10001', lat: 40.7128, lon: -74.0060, radius: 25 },
-  { label: 'LOS ANGELES', metro: 'LOS ANGELES', zip: '90012', lat: 34.0522, lon: -118.2437, radius: 30 },
-  { label: 'CHICAGO', metro: 'CHICAGO', zip: '60601', lat: 41.8781, lon: -87.6298, radius: 25 },
-  { label: 'AUSTIN', metro: 'AUSTIN', zip: '78701', lat: 30.2672, lon: -97.7431, radius: 25 },
-  { label: 'SEATTLE', metro: 'SEATTLE', zip: '98101', lat: 47.6062, lon: -122.3321, radius: 25 },
-  { label: 'LONDON', metro: 'LONDON', zip: 'EC1A 1BB', lat: 51.5074, lon: -0.1278, radius: 20 },
-]
-
 const metroLabel = ref('NEW YORK CITY')
 const postalCode = ref('10001')
 const latitude = ref('40.7128')
 const longitude = ref('-74.0060')
 const radiusMiles = ref('25')
 
-function applyPreset(preset: typeof presets[0]) {
+function applyPreset(preset: RegionalPreset) {
   selectedPreset.value = preset.label
   metroLabel.value = preset.metro
   postalCode.value = preset.zip

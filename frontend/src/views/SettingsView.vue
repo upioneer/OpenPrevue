@@ -1,41 +1,34 @@
 <template>
-  <div class="flex-1 overflow-y-auto p-6 bg-[#000033] font-mono text-[#E0E0E0] select-none">
-    <div class="max-w-4xl mx-auto space-y-6">
-      <!-- Title Header -->
-      <div class="border-b-2 border-[#FFFF00] pb-3 flex items-center justify-between">
-        <div>
-          <h1 class="text-xl font-bold text-[#FFFF00] tracking-wider">SYSTEM CONFIGURATION // SETTINGS</h1>
-          <p class="text-xs text-[#8888AA]">Dynamic parameters applied live without restarting services</p>
+  <div class="flex-1 w-full h-full bg-[#000033] text-[#E0E0E0] overflow-y-auto p-4 md:p-6 font-mono select-none">
+    <div class="max-w-5xl mx-auto space-y-6">
+      <!-- Header Bar -->
+      <div class="flex items-center justify-between border-b-2 border-[#FFFF00] pb-3">
+        <div class="flex items-center space-x-3">
+          <span class="w-3 h-3 bg-[#FFFF00] inline-block animate-pulse"></span>
+          <h1 class="text-xl md:text-2xl font-black text-[#FFFF00] tracking-widest">
+            OPENPREVUE SYSTEM CONFIGURATION
+          </h1>
         </div>
         <div class="flex items-center space-x-3">
-          <button
-            :disabled="isSyncing"
-            class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-3 py-1.5 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-50 transition-colors"
-            @click="handleManualSync"
-          >
-            {{ isSyncing ? '[ SYNCING... ]' : '[ SYNC ALL PROVIDERS ]' }}
-          </button>
-          <router-link
+          <RouterLink
             to="/"
-            class="px-3 py-1.5 border border-[#8888AA] text-[#8888AA] hover:text-[#FFFFFF] text-xs font-bold uppercase transition-colors"
+            class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-3 py-1 text-xs font-bold tracking-wider transition-colors cursor-pointer"
           >
             [ RETURN TO GUIDE ]
-          </router-link>
+          </RouterLink>
         </div>
-      </div>
-
-      <!-- Notification Banner -->
-      <div v-if="saveMessage" class="bg-[#000055] border border-[#00FF00] text-[#00FF00] px-4 py-2 text-xs font-bold">
-        {{ saveMessage }}
       </div>
 
       <!-- Navigation Tabs -->
-      <div class="flex flex-wrap gap-2 border-b border-[#333366] pb-2">
+      <div class="flex flex-wrap gap-1 border-b border-[#333366] pb-1">
         <button
           v-for="tab in tabs"
           :key="tab.id"
-          class="px-3 py-1.5 text-xs font-bold tracking-wider transition-colors cursor-pointer"
-          :class="activeTab === tab.id ? 'bg-[#FFFF00] text-[#000033] shadow' : 'bg-[#000044] text-[#A0A0C0] hover:text-[#FFFFFF] border border-[#333366]'"
+          type="button"
+          class="px-3 py-1.5 text-xs font-bold tracking-wider border cursor-pointer transition-all"
+          :class="activeTab === tab.id
+            ? 'bg-[#FFFF00] text-[#000033] border-[#FFFF00] shadow-[0_0_8px_rgba(255,255,0,0.8)]'
+            : 'bg-[#000055] text-[#8888AA] border-[#333366] hover:text-[#00FFFF] hover:border-[#00FFFF]'"
           @click="activeTab = tab.id"
         >
           {{ tab.label }}
@@ -47,6 +40,26 @@
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
           Location & Radial Event Aggregation
         </h2>
+
+        <!-- Quick Regional Presets -->
+        <div class="bg-[#000033] p-3 border border-[#333366] space-y-2">
+          <label class="text-xs font-bold text-[#FFFF00] block uppercase">Quick Regional Presets:</label>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
+            <button
+              v-for="preset in REGIONAL_PRESETS"
+              :key="preset.label"
+              type="button"
+              class="px-2 py-1 border text-[11px] font-bold transition-all text-left truncate cursor-pointer"
+              :class="form.metro_label === preset.metro
+                ? 'bg-[#FFFF00] text-[#000033] border-[#FFFF00]'
+                : 'bg-[#000044] text-[#E0E0E0] border-[#333366] hover:border-[#00FFFF] hover:text-[#00FFFF]'"
+              @click="applyRegionalPreset(preset)"
+            >
+              [ {{ preset.label }} ]
+            </button>
+          </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-1">
             <label class="text-xs text-[#A0A0C0] block">Metro Area Label:</label>
@@ -118,212 +131,232 @@
               @change="handleShaderChange"
               class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
             >
-              <option value="default">Standard Prevue Blue (1990s TV)</option>
-              <option value="ega16">EGA 16-Color Retro PC</option>
+              <option value="default">Standard Prevue Blue (1990s TV Default)</option>
+              <option value="ega16">EGA 16-Color PC Mode</option>
+              <option value="vga256">VGA 256-Color Mode</option>
               <option value="c64">Commodore 64 Palette</option>
-              <option value="amber_monochrome">Amber Phosphor Monochrome</option>
+              <option value="amber_monochrome">Amber Monochrome CRT</option>
               <option value="green_monochrome">Green Phosphor Terminal</option>
             </select>
           </div>
+
           <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Resolution Rasterizer Downscaling:</label>
+            <label class="text-xs text-[#A0A0C0] block">Resolution Downsampler Scaling:</label>
             <select
               v-model="shaderForm.resolutionScaling"
               @change="handleShaderChange"
               class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
             >
-              <option value="native">Native Full High-Resolution</option>
-              <option value="640x480">640 x 480 (VGA CRT Standard)</option>
-              <option value="480x360">480 x 360 (Retro Cable Headend)</option>
-              <option value="320x240">320 x 240 (Authentic Low-Res Prevue)</option>
+              <option value="native">Native Display Resolution</option>
+              <option value="640x480">640x480 CRT VGA</option>
+              <option value="480x360">480x360 Vintage NTSC</option>
+              <option value="320x240">320x240 Low-Res Scanline Grid</option>
             </select>
           </div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+
           <div class="space-y-1">
             <label class="text-xs text-[#A0A0C0] block">Scanline Opacity: {{ shaderForm.scanlineIntensity }}%</label>
             <input
-              v-model.number="shaderForm.scanlineIntensity"
+              v-model="shaderForm.scanlineIntensity"
+              @input="handleShaderChange"
               type="range"
               min="0"
               max="100"
               step="5"
               class="w-full accent-[#FFFF00]"
-              @input="handleShaderChange"
             />
           </div>
+
           <div class="space-y-1">
             <label class="text-xs text-[#A0A0C0] block">Autoscroll Speed: {{ form.autoscroll_speed }} px/sec</label>
             <input
               v-model="form.autoscroll_speed"
               type="range"
               min="20"
-              max="180"
-              step="10"
+              max="150"
+              step="5"
               class="w-full accent-[#FFFF00]"
             />
           </div>
-        </div>
-        <div class="space-y-3 pt-3 border-t border-[#333366]">
-          <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
+
+          <div class="space-y-1">
+            <label class="text-xs text-[#A0A0C0] block">Marquee Rotation Interval: {{ form.marquee_rotation_seconds }}s</label>
             <input
-              type="checkbox"
-              v-model="shaderForm.phosphorGlow"
-              class="accent-[#00FFFF]"
-              @change="handleShaderChange"
+              v-model="form.marquee_rotation_seconds"
+              type="range"
+              min="5"
+              max="60"
+              step="5"
+              class="w-full accent-[#FFFF00]"
             />
-            <span>Enable Retro Phosphor Bloom & Text Glow</span>
-          </label>
-          <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
-            <input
-              type="checkbox"
-              v-model="shaderForm.crtCurvature"
-              class="accent-[#00FFFF]"
-              @change="handleShaderChange"
-            />
-            <span>Enable CRT Screen Barrel Curvature & Vignette</span>
-          </label>
+          </div>
+
+          <div class="flex items-center space-x-4 pt-2">
+            <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
+              <input
+                v-model="shaderForm.phosphorGlow"
+                @change="handleShaderChange"
+                type="checkbox"
+                class="accent-[#00FF00]"
+              />
+              <span>Phosphor Text Glow Bloom</span>
+            </label>
+
+            <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
+              <input
+                v-model="shaderForm.crtCurvature"
+                @change="handleShaderChange"
+                type="checkbox"
+                class="accent-[#00FF00]"
+              />
+              <span>CRT Screen Curvature</span>
+            </label>
+          </div>
         </div>
       </div>
 
-      <!-- Tab 3: Audio & Spotify Muzak -->
+      <!-- Tab 3: Audio & Muzak Synthesizer -->
       <div v-if="activeTab === 'audio'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
-          Spotify Stream, Muzak & Analog Tape Hiss
+          Background Audio & Tape Hiss Emulation
         </h2>
-        <div class="space-y-3">
-          <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
-            <input
-              type="checkbox"
-              :checked="form.spotify_autoplay === '1'"
-              class="accent-[#00FFFF]"
-              @change="toggleSpotifyAutoplay"
-            />
-            <span>Autoplay Background Muzak Stream on Boot</span>
-          </label>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Ambient Audio Stream Source:</label>
+            <label class="text-xs text-[#A0A0C0] block">Ambient Muzak Stream Preset:</label>
             <select
               v-model="selectedMuzakStream"
               class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
-              @change="handleStreamSwitch"
             >
-              <option value="https://stream.zeno.fm/4wt00p9zsz4tv">90s Weather Channel Jazz Stream</option>
-              <option value="https://stream.zeno.fm/752y841vyb8uv">Prevue Vintage Muzak FM</option>
-              <option value="https://streaming.exclusive.radio/er/smoothjazz/icecast.audio">Smooth Jazz 24/7</option>
+              <option
+                v-for="stream in muzakStreams"
+                :key="stream.url"
+                :value="stream.url"
+              >
+                {{ stream.name }}
+              </option>
             </select>
           </div>
+
           <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Tape Hiss & 60Hz Transformer Hum Volume: {{ tapeHissVol }}%</label>
+            <label class="text-xs text-[#A0A0C0] block">Muzak Stream Volume: {{ muzakVol }}%</label>
             <input
-              v-model.number="tapeHissVol"
+              v-model="muzakVol"
+              @input="handleAudioVolumeChange"
               type="range"
               min="0"
               max="100"
               step="5"
               class="w-full accent-[#FFFF00]"
-              @input="handleTapeHissVolChange"
             />
           </div>
-          <div class="flex items-center space-x-3 pt-2">
+
+          <div class="space-y-1">
+            <label class="text-xs text-[#A0A0C0] block">Analog Tape Hiss & 60Hz Hum Volume: {{ tapeHissVol }}%</label>
+            <input
+              v-model="tapeHissVol"
+              @input="handleAudioVolumeChange"
+              type="range"
+              min="0"
+              max="100"
+              step="5"
+              class="w-full accent-[#FFFF00]"
+            />
+          </div>
+
+          <div class="flex items-center space-x-3 pt-4">
             <button
-              class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-4 py-1.5 text-xs font-bold uppercase cursor-pointer transition-colors"
+              type="button"
+              class="px-4 py-2 border text-xs font-black tracking-wider transition-all cursor-pointer"
+              :class="isAudioPreviewPlaying
+                ? 'bg-[#FF4444] text-white border-[#FF4444]'
+                : 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_8px_rgba(0,255,0,0.8)]'"
               @click="toggleAudioPreview"
             >
-              {{ isAudioPreviewPlaying ? '[ STOP SOUND PREVIEW ]' : '[ TEST SOUND GENERATOR ]' }}
+              {{ isAudioPreviewPlaying ? '[ STOP AUDIO GENERATOR ]' : '[ TEST SOUND GENERATOR ]' }}
             </button>
           </div>
         </div>
       </div>
 
       <!-- Tab 4: Ticket Ingestion & AI -->
-      <div v-if="activeTab === 'ingestion_tickets'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
-        <div class="flex items-center justify-between border-b border-[#333366] pb-2">
-          <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
-            Email & Ticket Ingestion Methods
-          </h2>
-          <span class="text-xs px-2 py-0.5 border border-[#00FF00] text-[#00FF00] bg-[#003300] font-bold">
-            STANDARD ENGINES READY
-          </span>
-        </div>
+      <div v-if="activeTab === 'ingestion'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
+        <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
+          Multi-Format Reservation Ingestion & Enhanced AI Extractor
+        </h2>
 
-        <!-- Supported Methods Badges -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
-          <div class="bg-[#000033] p-2 border border-[#333366]">
-            <p class="text-[#00FF00] font-bold">[ OK ] RFC 5545</p>
-            <p class="text-[10px] text-[#A0A0C0]">iCalendar (.ics)</p>
-          </div>
-          <div class="bg-[#000033] p-2 border border-[#333366]">
-            <p class="text-[#00FF00] font-bold">[ OK ] RFC 822</p>
-            <p class="text-[10px] text-[#A0A0C0]">Email MIME (.eml)</p>
-          </div>
-          <div class="bg-[#000033] p-2 border border-[#333366]">
-            <p class="text-[#00FF00] font-bold">[ OK ] OLE MSG</p>
-            <p class="text-[10px] text-[#A0A0C0]">MS Outlook (.msg)</p>
-          </div>
-          <div class="bg-[#000033] p-2 border border-[#333366]">
-            <p class="text-[#00FF00] font-bold">[ OK ] TELEGRAM</p>
-            <p class="text-[10px] text-[#A0A0C0]">Forward & /import</p>
-          </div>
-        </div>
-
-        <!-- Drag and Drop Zone -->
-        <div
-          class="border-2 border-dashed border-[#333366] hover:border-[#00FFFF] p-6 text-center bg-[#000022] cursor-pointer transition-colors"
-          @dragover.prevent
-          @drop.prevent="handleFileDrop"
-          @click="triggerFileInput"
-        >
-          <input
-            ref="fileInputRef"
-            type="file"
-            accept=".ics,.eml,.msg"
-            class="hidden"
-            @change="handleFileSelected"
-          />
-          <p class="text-[#FFFF00] font-bold text-xs mb-1">
-            DROP CALENDAR (.ICS), EMAIL (.EML), OR OUTLOOK (.MSG) FILES HERE
-          </p>
-          <p class="text-[11px] text-[#8888AA]">
-            Automatically extracts event details, matches canonical venues, and marks confirmed ticket commitments.
-          </p>
-        </div>
-
-        <div v-if="ingestionMessage" class="p-3 bg-[#000033] border text-xs font-bold" :class="ingestionIsError ? 'border-[#FF5555] text-[#FF5555]' : 'border-[#00FF00] text-[#00FF00]'">
-          {{ ingestionMessage }}
-        </div>
-
-        <!-- Positive AI Enhancement Section -->
-        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+        <!-- Ingestion Matrix Banner -->
+        <div class="bg-[#000033] border border-[#333366] p-4 space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
-              Enhanced AI Ticket Ingestion (Optional LLM Extractor)
+              Drag & Drop Ticket Ingestion Dropzone
             </h3>
-            <span class="text-[10px] text-[#00FFFF] border border-[#00FFFF] px-2 py-0.5">
-              ADVANCED ACCELERATION
-            </span>
+            <span class="text-[10px] text-[#00FFFF]">SUPPORTED: .ICS | .EML | .MSG</span>
           </div>
-          <p class="text-[11px] text-[#8888AA]">
-            Standard iCal and major ticketing receipts (Ticketmaster, Live Nation, Eventbrite, AXS, SeatGeek) parse deterministically with 100% precision out of the box. Adding an optional LLM API key allows intelligent parsing of irregular indie venue flyers, unformatted emails, and non-standard confirmations.
-          </p>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+          <div
+            class="border-2 border-dashed border-[#333366] hover:border-[#00FFFF] p-6 text-center rounded-xs transition-colors cursor-pointer bg-[#000022]/60"
+            @dragover.prevent
+            @drop.prevent="handleFileDrop"
+            @click="triggerFileInput"
+          >
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept=".ics,.eml,.msg"
+              class="hidden"
+              @change="handleFileSelected"
+            />
             <div class="space-y-1">
-              <label class="text-[11px] text-[#A0A0C0] block">AI Parsing Engine Provider:</label>
-              <select
-                v-model="form.ticket_ai_provider"
-                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
-              >
-                <option value="groq">Groq (Ultra-Fast Llama-3)</option>
-                <option value="openai">OpenAI (GPT-4o mini)</option>
-                <option value="anthropic">Anthropic (Claude 3.5 Sonnet)</option>
-              </select>
+              <div class="text-xs text-[#FFFF00] font-bold">DRAG AND DROP RESERVATION FILES HERE</div>
+              <div class="text-[11px] text-[#8888AA]">or click to browse calendar (.ics), email (.eml), or Outlook (.msg) files</div>
+            </div>
+          </div>
+
+          <div v-if="ingestionMessage" class="p-2 text-xs border" :class="ingestionIsError ? 'bg-[#330000] border-[#FF4444] text-[#FF8888]' : 'bg-[#003300] border-[#00FF00] text-[#00FF00]'">
+            {{ ingestionMessage }}
+          </div>
+        </div>
+
+        <!-- Enhanced AI Ticket Extractor Settings -->
+        <div class="bg-[#000033] border border-[#333366] p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
+              Enhanced AI Ticket Parser (Optional Cloud Assist)
+            </h3>
+            <span class="text-[10px] text-[#00FF00] font-bold">ZERO-CONFIG LOCAL PARSER ACTIVE</span>
+          </div>
+
+          <p class="text-[11px] text-[#8888AA] leading-relaxed">
+            Standard calendar feeds (.ics), MIME emails (.eml), and Outlook messages (.msg) parse deterministically with 100% precision out of the box with no API keys needed.
+            Add an optional API key below to enable enhanced AI extraction for complex, unformatted indie venue flyers and irregular promoter emails.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+            <div class="space-y-1">
+              <label class="text-[11px] text-[#A0A0C0] block">Groq API Key (Llama 3.3 70B):</label>
+              <input
+                v-model="form.ai_groq_key"
+                type="password"
+                placeholder="gsk_..."
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
+              />
             </div>
             <div class="space-y-1">
-              <label class="text-[11px] text-[#A0A0C0] block">LLM API Key (Optional):</label>
+              <label class="text-[11px] text-[#A0A0C0] block">OpenAI API Key (GPT-4o Mini):</label>
               <input
-                v-model="form.ticket_ai_api_key"
+                v-model="form.ai_openai_key"
                 type="password"
                 placeholder="sk-..."
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
+              />
+            </div>
+            <div class="space-y-1">
+              <label class="text-[11px] text-[#A0A0C0] block">Anthropic API Key (Claude 3.5 Haiku):</label>
+              <input
+                v-model="form.ai_anthropic_key"
+                type="password"
+                placeholder="sk-ant-..."
                 class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
               />
             </div>
@@ -331,100 +364,106 @@
         </div>
       </div>
 
-      <!-- Tab 5: Telegram Bot & Speech Engine -->
-      <div v-if="activeTab === 'telegram'" class="bg-[#000044] p-5 border border-[#333366] space-y-6">
-        <!-- Telegram Pairing & Status -->
-        <div class="space-y-4">
-          <div class="flex items-center justify-between border-b border-[#333366] pb-2">
-            <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
-              Telegram Remote Curation & Alerts
-            </h2>
+      <!-- Tab 5: Telegram & Speech -->
+      <div v-if="activeTab === 'telegram'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
+        <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
+          Telegram Bot & Spoken Voice Announcer
+        </h2>
+
+        <!-- Telegram Pairing Wizard -->
+        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
+              Telegram Device Pairing Wizard
+            </h3>
             <span
-              class="text-xs px-2 py-0.5 border font-bold"
-              :class="telegramStatus?.is_running ? 'border-[#00FF00] text-[#00FF00] bg-[#003300]' : 'border-[#FFFF00] text-[#FFFF00] bg-[#333300]'"
+              class="text-[11px] px-2 py-0.5 border"
+              :class="telegramStatus?.is_running ? 'bg-[#003300] text-[#00FF00] border-[#00FF00]' : 'bg-[#330000] text-[#FF4444] border-[#FF4444]'"
             >
-              {{ telegramStatus?.is_running ? 'BOT WORKER ACTIVE' : 'BOT WORKER IDLE' }}
+              {{ telegramStatus?.is_running ? '[ BOT ACTIVE ]' : '[ BOT OFFLINE ]' }}
             </span>
           </div>
 
-          <div class="flex items-center space-x-4">
+          <p class="text-[11px] text-[#8888AA] leading-relaxed">
+            Pair your Telegram account to curate the channel schedule, pin featured events, search upcoming concerts, and query by voice from anywhere.
+          </p>
+
+          <div class="flex items-center space-x-3 pt-1">
             <button
-              class="bg-[#FFFF00] text-[#000033] hover:bg-[#FFFF77] px-4 py-1.5 text-xs font-black uppercase cursor-pointer"
+              class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-4 py-1.5 text-xs font-bold tracking-wider cursor-pointer transition-colors"
               @click="handleGeneratePairCode"
             >
               [ GENERATE PAIRING CODE ]
             </button>
-            <div v-if="activePairCode" class="bg-[#000022] border-2 border-[#00FFFF] px-3 py-1 text-xs font-black text-[#00FFFF] tracking-widest animate-pulse">
-              PAIR CODE: {{ activePairCode }} (Use: /pair {{ activePairCode }})
+            <div v-if="activePairCode" class="flex items-center space-x-2">
+              <span class="text-xs text-[#8888AA]">Type in Telegram:</span>
+              <code class="bg-[#000022] text-[#FFFF00] font-black px-2 py-1 border border-[#FFFF00] text-sm tracking-widest">
+                /pair {{ activePairCode }}
+              </code>
             </div>
           </div>
 
-          <!-- Connected Telegram Accounts Table -->
-          <div v-if="telegramUsers.length > 0" class="space-y-2">
-            <h3 class="text-xs font-bold text-[#FFFF00] uppercase">Paired Accounts ({{ telegramUsers.length }})</h3>
-            <div class="border border-[#333366] overflow-x-auto">
-              <table class="w-full text-xs text-left">
-                <thead class="bg-[#000033] text-[#A0A0C0] border-b border-[#333366]">
-                  <tr>
-                    <th class="p-2">Chat ID</th>
-                    <th class="p-2">Username</th>
-                    <th class="p-2">Paired Date</th>
-                    <th class="p-2 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="user in telegramUsers" :key="user.chat_id" class="border-b border-[#333366] hover:bg-[#000055]">
-                    <td class="p-2 font-mono text-[#FFFF00]">{{ user.chat_id }}</td>
-                    <td class="p-2 text-[#00FFFF]">@{{ user.username || 'Anonymous' }}</td>
-                    <td class="p-2 text-[#A0A0C0]">{{ user.paired_at ? user.paired_at.slice(0, 10) : 'N/A' }}</td>
-                    <td class="p-2 text-right space-x-2">
-                      <button
-                        class="text-[10px] text-[#00FF00] border border-[#00FF00] px-2 py-0.5 hover:bg-[#00FF00] hover:text-[#000033]"
-                        @click="handleTestMessage(user.chat_id)"
-                      >
-                        TEST MSG
-                      </button>
-                      <button
-                        class="text-[10px] text-[#FF5555] border border-[#FF5555] px-2 py-0.5 hover:bg-[#FF5555] hover:text-[#FFFFFF]"
-                        @click="handleUnpairUser(user.chat_id)"
-                      >
-                        UNPAIR
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+          <!-- Connected Users List -->
+          <div v-if="telegramUsers.length > 0" class="pt-2 border-t border-[#333366] space-y-2">
+            <label class="text-xs text-[#A0A0C0] block font-bold">PAIRED TELEGRAM DEVICES ({{ telegramUsers.length }}):</label>
+            <div class="space-y-1">
+              <div
+                v-for="user in telegramUsers"
+                :key="user.chat_id"
+                class="flex items-center justify-between bg-[#000022] px-3 py-1.5 border border-[#333366] text-xs"
+              >
+                <div class="flex items-center space-x-2">
+                  <span class="text-[#00FF00] font-bold">@{{ user.username || 'User' }}</span>
+                  <span class="text-[#8888AA] text-[10px]">Chat ID: {{ user.chat_id }}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <button
+                    class="text-[10px] text-[#00FFFF] hover:underline cursor-pointer"
+                    @click="handleTestMessage(user.chat_id)"
+                  >
+                    [ Send Test Bulletin ]
+                  </button>
+                  <button
+                    class="text-[10px] text-[#FF4444] hover:underline cursor-pointer"
+                    @click="handleUnpairUser(user.chat_id)"
+                  >
+                    [ Unpair ]
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-          <div v-else class="text-xs text-[#8888AA]">
-            No paired Telegram accounts registered. Send /pair &lt;code&gt; in Telegram to link your device.
           </div>
         </div>
 
-        <!-- Speech Engine Heartbeat & Monitoring -->
-        <div class="space-y-4 pt-4 border-t border-[#333366]">
-          <div class="flex items-center justify-between border-b border-[#333366] pb-2">
-            <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
-              Speech Engine & Voice Heartbeat Monitor
-            </h2>
-            <div class="flex items-center space-x-2">
-              <span class="text-xs px-2 py-0.5 border border-[#00FF00] text-[#00FF00] bg-[#003300] font-bold">
-                {{ speechStatus?.status ? speechStatus.status.toUpperCase() : 'OPERATIONAL' }}
-              </span>
-              <span class="text-xs px-2 py-0.5 border border-[#00FFFF] text-[#00FFFF] bg-[#000033] font-bold">
-                {{ speechStatus?.latency_ms }}ms LATENCY
-              </span>
-            </div>
+        <!-- Speech Engine Diagnostics -->
+        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
+              Speech Synthesizer & Voice Router Diagnostics
+            </h3>
+            <span
+              class="text-[11px] px-2 py-0.5 border bg-[#003300] text-[#00FF00] border-[#00FF00]"
+            >
+              [ HEALTH: {{ speechStatus?.status?.toUpperCase() || 'HEALTHY' }} ]
+            </span>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div class="bg-[#000033] p-3 border border-[#333366] space-y-1">
-              <p class="text-[#A0A0C0]">ACTIVE STT ENGINE (SPEECH-TO-TEXT):</p>
-              <p class="text-[#FFFF00] font-bold">{{ speechStatus?.stt_engine || 'faster-whisper (tiny.en local)' }}</p>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+            <div class="bg-[#000022] p-2 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px]">SPEECH MODE:</span>
+              <span class="text-[#FFFF00] font-bold">{{ speechStatus?.mode || 'local_standard' }}</span>
             </div>
-            <div class="bg-[#000033] p-3 border border-[#333366] space-y-1">
-              <p class="text-[#A0A0C0]">ACTIVE TTS SYNTHESIZER (TEXT-TO-SPEECH):</p>
-              <p class="text-[#FFFF00] font-bold">{{ speechStatus?.tts_engine || 'piper-tts / 90s Announcer (local)' }}</p>
+            <div class="bg-[#000022] p-2 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px]">STT ENGINE:</span>
+              <span class="text-[#00FFFF] font-bold">{{ speechStatus?.stt_engine || 'faster-whisper (CPU)' }}</span>
+            </div>
+            <div class="bg-[#000022] p-2 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px]">TTS ANNOUNCER:</span>
+              <span class="text-[#00FFFF] font-bold">{{ speechStatus?.tts_engine || 'piper-tts (90s TV)' }}</span>
+            </div>
+            <div class="bg-[#000022] p-2 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px]">LAST HEARTBEAT:</span>
+              <span class="text-[#E0E0E0] font-bold">{{ speechStatus?.last_heartbeat ? new Date(speechStatus.last_heartbeat).toLocaleTimeString() : 'Active' }}</span>
             </div>
           </div>
 
@@ -479,76 +518,70 @@
           <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
             Emergency Alert System (EAS) & Public Safety
           </h2>
-          <span
-            class="text-xs px-2 py-0.5 border font-bold"
-            :class="form.eas_enabled === '1' ? 'border-[#00FF00] text-[#00FF00] bg-[#003300]' : 'border-[#8888AA] text-[#8888AA] bg-[#000022]'"
-          >
-            {{ form.eas_enabled === '1' ? 'EAS ACTIVE' : 'EAS DISABLED' }}
-          </span>
+          <span class="text-[11px] text-[#FFFF00]">NOAA / NWS CAP FEED INGESTION</span>
         </div>
 
-        <div class="space-y-3">
-          <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between bg-[#000033] p-3 border border-[#333366]">
+            <div>
+              <span class="text-xs font-bold text-[#FFFF00] block">Enable Emergency Alert System Banner:</span>
+              <span class="text-[11px] text-[#8888AA]">Display high-priority weather and civil alerts with audio chimes.</span>
+            </div>
             <input
               type="checkbox"
               :checked="form.eas_enabled === '1'"
-              class="accent-[#00FFFF]"
+              class="w-4 h-4 accent-[#FF4444]"
               @change="toggleEAS"
             />
-            <span class="font-bold text-[#FFFF00]">Enable Live Emergency Broadcast Ingestion (NWS, USGS, IPAWS)</span>
-          </label>
-          <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
+          </div>
+
+          <div class="flex items-center justify-between bg-[#000033] p-3 border border-[#333366]">
+            <div>
+              <span class="text-xs font-bold text-[#FFFF00] block">Dual-Tone Audio Attention Signal (853 Hz + 960 Hz):</span>
+              <span class="text-[11px] text-[#8888AA]">Play authentic 1990s emergency tone signal on active alert broadcast.</span>
+            </div>
             <input
               type="checkbox"
               :checked="form.eas_sound_enabled === '1'"
-              class="accent-[#00FFFF]"
+              class="w-4 h-4 accent-[#FF4444]"
               @change="toggleEASSound"
             />
-            <span>Synthesize 90s Dual-Tone Attention Signal (853 Hz + 960 Hz)</span>
-          </label>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Toast Display Duration: {{ form.eas_display_duration_seconds }}s</label>
-            <input
-              v-model="form.eas_display_duration_seconds"
-              type="range"
-              min="10"
-              max="120"
-              step="5"
-              class="w-full accent-[#FFFF00]"
-            />
           </div>
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Minimum Severity Threshold:</label>
-            <select
-              v-model="form.eas_severity_threshold"
-              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
-            >
-              <option value="All">All Advisories & Warnings</option>
-              <option value="Moderate">Moderate, Severe & Extreme</option>
-              <option value="Severe">Severe & Extreme Threats Only</option>
-              <option value="Extreme">Extreme Imminent Danger Only</option>
-            </select>
-          </div>
-        </div>
 
-        <!-- Simulated EAS Broadcast Tester -->
-        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
-          <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
-            Test Emergency Alert Broadcast
-          </h3>
-          <p class="text-[11px] text-[#8888AA]">
-            Dispatches a simulated high-priority emergency bulletin to preview the visual toast banner and dual-tone attention signal.
-          </p>
-          <div class="flex items-center space-x-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#000033] p-3 border border-[#333366]">
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">Minimum Alert Severity Level:</label>
+              <select
+                v-model="form.eas_min_severity"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+              >
+                <option value="Minor">Minor (Advisories, Special Statements, Watches)</option>
+                <option value="Moderate">Moderate (Severe Warnings, High Impact)</option>
+                <option value="Severe">Severe (Tornado, Flash Flood, Evacuation)</option>
+                <option value="Extreme">Extreme (Civil Danger, Extreme Urgency Only)</option>
+              </select>
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">Alert Display Duration: {{ form.eas_display_duration_seconds || '30' }}s</label>
+              <input
+                v-model="form.eas_display_duration_seconds"
+                type="range"
+                min="10"
+                max="120"
+                step="5"
+                class="w-full accent-[#FFFF00]"
+              />
+            </div>
+          </div>
+
+          <div class="pt-2 flex items-center space-x-3">
             <button
               :disabled="isTestingEAS"
-              class="bg-[#AA0000] hover:bg-[#CC0000] border-2 border-[#FFFF00] text-[#FFFF00] px-4 py-1.5 text-xs font-black uppercase cursor-pointer disabled:opacity-50 transition-colors shadow"
+              class="bg-[#330000] hover:bg-[#550000] border border-[#FF4444] text-[#FF8888] px-4 py-1.5 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-50 transition-colors"
               @click="handleDispatchEASTest"
             >
-              {{ isTestingEAS ? '[ BROADCASTING TEST... ]' : '[ DISPATCH SIMULATED EAS ALERT ]' }}
+              {{ isTestingEAS ? '[ DISPATCHING... ]' : '[ DISPATCH SIMULATED EAS ALERT ]' }}
             </button>
             <span v-if="easTestMessage" class="text-xs text-[#00FF00] font-bold">
               {{ easTestMessage }}
@@ -557,40 +590,81 @@
         </div>
       </div>
 
-      <!-- Tab 7: Provider Feeds & Health -->
+      <!-- Tab 7: Provider API Keys -->
       <div v-if="activeTab === 'providers'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
-          Ingestion Providers & Circuit Breakers
+          External Ticketing & Event Provider APIs
         </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div
-            v-for="(prov, name) in healthData?.providers || {}"
-            :key="name"
-            class="bg-[#000033] p-3 border border-[#333366] space-y-1 text-xs"
-          >
-            <div class="flex items-center justify-between border-b border-[#333366] pb-1">
-              <span class="font-bold text-[#FFFF00] uppercase">{{ name }}</span>
-              <span
-                class="px-1.5 py-0.5 text-[10px] font-bold uppercase"
-                :class="prov.status === 'ok' ? 'text-[#00FF00] bg-[#003300]' : 'text-[#FF5555] bg-[#330000]'"
-              >
-                {{ prov.status }}
-              </span>
+        <div class="space-y-3">
+          <div class="space-y-1">
+            <label class="text-xs text-[#A0A0C0] block">Ticketmaster Discovery API Key:</label>
+            <input
+              v-model="form.ticketmaster_api_key"
+              type="password"
+              placeholder="Live Ticketmaster Discovery API key"
+              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
+            />
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">SeatGeek Client ID:</label>
+              <input
+                v-model="form.seatgeek_client_id"
+                type="text"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
+              />
             </div>
-            <p class="text-[#A0A0C0] text-[11px]">Cached Events: <span class="text-[#FFFFFF]">{{ prov.events_cached }}</span></p>
-            <p class="text-[#A0A0C0] text-[11px]">Last Sync: <span class="text-[#00FFFF]">{{ prov.last_sync ? prov.last_sync.slice(0, 16) : 'N/A' }}</span></p>
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">SeatGeek Client Secret:</label>
+              <input
+                v-model="form.seatgeek_client_secret"
+                type="password"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
+              />
+            </div>
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs text-[#A0A0C0] block">Eventbrite Private Token:</label>
+            <input
+              v-model="form.eventbrite_api_token"
+              type="password"
+              placeholder="Bearer token"
+              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
+            />
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs text-[#A0A0C0] block">Telegram Bot API Token:</label>
+            <input
+              v-model="form.telegram_bot_token"
+              type="password"
+              placeholder="From @BotFather"
+              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
+            />
           </div>
         </div>
       </div>
 
-      <!-- Action Buttons -->
-      <div class="flex items-center justify-end space-x-4 pt-4 border-t border-[#333366]">
-        <button
-          class="bg-[#FFFF00] text-[#000033] px-6 py-2 text-xs font-black uppercase hover:bg-[#FFFF77] transition-colors cursor-pointer shadow"
-          @click="saveAllSettings"
-        >
-          Save All System Parameters
-        </button>
+      <!-- Action Bar -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t-2 border-[#FFFF00]">
+        <div class="flex items-center space-x-3">
+          <button
+            class="bg-[#FFFF00] text-[#000033] hover:bg-[#FFFFFF] px-5 py-2 text-xs font-black tracking-wider cursor-pointer shadow-[0_0_10px_rgba(255,255,0,0.8)] transition-all"
+            @click="saveAllSettings"
+          >
+            [ SAVE & APPLY CONFIGURATION ]
+          </button>
+          <button
+            :disabled="isSyncing"
+            class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-4 py-2 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-50 transition-colors"
+            @click="handleManualSync"
+          >
+            {{ isSyncing ? '[ SYNCHRONIZING... ]' : '[ TRIGGER INSTANT SYNC ]' }}
+          </button>
+        </div>
+
+        <div v-if="saveMessage" class="text-xs font-bold" :class="saveMessage.startsWith('ERROR') ? 'text-[#FF4444]' : 'text-[#00FF00]'">
+          {{ saveMessage }}
+        </div>
       </div>
     </div>
   </div>
@@ -601,8 +675,8 @@ import { onMounted, reactive, ref } from 'vue'
 import {
   dispatchEASTestAlert,
   fetchHealth,
-  fetchSettings,
   fetchSpeechStatus,
+  fetchSettings,
   fetchTelegramStatus,
   fetchTelegramUsers,
   generateTelegramPairCode,
@@ -612,62 +686,35 @@ import {
   unpairTelegramUser,
   updateSetting,
 } from '../api/client'
-import { audioSynth } from '../services/audioSynth'
 import { retroShader, type ShaderConfig } from '../services/retroShader'
+import { audioSynth } from '../services/audioSynth'
+import { REGIONAL_PRESETS, type RegionalPreset } from '../services/regionalPresets'
 import type { HealthData, SystemSettings } from '../types'
-
-const activeTab = ref('location')
-const isSyncing = ref(false)
-const isTestingSpeech = ref(false)
-const isTestingEAS = ref(false)
-const saveMessage = ref('')
-const activePairCode = ref('')
-const speechTestResult = ref('')
-const easTestMessage = ref('')
-const isAudioPreviewPlaying = ref(false)
-const selectedMuzakStream = ref('https://stream.zeno.fm/4wt00p9zsz4tv')
-const tapeHissVol = ref(30)
-const fileInputRef = ref<HTMLInputElement | null>(null)
-const ingestionMessage = ref('')
-const ingestionIsError = ref(false)
 
 const tabs = [
   { id: 'location', label: '[ LOCATION & DISCOVERY ]' },
   { id: 'display', label: '[ RETRO CRT SHADER ]' },
   { id: 'audio', label: '[ SPOTIFY & MUZAK ]' },
-  { id: 'ingestion_tickets', label: '[ TICKET INGESTION & AI ]' },
+  { id: 'ingestion', label: '[ TICKET INGESTION & AI ]' },
   { id: 'telegram', label: '[ TELEGRAM & SPEECH ]' },
   { id: 'eas', label: '[ EMERGENCY ALERTS (EAS) ]' },
-  { id: 'providers', label: '[ PROVIDER FEEDS ]' },
+  { id: 'providers', label: '[ PROVIDER CREDENTIALS ]' },
 ]
 
-const form = reactive<SystemSettings>({
-  postal_code: '70112',
-  metro_label: 'NEW ORLEANS',
-  latitude: '29.9511',
-  longitude: '-90.0715',
-  radius_miles: '35',
-  autoscroll_speed: '60',
-  marquee_rotation_seconds: '20',
-  scanline_intensity: '8',
-  phosphor_glow: '1',
-  crt_curvature: '0',
-  vhs_tracking_noise: '0',
-  time_format: '12h',
-  sync_interval_hours: '6',
-  spotify_autoplay: '0',
-  spotify_playlist_uri: '',
-  cassette_tape_hiss: '0',
-  groq_api_key: '',
-  elevenlabs_api_key: '',
-  eas_enabled: '1',
-  eas_severity_threshold: 'Severe',
-  eas_display_duration_seconds: '30',
-  eas_sound_enabled: '1',
-  ticket_ai_provider: 'groq',
-  ticket_ai_api_key: '',
-})
+const activeTab = ref('location')
+const isSyncing = ref(false)
+const saveMessage = ref('')
+const healthData = ref<HealthData | null>(null)
+const telegramStatus = ref<{ is_configured: boolean; is_running: boolean; paired_users_count: number } | null>(null)
+const telegramUsers = ref<Array<{ chat_id: number; username: string; pair_code: string; paired_at: string; is_active: number }>>([])
+const activePairCode = ref('')
+const isTestingSpeech = ref(false)
+const speechTestResult = ref('')
+const speechStatus = ref<{ status: string; mode: string; speech_enabled: boolean; stt_status: string; tts_status: string; stt_engine: string; tts_engine: string; latency_ms: number; last_heartbeat: string } | null>(null)
+const isTestingEAS = ref(false)
+const easTestMessage = ref('')
 
+// Retro Shader Config Reactive State
 const shaderForm = reactive<ShaderConfig>({
   scanlines: true,
   scanlineIntensity: 45,
@@ -678,23 +725,64 @@ const shaderForm = reactive<ShaderConfig>({
   resolutionScaling: 'native',
 })
 
-const healthData = ref<HealthData | null>(null)
-const telegramStatus = ref<{ is_configured: boolean; is_running: boolean; paired_users_count: number } | null>(null)
-const telegramUsers = ref<Array<{ chat_id: number; username: string; pair_code: string; paired_at: string; is_active: number }>>([])
-const speechStatus = ref<any>(null)
+// Web Audio State
+const isAudioPreviewPlaying = ref(false)
+const tapeHissVol = ref(35)
+const muzakVol = ref(50)
+const muzakStreams = audioSynth.getPlaybackState().streams
+const selectedMuzakStream = ref(muzakStreams[0].url)
+
+// Ticket Ingestion State
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const ingestionMessage = ref('')
+const ingestionIsError = ref(false)
+
+const form = reactive<SystemSettings>({
+  postal_code: '10001',
+  metro_label: 'NEW YORK CITY',
+  latitude: '40.7128',
+  longitude: '-74.0060',
+  radius_miles: '25',
+  autoscroll_speed: '60',
+  marquee_rotation_seconds: '20',
+  scanline_intensity: '45',
+  phosphor_glow: '1',
+  crt_curvature: '0',
+  vhs_tracking_noise: '0',
+  time_format: '12h',
+  sync_interval_hours: '6',
+  spotify_autoplay: '0',
+  eas_enabled: '1',
+  eas_sound_enabled: '1',
+  eas_min_severity: 'Moderate',
+  eas_display_duration_seconds: '30',
+  ticketmaster_api_key: '',
+  seatgeek_client_id: '',
+  seatgeek_client_secret: '',
+  eventbrite_api_token: '',
+  telegram_bot_token: '',
+  groq_api_key: '',
+  elevenlabs_api_key: '',
+  ai_groq_key: '',
+  ai_openai_key: '',
+  ai_anthropic_key: '',
+})
+
+function applyRegionalPreset(preset: RegionalPreset) {
+  form.metro_label = preset.metro
+  form.postal_code = preset.zip
+  form.latitude = preset.lat.toString()
+  form.longitude = preset.lon.toString()
+  form.radius_miles = preset.radius.toString()
+}
 
 function handleShaderChange() {
   retroShader.updateConfig(shaderForm)
 }
 
-function handleStreamSwitch() {
-  if (isAudioPreviewPlaying.value) {
-    audioSynth.playMuzakStream(selectedMuzakStream.value)
-  }
-}
-
-function handleTapeHissVolChange() {
+function handleAudioVolumeChange() {
   audioSynth.setTapeHissVolume(tapeHissVol.value)
+  audioSynth.setMuzakVolume(muzakVol.value)
 }
 
 function toggleAudioPreview() {
@@ -766,10 +854,6 @@ async function loadAll() {
   }
 }
 
-function toggleSpotifyAutoplay(e: Event) {
-  form.spotify_autoplay = (e.target as HTMLInputElement).checked ? '1' : '0'
-}
-
 function toggleEAS(e: Event) {
   form.eas_enabled = (e.target as HTMLInputElement).checked ? '1' : '0'
 }
@@ -790,7 +874,7 @@ async function handleGeneratePairCode() {
 async function handleUnpairUser(chatId: number) {
   try {
     await unpairTelegramUser(chatId)
-    telegramUsers.value = telegramUsers.value.filter(u => u.chat_id !== chatId)
+    telegramUsers.value = telegramUsers.value.filter((u: { chat_id: number }) => u.chat_id !== chatId)
     saveMessage.value = `SUCCESS: Unpaired chat ${chatId}.`
     setTimeout(() => { saveMessage.value = '' }, 3000)
   } catch (err) {
