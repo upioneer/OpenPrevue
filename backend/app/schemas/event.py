@@ -31,6 +31,7 @@ class EventBase(BaseModel):
     source: str
     source_event_id: str | None = None
     is_featured: int = 0
+    has_ticket: int = 0
     status: str = "active"
 
 
@@ -53,6 +54,7 @@ class EventUpdate(BaseModel):
     image_url: str | None = None
     ticket_url: str | None = None
     is_featured: int | None = None
+    has_ticket: int | None = None
     status: str | None = None
 
 

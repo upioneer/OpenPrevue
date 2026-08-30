@@ -31,6 +31,7 @@ async def list_events(
     category: str | None = Query(None, description="Filter by event category"),
     venue_id: str | None = Query(None, description="Filter by canonical venue ID"),
     is_featured: int | None = Query(None, description="Filter featured events (1 or 0)"),
+    has_ticket: int | None = Query(None, description="Filter committed/ticketed events (1 or 0)"),
     status: str | None = Query("active", description="Filter by event status (active, stale, archived, all)"),
     search: str | None = Query(None, description="Search term in title or description"),
     limit: int = Query(200, ge=1, le=500),
@@ -64,6 +65,10 @@ async def list_events(
     if is_featured is not None:
         query += " AND e.is_featured = ?"
         params.append(is_featured)
+
+    if has_ticket is not None:
+        query += " AND e.has_ticket = ?"
+        params.append(has_ticket)
 
     if search:
         query += " AND (e.title LIKE ? OR e.description LIKE ? OR v.name LIKE ?)"
@@ -113,7 +118,7 @@ async def get_event(event_id: str) -> EventResponse:
 
 @router.patch("/events/{event_id}", response_model=EventResponse)
 async def update_event(event_id: str, payload: EventUpdate) -> EventResponse:
-    """Update specific fields of an event."""
+    """Update specific fields of an event, including has_ticket commitment toggle."""
     async with get_db() as db:
         async with db.execute("SELECT id FROM events WHERE id = ?", (event_id,)) as cursor:
             existing = await cursor.fetchone()

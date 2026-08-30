@@ -10,13 +10,27 @@
           @error="handleImageError"
         />
         <div class="absolute inset-0 bg-gradient-to-t from-[#000022] via-transparent to-transparent opacity-60"></div>
-        <div class="absolute bottom-2 left-2 bg-[#000080]/80 px-2 py-0.5 text-xs text-[#00FFFF] border border-[#333366]">
-          FEATURED EVENT
+        <div class="absolute bottom-2 left-2 flex items-center space-x-1.5">
+          <div class="bg-[#000080]/80 px-2 py-0.5 text-xs text-[#00FFFF] border border-[#333366]">
+            FEATURED EVENT
+          </div>
+          <div
+            v-if="currentEvent?.has_ticket === 1"
+            class="bg-[#00FF00] text-[#000033] px-2 py-0.5 text-xs font-black border border-[#00FF00] shadow-[0_0_8px_rgba(0,255,0,0.8)]"
+          >
+            [TICKET HOLDER]
+          </div>
         </div>
       </div>
       <div v-else class="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-[#000055]">
         <div class="text-4xl font-black text-[#FFFF00] tracking-widest mb-2">PREVUE</div>
         <div class="text-xs text-[#00FFFF] uppercase tracking-wider">{{ currentEvent?.category || 'SPOTLIGHT' }}</div>
+        <div
+          v-if="currentEvent?.has_ticket === 1"
+          class="mt-2 bg-[#00FF00] text-[#000033] px-2 py-0.5 text-xs font-black border border-[#00FF00]"
+        >
+          [TICKET HOLDER]
+        </div>
       </div>
     </div>
 
@@ -25,9 +39,17 @@
       <div class="space-y-2 overflow-hidden">
         <!-- Top Meta Tag -->
         <div class="flex items-center justify-between text-xs border-b border-[#333366] pb-1">
-          <span class="text-[#00FFFF] font-bold tracking-wider">
-            [ {{ currentEvent?.category?.toUpperCase() || 'EVENT' }} ]
-          </span>
+          <div class="flex items-center space-x-2">
+            <span class="text-[#00FFFF] font-bold tracking-wider">
+              [ {{ currentEvent?.category?.toUpperCase() || 'EVENT' }} ]
+            </span>
+            <span
+              v-if="currentEvent?.has_ticket === 1"
+              class="bg-[#00FF00] text-[#000033] text-[10px] px-1.5 py-0.2 font-black rounded-xs shadow-[0_0_6px_rgba(0,255,0,0.8)]"
+            >
+              [TICKET OWNED]
+            </span>
+          </div>
           <span class="text-[#8888AA] text-[10px]">
             SPOTLIGHT {{ currentIndex + 1 }} OF {{ featuredEvents.length }}
           </span>

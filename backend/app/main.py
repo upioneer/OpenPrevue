@@ -11,6 +11,7 @@ from backend.app.api.v1.router import api_router
 from backend.app.core.config import settings
 from backend.app.core.logging import logger
 from backend.app.db.session import init_db
+from backend.app.services.scheduler import shutdown_scheduler, start_scheduler
 from backend.app.services.seeder import seed_initial_data
 
 
@@ -20,14 +21,16 @@ async def lifespan(app: FastAPI):
     logger.info("OpenPrevue backend initializing...")
     await init_db()
     await seed_initial_data()
-    logger.info("OpenPrevue backend initialized and ready.")
+    await start_scheduler()
+    logger.info("OpenPrevue backend initialized and scheduler running.")
     yield
     logger.info("OpenPrevue backend shutting down...")
+    await shutdown_scheduler()
 
 
 app = FastAPI(
     title="OpenPrevue API",
-    version="0.1.0",
+    version="0.2.0",
     description="Self-hosted local event aggregator and interactive retro display backend.",
     lifespan=lifespan,
 )

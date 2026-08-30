@@ -11,12 +11,26 @@ from backend.app.db.schema import SCHEMA_SQL
 
 
 async def init_db(database_path: Path | None = None) -> None:
-    """Initialize database tables and indices if not present."""
+    """Initialize database tables, migrations, and indices if not present."""
     db_file = database_path or settings.database_path
     db_file.parent.mkdir(parents=True, exist_ok=True)
 
     logger.info("Initializing database at %s", db_file)
     async with aiosqlite.connect(db_file) as db:
+        # Check if events table exists and needs column migration before running schema script
+        try:
+            async with db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='events'") as cursor:
+                table_exists = await cursor.fetchone()
+
+            if table_exists:
+                async with db.execute("PRAGMA table_info(events)") as cursor:
+                    columns = [row[1] for row in await cursor.fetchall()]
+                    if "has_ticket" not in columns:
+                        logger.info("Migrating schema: Adding has_ticket column to existing events table")
+                        await db.execute("ALTER TABLE events ADD COLUMN has_ticket INTEGER DEFAULT 0")
+        except Exception as exc:
+            logger.warning("Pre-schema column migration check error: %s", exc)
+
         await db.executescript(SCHEMA_SQL)
         await db.commit()
 

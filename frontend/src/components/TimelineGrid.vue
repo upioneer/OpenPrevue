@@ -37,10 +37,34 @@
               <div
                 v-for="evt in getVenueSlotEvents(venue.id, 'today')"
                 :key="evt.id"
-                class="truncate text-[#FFFF00] flex items-center space-x-1.5"
+                class="truncate text-[#FFFF00] flex items-center space-x-1.5 group"
               >
+                <!-- Category Color Pip -->
                 <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0" :class="getCategoryColor(evt.category)"></span>
-                <span class="truncate font-semibold">{{ evt.title }}</span>
+
+                <!-- Ticket Commitment Badge / Toggle Button -->
+                <button
+                  type="button"
+                  class="shrink-0 text-[9px] px-1 py-0.2 rounded-xs font-black cursor-pointer transition-all border"
+                  :class="evt.has_ticket === 1
+                    ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
+                    : 'bg-transparent text-[#555577] border-[#333355] opacity-0 group-hover:opacity-100 hover:text-[#00FFFF] hover:border-[#00FFFF]'"
+                  :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
+                  @click.stop="toggleTicketStatus(evt)"
+                >
+                  {{ evt.has_ticket === 1 ? '[TICKET]' : '[+TKT]' }}
+                </button>
+
+                <!-- Event Title -->
+                <span
+                  class="truncate font-semibold cursor-pointer hover:underline"
+                  :class="{ 'text-[#00FF00] font-black': evt.has_ticket === 1 }"
+                  @click.stop="toggleTicketStatus(evt)"
+                >
+                  {{ evt.title }}
+                </span>
+
+                <!-- Event Time -->
                 <span class="text-[#00FFFF] text-[10px] shrink-0">{{ formatEventTime(evt.start_time) }}</span>
               </div>
             </template>
@@ -53,10 +77,34 @@
               <div
                 v-for="evt in getVenueSlotEvents(venue.id, 'tonight')"
                 :key="evt.id"
-                class="truncate text-[#FFFF00] flex items-center space-x-1.5"
+                class="truncate text-[#FFFF00] flex items-center space-x-1.5 group"
               >
+                <!-- Category Color Pip -->
                 <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0" :class="getCategoryColor(evt.category)"></span>
-                <span class="truncate font-semibold">{{ evt.title }}</span>
+
+                <!-- Ticket Commitment Badge / Toggle Button -->
+                <button
+                  type="button"
+                  class="shrink-0 text-[9px] px-1 py-0.2 rounded-xs font-black cursor-pointer transition-all border"
+                  :class="evt.has_ticket === 1
+                    ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
+                    : 'bg-transparent text-[#555577] border-[#333355] opacity-0 group-hover:opacity-100 hover:text-[#00FFFF] hover:border-[#00FFFF]'"
+                  :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
+                  @click.stop="toggleTicketStatus(evt)"
+                >
+                  {{ evt.has_ticket === 1 ? '[TICKET]' : '[+TKT]' }}
+                </button>
+
+                <!-- Event Title -->
+                <span
+                  class="truncate font-semibold cursor-pointer hover:underline"
+                  :class="{ 'text-[#00FF00] font-black': evt.has_ticket === 1 }"
+                  @click.stop="toggleTicketStatus(evt)"
+                >
+                  {{ evt.title }}
+                </span>
+
+                <!-- Event Time -->
                 <span class="text-[#00FFFF] text-[10px] shrink-0">{{ formatEventTime(evt.start_time) }}</span>
               </div>
             </template>
@@ -69,10 +117,34 @@
               <div
                 v-for="evt in getVenueSlotEvents(venue.id, 'tomorrow')"
                 :key="evt.id"
-                class="truncate text-[#FFFF00] flex items-center space-x-1.5"
+                class="truncate text-[#FFFF00] flex items-center space-x-1.5 group"
               >
+                <!-- Category Color Pip -->
                 <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0" :class="getCategoryColor(evt.category)"></span>
-                <span class="truncate font-semibold">{{ evt.title }}</span>
+
+                <!-- Ticket Commitment Badge / Toggle Button -->
+                <button
+                  type="button"
+                  class="shrink-0 text-[9px] px-1 py-0.2 rounded-xs font-black cursor-pointer transition-all border"
+                  :class="evt.has_ticket === 1
+                    ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
+                    : 'bg-transparent text-[#555577] border-[#333355] opacity-0 group-hover:opacity-100 hover:text-[#00FFFF] hover:border-[#00FFFF]'"
+                  :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
+                  @click.stop="toggleTicketStatus(evt)"
+                >
+                  {{ evt.has_ticket === 1 ? '[TICKET]' : '[+TKT]' }}
+                </button>
+
+                <!-- Event Title -->
+                <span
+                  class="truncate font-semibold cursor-pointer hover:underline"
+                  :class="{ 'text-[#00FF00] font-black': evt.has_ticket === 1 }"
+                  @click.stop="toggleTicketStatus(evt)"
+                >
+                  {{ evt.title }}
+                </span>
+
+                <!-- Event Time -->
                 <span class="text-[#00FFFF] text-[10px] shrink-0">{{ formatEventTime(evt.start_time) }}</span>
               </div>
             </template>
@@ -86,6 +158,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { updateEvent } from '../api/client'
 import type { EventItem, VenueItem } from '../types'
 
 const props = withDefaults(
@@ -98,6 +171,10 @@ const props = withDefaults(
     scrollSpeed: 60,
   }
 )
+
+const emit = defineEmits<{
+  (e: 'ticket-toggled', eventId: string, hasTicket: number): void
+}>()
 
 const scrollContainer = ref<HTMLElement | null>(null)
 const scrollContent = ref<HTMLElement | null>(null)
@@ -159,6 +236,18 @@ function getVenueSlotEvents(venueId: string, slot: 'today' | 'tonight' | 'tomorr
     }
     return false
   })
+}
+
+async function toggleTicketStatus(evt: EventItem) {
+  const newStatus = evt.has_ticket === 1 ? 0 : 1
+  evt.has_ticket = newStatus
+  emit('ticket-toggled', evt.id, newStatus)
+  try {
+    await updateEvent(evt.id, { has_ticket: newStatus })
+  } catch (err) {
+    console.error('Failed to update event ticket commitment status:', err)
+    evt.has_ticket = newStatus === 1 ? 0 : 1
+  }
 }
 
 function startAutoScroll() {

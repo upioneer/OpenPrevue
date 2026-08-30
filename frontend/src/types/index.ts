@@ -22,6 +22,7 @@ export interface EventItem {
   source: string
   source_event_id?: string
   is_featured: number
+  has_ticket?: number
   status: string
   venue_name?: string
   venue_address?: string

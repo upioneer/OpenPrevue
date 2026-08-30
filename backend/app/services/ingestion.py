@@ -1,10 +1,11 @@
-"""Ingestion orchestrator, normalization, and deduplication engine."""
+"""Ingestion orchestrator, normalization, circuit breaker protection, and deduplication engine."""
 
 from datetime import datetime, timezone
 import math
 import re
 import aiosqlite
 
+from backend.app.core.circuit_breaker import circuit_registry
 from backend.app.core.logging import logger
 from backend.app.db.session import get_db
 from backend.app.providers.base import BaseProvider, GeoPoint, RawEvent
@@ -40,8 +41,26 @@ class IngestionService:
         center: GeoPoint,
         radius_miles: float,
     ) -> dict[str, int | str]:
-        """Execute a full synchronization cycle for a specific provider."""
+        """Execute a full synchronization cycle for a specific provider with circuit breaker protection."""
         started_at = datetime.now(timezone.utc).isoformat()
+        breaker = circuit_registry.get_breaker(provider.provider_name)
+
+        if not breaker.can_execute():
+            logger.warning(
+                "Circuit breaker for [%s] is currently %s. Skipping synchronization run.",
+                provider.provider_name,
+                breaker.state.value.upper(),
+            )
+            return {
+                "provider": provider.provider_name,
+                "status": f"circuit_{breaker.state.value}",
+                "events_fetched": 0,
+                "events_inserted": 0,
+                "events_updated": 0,
+                "events_skipped": 0,
+                "error": breaker.last_error,
+            }
+
         logger.info("Starting sync for provider: %s", provider.provider_name)
 
         events_fetched = 0
@@ -81,9 +100,12 @@ class IngestionService:
 
                 await db.commit()
 
+            breaker.record_success()
+
         except Exception as exc:
             status = "failed"
             error_message = str(exc)
+            breaker.record_failure(exc)
             logger.error("Ingestion failed for %s: %s", provider.provider_name, exc, exc_info=True)
 
         completed_at = datetime.now(timezone.utc).isoformat()

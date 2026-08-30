@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS events (
     source TEXT NOT NULL,
     source_event_id TEXT,
     is_featured INTEGER DEFAULT 0,
+    has_ticket INTEGER DEFAULT 0,
     status TEXT DEFAULT 'active' CHECK(status IN ('active', 'stale', 'archived', 'hidden')),
     last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -103,6 +104,7 @@ CREATE INDEX IF NOT EXISTS idx_events_start_time ON events(start_time);
 CREATE INDEX IF NOT EXISTS idx_events_venue_id ON events(venue_id);
 CREATE INDEX IF NOT EXISTS idx_events_category ON events(category);
 CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
+CREATE INDEX IF NOT EXISTS idx_events_has_ticket ON events(has_ticket);
 CREATE INDEX IF NOT EXISTS idx_events_last_seen ON events(last_seen_at);
 CREATE INDEX IF NOT EXISTS idx_venue_aliases_venue ON venue_aliases(venue_id);
 CREATE INDEX IF NOT EXISTS idx_ticket_links_event ON ticket_links(event_id);

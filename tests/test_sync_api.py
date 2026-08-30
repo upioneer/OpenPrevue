@@ -16,7 +16,7 @@ async def setup_database():
 
 @pytest.mark.asyncio
 async def test_trigger_sync():
-    """Verify manual sync triggers and completes successfully."""
+    """Verify manual sync triggers and completes successfully across registered providers."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post("/api/v1/sync")
@@ -29,4 +29,4 @@ async def test_trigger_sync():
         assert logs_res.status_code == 200
         logs = logs_res.json()
         assert len(logs) > 0
-        assert logs[0]["provider"] == "mock"
+        assert any(log["provider"] == "mock" for log in logs)

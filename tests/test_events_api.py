@@ -30,6 +30,31 @@ async def test_list_events():
         assert "title" in first_event
         assert "venue_name" in first_event
         assert "ticket_links" in first_event
+        assert "has_ticket" in first_event
+
+
+@pytest.mark.asyncio
+async def test_event_ticket_commitment_toggle():
+    """Verify toggling has_ticket commitment updates in datastore."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.get("/api/v1/events")
+        first_id = res.json()[0]["id"]
+
+        # Mark as ticketed commitment
+        patch_res = await client.patch(
+            f"/api/v1/events/{first_id}",
+            json={"has_ticket": 1},
+        )
+        assert patch_res.status_code == 200
+        assert patch_res.json()["has_ticket"] == 1
+
+        # Query filtered by has_ticket=1
+        filter_res = await client.get("/api/v1/events?has_ticket=1")
+        assert filter_res.status_code == 200
+        ticketed_events = filter_res.json()
+        assert len(ticketed_events) >= 1
+        assert any(e["id"] == first_id for e in ticketed_events)
 
 
 @pytest.mark.asyncio
