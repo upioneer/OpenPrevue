@@ -1,4 +1,4 @@
-Copyright (c) [YEAR] [AUTHOR / ORGANIZATION]. All Rights Reserved.
+Copyright (c) 2026 Jasen Henry. All Rights Reserved.
 
 This software and all associated files are the exclusive intellectual property of the copyright holder.
 
