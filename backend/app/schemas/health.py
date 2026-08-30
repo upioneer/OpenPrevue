@@ -21,6 +21,7 @@ class HealthResponse(BaseModel):
     scheduler: str
     providers: dict[str, ProviderHealth]
     telegram_bot: str
+    speech: dict | None = None
     next_sync: str | datetime | None = None
 
 

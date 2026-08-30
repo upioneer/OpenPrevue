@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="OpenPrevue API",
-    version="0.4.0",
+    version="0.5.0",
     description="Self-hosted local event aggregator and interactive retro display backend.",
     lifespan=lifespan,
 )
@@ -76,4 +76,5 @@ if __name__ == "__main__":
         port=settings.PORT,
         reload=True,
     )
+
 

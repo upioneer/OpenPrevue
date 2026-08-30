@@ -8,6 +8,7 @@ import aiosqlite
 from backend.app.core.config import settings
 from backend.app.db.session import get_db
 from backend.app.schemas.health import HealthResponse, ProviderHealth
+from backend.app.services.speech import speech_service
 
 router = APIRouter()
 START_TIME = time.time()
@@ -15,7 +16,7 @@ START_TIME = time.time()
 
 @router.get("/health", response_model=HealthResponse)
 async def get_system_health() -> HealthResponse:
-    """Return composite operational health status across database, providers, and bot."""
+    """Return composite operational health status across database, providers, bot, and speech."""
     uptime = time.time() - START_TIME
     db_status = "ok"
 
@@ -76,6 +77,7 @@ async def get_system_health() -> HealthResponse:
         )
 
     telegram_status = "connected" if settings.TELEGRAM_BOT_TOKEN else "disabled (no_token)"
+    speech_health = await speech_service.check_health()
 
     overall_status = "healthy" if db_status == "ok" else "degraded"
 
@@ -86,5 +88,6 @@ async def get_system_health() -> HealthResponse:
         scheduler="ok",
         providers=provider_health_map,
         telegram_bot=telegram_status,
+        speech=speech_health,
         next_sync=None,
     )

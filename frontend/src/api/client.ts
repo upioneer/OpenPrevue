@@ -70,3 +70,61 @@ export async function triggerSync(): Promise<{ status: string; message: string }
   if (!res.ok) throw new Error(`Failed to trigger sync: ${res.statusText}`)
   return res.json()
 }
+
+export async function fetchTelegramStatus(): Promise<{ is_configured: boolean; is_running: boolean; paired_users_count: number }> {
+  const res = await fetch(`${API_BASE}/telegram/status`)
+  if (!res.ok) throw new Error(`Failed to fetch Telegram status: ${res.statusText}`)
+  return res.json()
+}
+
+export async function generateTelegramPairCode(): Promise<{ pair_code: string; expires_in_seconds: number }> {
+  const res = await fetch(`${API_BASE}/telegram/pair-code`, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to generate pairing code: ${res.statusText}`)
+  return res.json()
+}
+
+export async function fetchTelegramUsers(): Promise<Array<{ chat_id: number; username: string; pair_code: string; paired_at: string; is_active: number }>> {
+  const res = await fetch(`${API_BASE}/telegram/users`)
+  if (!res.ok) throw new Error(`Failed to fetch Telegram users: ${res.statusText}`)
+  return res.json()
+}
+
+export async function unpairTelegramUser(chatId: number): Promise<{ status: string; chat_id: number }> {
+  const res = await fetch(`${API_BASE}/telegram/users/${chatId}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`Failed to unpair Telegram user: ${res.statusText}`)
+  return res.json()
+}
+
+export async function sendTelegramTestMessage(chatId: number): Promise<{ status: string; chat_id: number }> {
+  const res = await fetch(`${API_BASE}/telegram/test-message?chat_id=${chatId}`, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to send test message: ${res.statusText}`)
+  return res.json()
+}
+
+export async function fetchSpeechStatus(): Promise<{
+  status: string
+  mode: string
+  speech_enabled: boolean
+  stt_status: string
+  tts_status: string
+  stt_engine: string
+  tts_engine: string
+  latency_ms: number
+  last_heartbeat: string
+}> {
+  const res = await fetch(`${API_BASE}/speech/status`)
+  if (!res.ok) throw new Error(`Failed to fetch speech status: ${res.statusText}`)
+  return res.json()
+}
+
+export async function testSpeechPipeline(): Promise<{
+  status: string
+  mode: string
+  latency_ms: number
+  tested_at: string
+  message: string
+}> {
+  const res = await fetch(`${API_BASE}/speech/test`, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to test speech pipeline: ${res.statusText}`)
+  return res.json()
+}
