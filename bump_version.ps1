@@ -24,4 +24,11 @@ if (Test-Path $mainPyPath) {
     Write-Host "Updated backend/app/main.py version to $Version"
 }
 
+# Automated Playwright Screenshot Capture for version changelog
+$captureScript = Join-Path $PSScriptRoot "project_details\playbooks\capture_screenshots.py"
+if ((Test-Path $captureScript) -and (Get-Command python -ErrorAction SilentlyContinue)) {
+    Write-Host "Capturing Playwright screenshots for v$Version..."
+    python $captureScript --version "v$Version"
+}
+
 Write-Host "Version bump to $Version complete."
