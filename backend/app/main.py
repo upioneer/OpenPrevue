@@ -14,6 +14,7 @@ from backend.app.core.logging import logger
 from backend.app.db.session import init_db
 from backend.app.services.scheduler import shutdown_scheduler, start_scheduler
 from backend.app.services.seeder import seed_initial_data
+from backend.app.services.telegram.bot import telegram_service
 
 
 @asynccontextmanager
@@ -23,15 +24,17 @@ async def lifespan(app: FastAPI):
     await init_db()
     await seed_initial_data()
     await start_scheduler()
-    logger.info("OpenPrevue backend initialized and scheduler running.")
+    await telegram_service.start()
+    logger.info("OpenPrevue backend initialized and services running.")
     yield
     logger.info("OpenPrevue backend shutting down...")
+    await telegram_service.stop()
     await shutdown_scheduler()
 
 
 app = FastAPI(
     title="OpenPrevue API",
-    version="0.3.0",
+    version="0.4.0",
     description="Self-hosted local event aggregator and interactive retro display backend.",
     lifespan=lifespan,
 )

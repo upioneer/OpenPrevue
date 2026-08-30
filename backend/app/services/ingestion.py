@@ -9,6 +9,7 @@ from backend.app.core.circuit_breaker import circuit_registry
 from backend.app.core.logging import logger
 from backend.app.db.session import get_db
 from backend.app.providers.base import BaseProvider, GeoPoint, RawEvent
+from backend.app.services.telegram.bot import telegram_service
 
 
 def calculate_haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -101,6 +102,12 @@ class IngestionService:
                 await db.commit()
 
             breaker.record_success()
+
+            # Scan new events against active user watchlists for push notifications
+            try:
+                await telegram_service.scan_watchlist_and_alert(raw_events)
+            except Exception as exc:
+                logger.debug("Watchlist scan error during ingestion: %s", exc)
 
         except Exception as exc:
             status = "failed"
