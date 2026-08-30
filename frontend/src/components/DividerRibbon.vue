@@ -23,8 +23,25 @@
       </div>
     </div>
 
-    <!-- Right: Metro Area & Search Radius -->
+    <!-- Right: Ambient Audio & Search Radius -->
     <div class="flex items-center space-x-3">
+      <!-- Ambient Muzak & Tape Hiss Controller -->
+      <div class="flex items-center space-x-2 bg-[#000022] px-2 py-0.5 border border-[#333366]">
+        <button
+          @click="toggleAudio"
+          class="px-1.5 py-0.2 text-[10px] font-bold uppercase transition"
+          :class="isAudioPlaying ? 'bg-[#00FF00] text-[#000033]' : 'bg-[#333366] text-[#A0A0C0] hover:text-[#FFFFFF]'"
+          title="Toggle Ambient Weather Jazz & Tape Hiss"
+        >
+          {{ isAudioPlaying ? '[ MUZAK ON ]' : '[ MUZAK OFF ]' }}
+        </button>
+        <div v-if="isAudioPlaying" class="flex items-end space-x-0.5 h-3 text-[#00FF00]">
+          <span class="w-0.5 bg-[#00FF00] animate-pulse h-2"></span>
+          <span class="w-0.5 bg-[#00FF00] animate-pulse h-3"></span>
+          <span class="w-0.5 bg-[#00FF00] animate-pulse h-1"></span>
+        </div>
+      </div>
+
       <div class="text-[11px] text-[#A0A0C0] hidden md:inline">
         RADIUS: <span class="text-[#FFFF00] font-bold">{{ radiusMiles }}mi</span>
       </div>
@@ -38,6 +55,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { fetchWeather } from '../api/client'
+import { audioSynth } from '../services/audioSynth'
 import { wsService } from '../services/websocket'
 import type { WeatherData } from '../types'
 
@@ -59,6 +77,7 @@ const props = withDefaults(
 const currentTime = ref('')
 const currentDate = ref('')
 const liveWeather = ref<WeatherData | null>(null)
+const isAudioPlaying = ref(false)
 let clockTimer: ReturnType<typeof setInterval> | null = null
 let unsubscribeWs: (() => void) | null = null
 
@@ -97,6 +116,16 @@ function updateClock() {
     month: 'short',
     day: 'numeric',
   }).toUpperCase()
+}
+
+function toggleAudio() {
+  const playing = audioSynth.toggleMuzak()
+  if (playing) {
+    audioSynth.startTapeHiss()
+  } else {
+    audioSynth.stopTapeHiss()
+  }
+  isAudioPlaying.value = playing
 }
 
 async function loadWeather() {

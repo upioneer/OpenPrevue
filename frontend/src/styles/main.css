@@ -11,6 +11,7 @@
     --border-grid: #333366;
     --status-live: #FF4444;
     --status-soon: #FFAA00;
+    --scanline-opacity: 0.45;
   }
 
   body {
@@ -18,7 +19,50 @@
     color: var(--text-body);
     font-family: 'Share Tech Mono', 'VT323', 'Courier New', monospace;
     letter-spacing: 0.5px;
+    margin: 0;
+    padding: 0;
   }
+}
+
+/* Color Palette Themes */
+body.palette-amber {
+  --bg-deep: #1a0f00 !important;
+  --bg-surface: #2b1800 !important;
+  --text-heading: #ffb000 !important;
+  --text-body: #ff9900 !important;
+  --text-accent: #ffd24d !important;
+  --text-price: #ffaa00 !important;
+  --border-grid: #4d2600 !important;
+}
+
+body.palette-green {
+  --bg-deep: #001400 !important;
+  --bg-surface: #002900 !important;
+  --text-heading: #33ff33 !important;
+  --text-body: #00cc00 !important;
+  --text-accent: #66ff66 !important;
+  --text-price: #33ff33 !important;
+  --border-grid: #004d00 !important;
+}
+
+body.palette-c64 {
+  --bg-deep: #40318d !important;
+  --bg-surface: #6854b7 !important;
+  --text-heading: #ffff77 !important;
+  --text-body: #ffffff !important;
+  --text-accent: #70a4b2 !important;
+  --text-price: #6cb96a !important;
+  --border-grid: #5b46a0 !important;
+}
+
+body.palette-ega16 {
+  --bg-deep: #0000aa !important;
+  --bg-surface: #000055 !important;
+  --text-heading: #ffff55 !important;
+  --text-body: #ffffff !important;
+  --text-accent: #55ffff !important;
+  --text-price: #55ff55 !important;
+  --border-grid: #5555ff !important;
 }
 
 /* Retro text shadows & phosphor bloom */
@@ -37,6 +81,10 @@
   text-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
 }
 
+.phosphor-bloom-active * {
+  text-shadow: 0 0 4px currentColor, 0 0 8px currentColor;
+}
+
 /* Classic Prevue Gradient Backgrounds */
 .prevue-gradient {
   background: linear-gradient(180deg, #000088 0%, #000044 50%, #000022 100%);
@@ -51,20 +99,44 @@
 }
 
 /* CRT Scanline Overlay */
-.scanlines-active::before {
+body::before {
   content: " ";
   display: block;
   position: fixed;
   top: 0; left: 0; bottom: 0; right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-  z-index: 999;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, var(--scanline-opacity)) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 255, 0, 0.03));
+  z-index: 9999;
   background-size: 100% 3px, 6px 100%;
   pointer-events: none;
 }
 
-/* CRT Screen Vignette / Slight Curvature */
-.crt-screen-active {
-  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.85);
+/* CRT Curvature & Vignette */
+body.crt-curvature-active {
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.95);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+/* Low-res rasterization scaling containers */
+#app.res-320x240 {
+  max-width: 640px;
+  max-height: 480px;
+  margin: auto;
+  image-rendering: pixelated;
+}
+
+#app.res-480x360 {
+  max-width: 960px;
+  max-height: 720px;
+  margin: auto;
+  image-rendering: pixelated;
+}
+
+#app.res-640x480 {
+  max-width: 1280px;
+  max-height: 960px;
+  margin: auto;
+  image-rendering: pixelated;
 }
 
 /* Smooth continuous scrolling */
