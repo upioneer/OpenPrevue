@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter
 from backend.app.db.session import get_db
 from backend.app.schemas.setting import SettingItem, SettingUpdate
+from backend.app.services.scheduler import reschedule_sync_interval
+from backend.app.services.websocket import connection_manager
 
 router = APIRouter()
 
@@ -19,7 +21,7 @@ async def get_all_settings() -> dict[str, str]:
 
 @router.put("/settings/{key}", response_model=SettingItem)
 async def update_setting(key: str, payload: SettingUpdate) -> SettingItem:
-    """Create or update a single configuration setting."""
+    """Create or update a single configuration setting and broadcast changes."""
     now_iso = datetime.now(timezone.utc).isoformat()
     async with get_db() as db:
         await db.execute(
@@ -33,5 +35,15 @@ async def update_setting(key: str, payload: SettingUpdate) -> SettingItem:
             (key, payload.value, now_iso),
         )
         await db.commit()
+
+    # Dynamic scheduler rescheduling if sync_interval_hours was updated
+    if key == "sync_interval_hours":
+        try:
+            reschedule_sync_interval(int(payload.value))
+        except ValueError:
+            pass
+
+    # Broadcast settings update to all active dashboard displays
+    await connection_manager.broadcast("settings_updated", {"key": key, "value": payload.value})
 
     return SettingItem(key=key, value=payload.value, updated_at=now_iso)

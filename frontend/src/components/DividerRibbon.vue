@@ -10,10 +10,16 @@
       </span>
     </div>
 
-    <!-- Center: Weather & Condition -->
+    <!-- Center: Live Open-Meteo Weather & Condition -->
     <div class="flex items-center space-x-3 text-center">
       <div class="text-[#E0E0E0] font-bold">
-        <span class="text-[#00FF00]">{{ weatherTemp }}</span> | <span class="text-[#00FFFF] uppercase">{{ weatherCondition }}</span>
+        <span class="text-[#00FF00]">{{ currentTemp }}</span> | <span class="text-[#00FFFF] uppercase">{{ currentCondition }}</span>
+        <span v-if="humidity !== null" class="text-[#8888AA] text-[10px] hidden md:inline ml-2">
+          HUMIDITY: <span class="text-[#FFFFFF]">{{ humidity }}%</span>
+        </span>
+        <span v-if="windSpeed !== null" class="text-[#8888AA] text-[10px] hidden lg:inline ml-2">
+          WIND: <span class="text-[#FFFFFF]">{{ windSpeed }}mph</span>
+        </span>
       </div>
     </div>
 
@@ -30,9 +36,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { fetchWeather } from '../api/client'
+import { wsService } from '../services/websocket'
+import type { WeatherData } from '../types'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     metroLabel?: string
     radiusMiles?: string | number
@@ -43,13 +52,37 @@ withDefaults(
     metroLabel: 'NEW ORLEANS',
     radiusMiles: '35',
     weatherTemp: '74F',
-    weatherCondition: 'CLEAR',
+    weatherCondition: 'CLEAR SKY',
   }
 )
 
 const currentTime = ref('')
 const currentDate = ref('')
+const liveWeather = ref<WeatherData | null>(null)
 let clockTimer: ReturnType<typeof setInterval> | null = null
+let unsubscribeWs: (() => void) | null = null
+
+const currentTemp = computed(() => {
+  if (liveWeather.value) {
+    return `${Math.round(liveWeather.value.temperature)}°${liveWeather.value.temperature_unit}`
+  }
+  return props.weatherTemp
+})
+
+const currentCondition = computed(() => {
+  if (liveWeather.value) {
+    return liveWeather.value.condition
+  }
+  return props.weatherCondition
+})
+
+const humidity = computed(() => {
+  return liveWeather.value ? liveWeather.value.humidity : null
+})
+
+const windSpeed = computed(() => {
+  return liveWeather.value ? Math.round(liveWeather.value.wind_speed) : null
+})
 
 function updateClock() {
   const now = new Date()
@@ -66,12 +99,30 @@ function updateClock() {
   }).toUpperCase()
 }
 
+async function loadWeather() {
+  try {
+    const data = await fetchWeather()
+    liveWeather.value = data
+  } catch (err) {
+    console.debug('Failed fetching initial live weather:', err)
+  }
+}
+
 onMounted(() => {
   updateClock()
   clockTimer = setInterval(updateClock, 1000)
+  loadWeather()
+
+  // Subscribe to live WebSocket weather updates
+  unsubscribeWs = wsService.on('weather_updated', (data: WeatherData) => {
+    if (data) {
+      liveWeather.value = data
+    }
+  })
 })
 
 onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer)
+  if (unsubscribeWs) unsubscribeWs()
 })
 </script>

@@ -1,4 +1,4 @@
-"""Async background task scheduler for recurring event ingestion."""
+"""Async background task scheduler for recurring event ingestion and weather refresh."""
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -9,9 +9,12 @@ from backend.app.db.session import get_db
 from backend.app.providers.base import GeoPoint
 from backend.app.providers.registry import provider_registry
 from backend.app.services.ingestion import ingestion_service
+from backend.app.services.weather import weather_service
+from backend.app.services.websocket import connection_manager
 
 scheduler = AsyncIOScheduler()
 JOB_ID_SYNC = "recurring_provider_sync"
+JOB_ID_WEATHER = "recurring_weather_refresh"
 
 
 async def execute_scheduled_sync() -> None:
@@ -34,6 +37,7 @@ async def execute_scheduled_sync() -> None:
             try:
                 res = await ingestion_service.sync_provider(provider, center, radius)
                 logger.info("Scheduled sync result for [%s]: %s", provider.provider_name, res.get("status"))
+                await connection_manager.broadcast("events_updated", {"provider": provider.provider_name, "status": res.get("status")})
             except Exception as exc:
                 logger.error("Error during scheduled sync for [%s]: %s", provider.provider_name, exc)
 
@@ -41,8 +45,18 @@ async def execute_scheduled_sync() -> None:
         logger.error("Scheduled sync job failed: %s", exc, exc_info=True)
 
 
+async def execute_scheduled_weather_refresh() -> None:
+    """Execute 15-minute weather refresh and broadcast to dashboard displays."""
+    try:
+        logger.info("Executing scheduled weather refresh...")
+        weather = await weather_service.get_current_weather(force_refresh=True)
+        await connection_manager.broadcast("weather_updated", weather.to_dict())
+    except Exception as exc:
+        logger.debug("Scheduled weather refresh error: %s", exc)
+
+
 async def start_scheduler() -> None:
-    """Start the APScheduler engine with configured sync interval from database."""
+    """Start the APScheduler engine with configured sync interval and weather refresh."""
     if scheduler.running:
         return
 
@@ -56,13 +70,22 @@ async def start_scheduler() -> None:
     except Exception:
         pass
 
-    logger.info("Starting background APScheduler with %d-hour interval trigger.", interval_hours)
+    logger.info("Starting background APScheduler with %d-hour sync and 15-minute weather triggers.", interval_hours)
+
     scheduler.add_job(
         execute_scheduled_sync,
         trigger=IntervalTrigger(hours=interval_hours),
         id=JOB_ID_SYNC,
         replace_existing=True,
     )
+
+    scheduler.add_job(
+        execute_scheduled_weather_refresh,
+        trigger=IntervalTrigger(minutes=15),
+        id=JOB_ID_WEATHER,
+        replace_existing=True,
+    )
+
     scheduler.start()
 
 

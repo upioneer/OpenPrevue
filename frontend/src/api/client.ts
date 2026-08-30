@@ -1,4 +1,4 @@
-import type { EventItem, HealthData, SystemSettings, VenueItem } from '../types'
+import type { EventItem, HealthData, SystemSettings, VenueItem, WeatherData } from '../types'
 
 const API_BASE = '/api/v1'
 
@@ -50,6 +50,18 @@ export async function updateSetting(key: string, value: string): Promise<{ key: 
 export async function fetchHealth(): Promise<HealthData> {
   const res = await fetch(`${API_BASE}/health`)
   if (!res.ok) throw new Error(`Failed to fetch health: ${res.statusText}`)
+  return res.json()
+}
+
+export async function fetchWeather(): Promise<WeatherData> {
+  const res = await fetch(`${API_BASE}/weather`)
+  if (!res.ok) throw new Error(`Failed to fetch weather: ${res.statusText}`)
+  return res.json()
+}
+
+export async function refreshWeather(): Promise<WeatherData> {
+  const res = await fetch(`${API_BASE}/weather/refresh`, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to refresh weather: ${res.statusText}`)
   return res.json()
 }
 

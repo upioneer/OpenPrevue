@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from backend.app.api.v1.endpoints.ws import dashboard_websocket_endpoint
 from backend.app.api.v1.router import api_router
 from backend.app.core.config import settings
 from backend.app.core.logging import logger
@@ -30,7 +31,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="OpenPrevue API",
-    version="0.2.0",
+    version="0.3.0",
     description="Self-hosted local event aggregator and interactive retro display backend.",
     lifespan=lifespan,
 )
@@ -46,6 +47,9 @@ app.add_middleware(
 
 # Mount REST API
 app.include_router(api_router)
+
+# Mount root WebSocket endpoint
+app.add_api_websocket_route("/ws/dashboard", dashboard_websocket_endpoint)
 
 # Mount static frontend build if present
 frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"

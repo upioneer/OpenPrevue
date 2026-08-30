@@ -48,6 +48,18 @@ export interface VenueItem {
   needs_review: number
 }
 
+export interface WeatherData {
+  temperature: number
+  apparent_temperature: number
+  weather_code: number
+  condition: string
+  humidity: number
+  wind_speed: number
+  temperature_unit: string
+  wind_speed_unit: string
+  updated_at: string
+}
+
 export interface HealthData {
   status: string
   uptime_seconds: number
