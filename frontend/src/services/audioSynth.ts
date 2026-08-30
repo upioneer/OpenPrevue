@@ -34,12 +34,18 @@ class AnalogAudioService {
     cutGainDb: -8,
   };
 
-  // Curated 90s Weather Channel, Vaporwave, and Smooth Jazz ambient streams
+  // Curated 90s Weather Channel, Vaporwave, Smooth Jazz, and Official Spotify Playlist
   private defaultStreams = [
     { name: "90s Weather Channel Jazz", url: "https://stream.zeno.fm/4wt00p9zsz4tv" },
     { name: "Prevue Vintage Muzak FM", url: "https://stream.zeno.fm/752y841vyb8uv" },
     { name: "Smooth Jazz 24/7", url: "https://streaming.exclusive.radio/er/smoothjazz/icecast.audio" },
   ];
+
+  public readonly officialSpotifyPlaylist = {
+    title: "OpenPrevue Vintage Muzak & Cable Headend Jazz",
+    url: "https://open.spotify.com/playlist/3jiPmIT4RugR8TPhli5Obk?si=22d007e309134d4f",
+    embedUrl: "https://open.spotify.com/embed/playlist/3jiPmIT4RugR8TPhli5Obk?utm_source=generator&theme=0",
+  };
 
   constructor() {
     this.loadFilterConfig();
@@ -394,6 +400,7 @@ class AnalogAudioService {
       isMuzakPlaying: this.isMuzakPlaying,
       streams: this.defaultStreams,
       filter: this.filterConfig,
+      officialSpotifyPlaylist: this.officialSpotifyPlaylist,
     };
   }
 }

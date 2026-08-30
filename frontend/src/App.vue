@@ -9,6 +9,7 @@
     <EASBanner />
     <HeaderBar />
     <router-view />
+    <UpdateToast />
   </div>
 </template>
 
@@ -16,6 +17,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import HeaderBar from './components/HeaderBar.vue'
 import EASBanner from './components/EASBanner.vue'
+import UpdateToast from './components/UpdateToast.vue'
 import { fetchSettings } from './api/client'
 import { wsService } from './services/websocket'
 

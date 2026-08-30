@@ -2,26 +2,26 @@
 
 Self-hosted local event aggregator and interactive retro display system styled after 1990s scrolling cable channel guides.
 
-![OpenPrevue 16:9 Hero Dashboard](./project_details/changelog/v0.14.1/dashboard_landscape.png)
+![OpenPrevue 16:9 Hero Dashboard](./project_details/changelog/v0.16.0/dashboard_landscape.png)
 
 ---
 
 ## Visual Showcase
 
 ### Standard 16:9 Retro Cable Guide Display (Hero View)
-![OpenPrevue 16:9 Landscape Dashboard](./project_details/changelog/v0.14.1/dashboard_landscape.png)
+![OpenPrevue 16:9 Landscape Dashboard](./project_details/changelog/v0.16.0/dashboard_landscape.png)
 
 ### Vertical 9:16 Portrait Kiosk & Wall Display
-![OpenPrevue 9:16 Vertical Portrait Kiosk](./project_details/changelog/v0.14.1/dashboard_portrait.png)
+![OpenPrevue 9:16 Vertical Portrait Kiosk](./project_details/changelog/v0.16.0/dashboard_portrait.png)
 
 ### Small Touchscreen & Raspberry Pi 7" Display
-![OpenPrevue Small Screen Display](./project_details/changelog/v0.14.1/dashboard_small_pi.png)
+![OpenPrevue Small Screen Display](./project_details/changelog/v0.16.0/dashboard_small_pi.png)
 
 ### First-Boot Regional Setup Wizard
-![OpenPrevue Setup Wizard Modal](./project_details/changelog/v0.14.1/setup_wizard_modal.png)
+![OpenPrevue Setup Wizard Modal](./project_details/changelog/v0.16.0/setup_wizard_modal.png)
 
 ### Settings Control Center & Audio Synthesizer
-![OpenPrevue Settings Control Center](./project_details/changelog/v0.14.1/settings_control_center.png)
+![OpenPrevue Settings Control Center](./project_details/changelog/v0.16.0/settings_control_center.png)
 
 ---
 
@@ -34,11 +34,14 @@ OpenPrevue aggregates local event listings across developer ticketing APIs, spor
 ## Key Features
 
 * **Authentic 1990s Prevue Experience:** CRT scanline shaders, selectable palettes (EGA 16, Commodore 64, Amber, Green phosphor), and Web Audio analog tape hiss with 60 Hz mains hum.
-* **Dynamic Sports Matchup Graphics:** Automatically renders vector logos and "VS" broadcast cards for NFL, NBA, MLB, MLS, and Formula 1.
+* **Dynamic Sports Matchup Graphics:** Automatically renders vector logos and "VS" broadcast cards for all 32 NFL, 30 NBA, 30 MLB, 32 NHL, 29 MLS, and Premier League teams.
+* **1990s Television Commercials & Station Bumpers:** Periodically plays retro TV commercial breaks in the top preview quadrant with audio ducking and custom video drag-and-drop dropzone.
+* **Translucent Spotify Divider Ticker:** Overlayed bottom ticker with animated equalizer bars and 1-click launch link to the official Spotify playlist.
 * **Turnkey Multi-Format Ingestion:** Ingests events from Ticketmaster, SeatGeek, Eventbrite, iCal (.ics), MIME email (.eml), and Microsoft Outlook (.msg).
 * **Emergency Alert System (EAS):** NOAA / NWS CAP feed ingestion with 853 Hz + 960 Hz dual-tone audio attention signal.
 * **Telegram Remote Curation & Voice Notes:** Manage pins, watchlists, and queries via retro ASCII Telegram cards and spoken voice notes.
 * **Model Context Protocol (MCP):** Embedded JSON-RPC 2.0 MCP server exposing tools and resources to external AI agents.
+* **Auto-Update Notification Hub:** Built-in semantic version tracking against GitHub releases with plain-English rate-limit handling and configurable check cadence.
 * **Multi-Arch Docker Ready:** Cross-compiled for both `linux/amd64` (standard servers/PCs) and `linux/arm64` (Raspberry Pi 4/5, Apple Silicon).
 
 ---
@@ -170,7 +173,7 @@ npm run build
 Capture Playwright screenshots:
 
 ```bash
-python project_details/playbooks/capture_screenshots.py --version v0.14.1
+python project_details/playbooks/capture_screenshots.py --version v0.16.0
 ```
 
 ---

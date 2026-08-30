@@ -74,6 +74,22 @@ export interface HealthData {
   telegram_bot: string
 }
 
+export interface UpdateStatusResponse {
+  current_version: string
+  latest_version: string
+  update_available: boolean
+  release_url: string
+  release_title: string
+  release_notes: string
+  last_checked: string | null
+  update_check_interval: string
+  rate_limit_remaining?: number | null
+  rate_limit_reset_minutes?: number | null
+  is_rate_limited?: boolean
+  user_message?: string | null
+  last_error?: string | null
+}
+
 export interface SystemSettings {
   postal_code: string
   metro_label: string
@@ -88,5 +104,7 @@ export interface SystemSettings {
   vhs_tracking_noise: string
   time_format: string
   sync_interval_hours: string
-  [key: string]: string
+  update_check_interval?: string
+  auto_update_notifs?: string
+  [key: string]: string | undefined
 }

@@ -1,4 +1,4 @@
-import type { EventItem, HealthData, SystemSettings, VenueItem, WeatherData } from '../types'
+import type { EventItem, HealthData, SystemSettings, UpdateStatusResponse, VenueItem, WeatherData } from '../types'
 
 const API_BASE = '/api/v1'
 
@@ -143,5 +143,17 @@ export async function dispatchEASTestAlert(data: {
     body: JSON.stringify(data),
   })
   if (!res.ok) throw new Error(`Failed to dispatch EAS test alert: ${res.statusText}`)
+  return res.json()
+}
+
+export async function fetchUpdateStatus(): Promise<UpdateStatusResponse> {
+  const res = await fetch(`${API_BASE}/updates/status`)
+  if (!res.ok) throw new Error(`Failed to fetch update status: ${res.statusText}`)
+  return res.json()
+}
+
+export async function checkUpdatesNow(): Promise<UpdateStatusResponse> {
+  const res = await fetch(`${API_BASE}/updates/check`, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to check updates: ${res.statusText}`)
   return res.json()
 }

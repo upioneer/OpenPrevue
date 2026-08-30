@@ -16,13 +16,15 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "radius_miles": str(settings.DEFAULT_RADIUS_MILES),
     "autoscroll_speed": "60",
     "marquee_rotation_seconds": "20",
-    "scanline_intensity": "8",
+    "scanline_intensity": "12",
     "phosphor_glow": "1",
     "crt_curvature": "0",
     "vhs_tracking_noise": "0",
     "time_format": "12h",
     "sync_interval_hours": "6",
     "initial_setup_completed": "0",
+    "update_check_interval": "disabled",
+    "auto_update_notifs": "0",
 }
 
 

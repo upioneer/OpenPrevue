@@ -29,7 +29,7 @@
       <div class="flex items-center space-x-2 bg-[#000022] px-2 py-0.5 border border-[#333366]">
         <button
           @click="toggleAudio"
-          class="px-1.5 py-0.2 text-[10px] font-bold uppercase transition"
+          class="px-1.5 py-0.2 text-[10px] font-bold uppercase transition cursor-pointer"
           :class="isAudioPlaying ? 'bg-[#00FF00] text-[#000033]' : 'bg-[#333366] text-[#A0A0C0] hover:text-[#FFFFFF]'"
           title="Toggle Ambient Weather Jazz & Tape Hiss"
         >
@@ -67,9 +67,9 @@ const props = withDefaults(
     weatherCondition?: string
   }>(),
   {
-    metroLabel: 'NEW ORLEANS',
-    radiusMiles: '35',
-    weatherTemp: '74F',
+    metroLabel: 'NEW YORK CITY',
+    radiusMiles: '25',
+    weatherTemp: '68F',
     weatherCondition: 'CLEAR SKY',
   }
 )

@@ -1,5 +1,6 @@
-"""Async background task scheduler for recurring event ingestion, weather refresh, and EAS alerts."""
+"""Async background task scheduler for recurring event ingestion, weather refresh, EAS alerts, and update checks."""
 
+import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.schedulers.base import STATE_RUNNING, STATE_STOPPED
 from apscheduler.triggers.interval import IntervalTrigger
@@ -11,6 +12,7 @@ from backend.app.providers.base import GeoPoint
 from backend.app.providers.registry import provider_registry
 from backend.app.services.eas import eas_service
 from backend.app.services.ingestion import ingestion_service
+from backend.app.services.updater import update_service
 from backend.app.services.weather import weather_service
 from backend.app.services.websocket import connection_manager
 
@@ -18,6 +20,7 @@ scheduler = AsyncIOScheduler()
 JOB_ID_SYNC = "recurring_provider_sync"
 JOB_ID_WEATHER = "recurring_weather_refresh"
 JOB_ID_EAS = "recurring_eas_poll"
+JOB_ID_UPDATES = "recurring_update_check"
 
 
 async def execute_scheduled_sync() -> None:
@@ -26,7 +29,9 @@ async def execute_scheduled_sync() -> None:
 
     try:
         async with get_db() as db:
-            async with db.execute("SELECT key, value FROM settings WHERE key IN ('latitude', 'longitude', 'radius_miles')") as cursor:
+            async with db.execute(
+                "SELECT key, value FROM settings WHERE key IN ('latitude', 'longitude', 'radius_miles')"
+            ) as cursor:
                 rows = await cursor.fetchall()
                 settings_map = {row["key"]: row["value"] for row in rows}
 
@@ -40,7 +45,9 @@ async def execute_scheduled_sync() -> None:
             try:
                 res = await ingestion_service.sync_provider(provider, center, radius)
                 logger.info("Scheduled sync result for [%s]: %s", provider.provider_name, res.get("status"))
-                await connection_manager.broadcast("events_updated", {"provider": provider.provider_name, "status": res.get("status")})
+                await connection_manager.broadcast(
+                    "events_updated", {"provider": provider.provider_name, "status": res.get("status")}
+                )
             except Exception as exc:
                 logger.error("Error during scheduled sync for [%s]: %s", provider.provider_name, exc)
 
@@ -66,8 +73,16 @@ async def execute_scheduled_eas_poll() -> None:
         logger.debug("Scheduled EAS poll error: %s", exc)
 
 
+async def execute_scheduled_update_check() -> None:
+    """Execute background update check according to configured interval."""
+    try:
+        await update_service.check_for_updates()
+    except Exception as exc:
+        logger.debug("Scheduled update check error: %s", exc)
+
+
 async def start_scheduler() -> None:
-    """Start the APScheduler engine with configured sync interval, weather refresh, and EAS polling."""
+    """Start the APScheduler engine with configured sync interval, weather refresh, EAS polling, and update checks."""
     global scheduler
 
     if scheduler.state == STATE_STOPPED:
@@ -77,16 +92,26 @@ async def start_scheduler() -> None:
         return
 
     interval_hours = 6
+    update_interval = "weekly"
     try:
         async with get_db() as db:
-            async with db.execute("SELECT value FROM settings WHERE key = 'sync_interval_hours'") as cursor:
-                row = await cursor.fetchone()
-                if row:
-                    interval_hours = int(row["value"])
+            async with db.execute(
+                "SELECT key, value FROM settings WHERE key IN ('sync_interval_hours', 'update_check_interval')"
+            ) as cursor:
+                rows = await cursor.fetchall()
+                for row in rows:
+                    if row["key"] == "sync_interval_hours" and row["value"]:
+                        interval_hours = int(row["value"])
+                    elif row["key"] == "update_check_interval" and row["value"]:
+                        update_interval = row["value"]
     except Exception:
         pass
 
-    logger.info("Starting background APScheduler with %d-hour sync, 15-min weather, and 5-min EAS triggers.", interval_hours)
+    logger.info(
+        "Starting background APScheduler with %d-hour sync, 15-min weather, 5-min EAS, and %s update check.",
+        interval_hours,
+        update_interval,
+    )
 
     scheduler.add_job(
         execute_scheduled_sync,
@@ -109,7 +134,26 @@ async def start_scheduler() -> None:
         replace_existing=True,
     )
 
+    if update_interval == "daily":
+        scheduler.add_job(
+            execute_scheduled_update_check,
+            trigger=IntervalTrigger(hours=24),
+            id=JOB_ID_UPDATES,
+            replace_existing=True,
+        )
+    elif update_interval == "weekly":
+        scheduler.add_job(
+            execute_scheduled_update_check,
+            trigger=IntervalTrigger(days=7),
+            id=JOB_ID_UPDATES,
+            replace_existing=True,
+        )
+
     scheduler.start()
+
+    # Trigger initial non-blocking update check if not disabled
+    if update_interval != "disabled":
+        asyncio.create_task(update_service.check_for_updates())
 
 
 def reschedule_sync_interval(interval_hours: int) -> None:

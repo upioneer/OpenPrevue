@@ -215,11 +215,128 @@
         </div>
       </div>
 
-      <!-- Tab 3: Audio & Muzak Synthesizer -->
+      <!-- Tab 3: Audio, Spotify, Commercials & Muzak Synthesizer -->
       <div v-if="activeTab === 'audio'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
-          Background Audio, RF Headend Filter & Tape Hiss
+          Background Audio, Spotify, Retro Commercials & RF Filter
         </h2>
+
+        <!-- Retro Video Commercials & Bumpers Engine Card -->
+        <div class="bg-[#000033] border border-[#FFFF00] p-4 space-y-4">
+          <div class="flex items-center justify-between border-b border-[#333366] pb-2">
+            <div>
+              <span class="text-xs font-bold text-[#FFFF00] block uppercase">
+                1990s Television Commercials & Station Bumpers Engine
+              </span>
+              <span class="text-[11px] text-[#8888AA]">
+                Periodically plays retro commercial breaks and station IDs in the top preview quadrant.
+              </span>
+            </div>
+            <label class="flex items-center space-x-2 text-xs font-bold text-[#00FF00] cursor-pointer">
+              <input
+                v-model="commercialsEnabled"
+                @change="handleCommercialsConfigChange"
+                type="checkbox"
+                class="w-4 h-4 accent-[#00FF00]"
+              />
+              <span>{{ commercialsEnabled ? '[ COMMERCIALS ACTIVE ]' : '[ DISABLED ]' }}</span>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">
+                Commercial Break Frequency: {{ commercialsFrequency }} per hour
+                <span class="text-[#00FFFF] block text-[10px]">
+                  (Plays 1 commercial every {{ Math.round(60 / commercialsFrequency) }} minutes / ~{{ Math.round(15 / commercialsFrequency) || 1 }} songs)
+                </span>
+              </label>
+              <input
+                v-model.number="commercialsFrequency"
+                @input="handleCommercialsConfigChange"
+                type="range"
+                min="1"
+                max="10"
+                step="1"
+                class="w-full accent-[#FFFF00]"
+              />
+            </div>
+
+            <div class="flex items-center space-x-3 pt-2">
+              <button
+                type="button"
+                class="bg-[#000080] hover:bg-[#0000AA] border border-[#FFFF00] text-[#FFFF00] px-4 py-2 text-xs font-bold tracking-wider cursor-pointer transition-colors shadow"
+                @click="triggerCommercialTest"
+              >
+                [ TEST PLAY COMMERCIAL CLIP ]
+              </button>
+            </div>
+          </div>
+
+          <!-- Video Dropzone for User Commercial Rips / OEM Bumpers -->
+          <div class="pt-1 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-[#00FFFF] uppercase">Local Commercial Video Dropzone (.MP4 / .WEBM):</span>
+              <span class="text-[10px] text-[#8888AA]">{{ commercialsEngine.clips.value.length }} clips in queue</span>
+            </div>
+            <div
+              class="border-2 border-dashed border-[#333366] hover:border-[#FFFF00] p-4 text-center rounded-xs transition-colors cursor-pointer bg-[#000022]/60"
+              @dragover.prevent
+              @drop.prevent="handleVideoDrop"
+              @click="triggerVideoFileInput"
+            >
+              <input
+                ref="videoFileInputRef"
+                type="file"
+                accept=".mp4,.webm,.m4v"
+                class="hidden"
+                @change="handleVideoFileSelected"
+              />
+              <div class="space-y-1">
+                <div class="text-xs text-[#FFFF00] font-bold">DRAG AND DROP RETRO COMMERCIAL CLIPS HERE</div>
+                <div class="text-[11px] text-[#8888AA]">Plays in top preview window during scheduled commercial breaks</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Official OpenPrevue Spotify Playlist Banner -->
+        <div class="bg-[#000033] border border-[#1DB954] p-4 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1DB954]/40 pb-2">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 bg-[#1DB954] inline-block animate-pulse"></span>
+              <h3 class="text-xs font-bold text-[#1DB954] uppercase tracking-wider">
+                Official OpenPrevue Spotify Playlist
+              </h3>
+            </div>
+            <a
+              href="https://open.spotify.com/playlist/3jiPmIT4RugR8TPhli5Obk?si=22d007e309134d4f"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="bg-[#1DB954] text-[#000033] hover:bg-white px-3 py-1 text-xs font-black tracking-wider transition-all cursor-pointer inline-block text-center shadow-[0_0_10px_rgba(29,185,84,0.6)]"
+            >
+              [ OPEN PLAYLIST ON SPOTIFY ]
+            </a>
+          </div>
+
+          <p class="text-[11px] text-[#A0A0C0] leading-relaxed">
+            Curated vintage ambient jazz, 1990s Weather Channel smooth lounge, vaporwave acoustics, and vintage cable headend themes.
+          </p>
+
+          <!-- Spotify Embedded Player -->
+          <div class="w-full pt-1">
+            <iframe
+              style="border-radius: 4px"
+              src="https://open.spotify.com/embed/playlist/3jiPmIT4RugR8TPhli5Obk?utm_source=generator&theme=0"
+              width="100%"
+              height="152"
+              frameBorder="0"
+              allowfullscreen
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+            ></iframe>
+          </div>
+        </div>
 
         <!-- Headend Audio Encoding & Filter Guidance Banner -->
         <div class="bg-[#000033] border border-[#333366] p-4 space-y-2">
@@ -761,6 +878,128 @@
         </div>
       </div>
 
+      <!-- Tab 8: System Updates & Version Management -->
+      <div v-if="activeTab === 'updates'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
+        <div class="flex items-center justify-between border-b border-[#333366] pb-2">
+          <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
+            System Updates & Release Management
+          </h2>
+          <span
+            class="text-[11px] px-2 py-0.5 border"
+            :class="updateStatus?.update_available ? 'bg-[#FFFF00] text-[#000033] border-[#FFFF00] font-black animate-pulse' : 'bg-[#003300] text-[#00FF00] border-[#00FF00]'"
+          >
+            {{ updateStatus?.update_available ? `[ UPDATE AVAILABLE: v${updateStatus.latest_version} ]` : '[ SYSTEM UP TO DATE ]' }}
+          </span>
+        </div>
+
+        <!-- Rate Limit Friendly Banner if active -->
+        <div v-if="updateStatus?.is_rate_limited" class="p-3 bg-[#332200] border-2 border-[#FFAA00] text-[#FFCC00] text-xs leading-relaxed space-y-1">
+          <div class="font-black tracking-wider text-[#FFFF00] uppercase">[ GITHUB CHECK LIMIT REACHED ]</div>
+          <p>{{ updateStatus.user_message || 'You have checked for updates frequently. Requests are temporarily paused and will resume shortly.' }}</p>
+        </div>
+
+        <!-- Version Telemetry Card -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+          <div class="bg-[#000022] p-2 border border-[#333366]">
+            <span class="text-[#8888AA] block text-[10px]">CURRENT VERSION:</span>
+            <span class="text-[#FFFF00] font-bold">v{{ updateStatus?.current_version || '0.15.0' }}</span>
+          </div>
+          <div class="bg-[#000022] p-2 border border-[#333366]">
+            <span class="text-[#8888AA] block text-[10px]">LATEST RELEASE:</span>
+            <span class="text-[#00FFFF] font-bold">v{{ updateStatus?.latest_version || updateStatus?.current_version || '0.15.0' }}</span>
+          </div>
+          <div class="bg-[#000022] p-2 border border-[#333366]">
+            <span class="text-[#8888AA] block text-[10px]">LAST CHECKED:</span>
+            <span class="text-[#E0E0E0] font-bold">{{ updateStatus?.last_checked ? new Date(updateStatus.last_checked).toLocaleTimeString() : 'Never' }}</span>
+          </div>
+          <div class="bg-[#000022] p-2 border border-[#333366]">
+            <span class="text-[#8888AA] block text-[10px]">CHECK STATUS:</span>
+            <span class="font-bold" :class="updateStatus?.is_rate_limited ? 'text-[#FFAA00]' : 'text-[#00FF00]'">
+              {{ updateStatus?.is_rate_limited
+                ? `Waiting ~${updateStatus.rate_limit_reset_minutes || 60}m`
+                : (updateStatus?.rate_limit_remaining !== undefined && updateStatus.rate_limit_remaining !== null
+                    ? `${updateStatus.rate_limit_remaining} / 60 remaining`
+                    : 'Normal')
+              }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Auto-Update Cadence Settings -->
+        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+          <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
+            Auto-Update Notification Cadence & Network Policy
+          </h3>
+          <p class="text-[11px] text-[#8888AA] leading-relaxed">
+            GitHub unauthenticated requests are limited to 60 per hour for your network. OpenPrevue defaults to <strong class="text-[#FFFF00]">Disabled</strong> (zero outbound calls). When turned on, checks are cached for 6 hours so your network never exceeds the limit.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">Update Check Frequency:</label>
+              <select
+                v-model="form.update_check_interval"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+              >
+                <option value="disabled">Disabled (Default: Zero External Network Calls)</option>
+                <option value="weekly">Weekly Check (Recommended for Homelab Deployments)</option>
+                <option value="daily">Daily Check (Ultra Low Bandwidth)</option>
+                <option value="on_boot">Check on Server Startup Only</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-3 pt-2">
+            <button
+              :disabled="isCheckingUpdates"
+              class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-4 py-1.5 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-50 transition-colors"
+              @click="handleCheckUpdatesNow"
+            >
+              {{ isCheckingUpdates ? '[ CHECKING GITHUB FOR UPDATES... ]' : '[ CHECK FOR UPDATES NOW ]' }}
+            </button>
+            <span v-if="updateProbeMessage" class="text-xs font-bold" :class="updateProbeMessage.startsWith('Notice:') ? 'text-[#FFAA00]' : 'text-[#00FF00]'">
+              {{ updateProbeMessage }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Release Notes Section if available -->
+        <div v-if="updateStatus?.update_available" class="bg-[#000033] p-4 border border-[#FFFF00] space-y-2">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold text-[#FFFF00] uppercase">
+              {{ updateStatus.release_title || `Release v${updateStatus.latest_version}` }}
+            </h4>
+            <a
+              :href="updateStatus.release_url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-[11px] text-[#00FFFF] hover:underline font-bold"
+            >
+              [ VIEW ON GITHUB RELEASES ]
+            </a>
+          </div>
+          <pre class="bg-[#000022] p-3 border border-[#333366] text-[#E0E0E0] text-[11px] max-h-48 overflow-y-auto whitespace-pre-wrap font-mono">{{ updateStatus.release_notes || 'No release notes provided.' }}</pre>
+        </div>
+
+        <!-- 1-Click Homelab Docker Upgrade Snippet -->
+        <div class="bg-[#000033] p-4 border border-[#333366] space-y-2">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold text-[#00FFFF] uppercase">
+              Homelab Docker Container Upgrade Command
+            </h4>
+            <button
+              class="text-[10px] text-[#FFFF00] hover:underline font-bold cursor-pointer"
+              @click="copyDockerUpgradeCommand"
+            >
+              [ {{ copiedCommand ? 'COPIED TO CLIPBOARD' : 'COPY COMMAND' }} ]
+            </button>
+          </div>
+          <code class="block bg-[#000022] p-2 border border-[#333366] text-[#00FF00] text-xs font-bold">
+            docker pull ghcr.io/upioneer/openprevue:latest && docker compose up -d
+          </code>
+        </div>
+      </div>
+
       <!-- Action Bar -->
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t-2 border-[#FFFF00]">
         <div class="flex items-center space-x-3">
@@ -790,12 +1029,14 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import {
+  checkUpdatesNow,
   dispatchEASTestAlert,
   fetchHealth,
   fetchSpeechStatus,
   fetchSettings,
   fetchTelegramStatus,
   fetchTelegramUsers,
+  fetchUpdateStatus,
   generateTelegramPairCode,
   sendTelegramTestMessage,
   testSpeechPipeline,
@@ -805,8 +1046,9 @@ import {
 } from '../api/client'
 import { retroShader, type ShaderConfig } from '../services/retroShader'
 import { audioSynth, type AudioFilterConfig, type AudioFilterProfile } from '../services/audioSynth'
+import { commercialsEngine } from '../services/commercialsEngine'
 import { REGIONAL_PRESETS, type RegionalPreset } from '../services/regionalPresets'
-import type { HealthData, SystemSettings } from '../types'
+import type { HealthData, SystemSettings, UpdateStatusResponse } from '../types'
 
 const tabs = [
   { id: 'location', label: '[ LOCATION & DISCOVERY ]' },
@@ -816,6 +1058,7 @@ const tabs = [
   { id: 'telegram', label: '[ TELEGRAM & SPEECH ]' },
   { id: 'eas', label: '[ EMERGENCY ALERTS (EAS) ]' },
   { id: 'providers', label: '[ PROVIDER CREDENTIALS ]' },
+  { id: 'updates', label: '[ SYSTEM & UPDATES ]' },
 ]
 
 const activeTab = ref('location')
@@ -830,6 +1073,17 @@ const speechTestResult = ref('')
 const speechStatus = ref<{ status: string; mode: string; speech_enabled: boolean; stt_status: string; tts_status: string; stt_engine: string; tts_engine: string; latency_ms: number; last_heartbeat: string } | null>(null)
 const isTestingEAS = ref(false)
 const easTestMessage = ref('')
+
+// Commercials Engine UI State
+const commercialsEnabled = ref(commercialsEngine.isEnabled.value)
+const commercialsFrequency = ref(commercialsEngine.frequencyPerHour.value)
+const videoFileInputRef = ref<HTMLInputElement | null>(null)
+
+// Update Tracking State
+const updateStatus = ref<UpdateStatusResponse | null>(null)
+const isCheckingUpdates = ref(false)
+const updateProbeMessage = ref('')
+const copiedCommand = ref(false)
 
 // Retro Shader Config Reactive State
 const shaderForm = reactive<ShaderConfig>({
@@ -888,6 +1142,10 @@ const form = reactive<SystemSettings>({
   ai_groq_key: '',
   ai_openai_key: '',
   ai_anthropic_key: '',
+  update_check_interval: 'disabled',
+  auto_update_notifs: '0',
+  commercials_enabled: '0',
+  commercials_frequency_per_hour: '4',
 })
 
 function applyRegionalPreset(preset: RegionalPreset) {
@@ -951,6 +1209,33 @@ function playLocalTrack(file: File) {
   isAudioPreviewPlaying.value = true
 }
 
+function handleCommercialsConfigChange() {
+  commercialsEngine.updateConfig(commercialsEnabled.value, commercialsFrequency.value)
+  form.commercials_enabled = commercialsEnabled.value ? '1' : '0'
+  form.commercials_frequency_per_hour = commercialsFrequency.value.toString()
+}
+
+function triggerCommercialTest() {
+  commercialsEngine.playRandomCommercial()
+}
+
+function triggerVideoFileInput() {
+  videoFileInputRef.value?.click()
+}
+
+function handleVideoFileSelected(e: Event) {
+  const target = e.target as HTMLInputElement
+  if (target.files && target.files.length > 0) {
+    commercialsEngine.addUploadedClip(target.files[0])
+  }
+}
+
+function handleVideoDrop(e: DragEvent) {
+  if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+    commercialsEngine.addUploadedClip(e.dataTransfer.files[0])
+  }
+}
+
 function triggerFileInput() {
   fileInputRef.value?.click()
 }
@@ -985,20 +1270,66 @@ function processUploadedFile(file: File) {
   }, 1200)
 }
 
+async function handleCheckUpdatesNow() {
+  isCheckingUpdates.value = true
+  updateProbeMessage.value = ''
+  try {
+    const res = await checkUpdatesNow()
+    updateStatus.value = res
+    if (res.is_rate_limited) {
+      updateProbeMessage.value = `Notice: Please wait about ${res.rate_limit_reset_minutes || 60}m before checking again.`
+    } else if (res.update_available) {
+      updateProbeMessage.value = `A new version (v${res.latest_version}) is available.`
+    } else if (res.user_message) {
+      updateProbeMessage.value = res.user_message
+    } else {
+      updateProbeMessage.value = 'OpenPrevue is running the newest version.'
+    }
+    setTimeout(() => {
+      updateProbeMessage.value = ''
+    }, 5000)
+  } catch (err) {
+    updateProbeMessage.value = 'Could not check for updates right now. Please try again later.'
+  } finally {
+    isCheckingUpdates.value = false
+  }
+}
+
+function copyDockerUpgradeCommand() {
+  navigator.clipboard.writeText('docker pull ghcr.io/upioneer/openprevue:latest && docker compose up -d')
+  copiedCommand.value = true
+  setTimeout(() => {
+    copiedCommand.value = false
+  }, 3000)
+}
+
 async function loadAll() {
   try {
-    const [s, h, tStatus, tUsers, spStatus] = await Promise.all([
+    const [s, h, tStatus, tUsers, spStatus, uStatus] = await Promise.all([
       fetchSettings(),
       fetchHealth(),
       fetchTelegramStatus(),
       fetchTelegramUsers(),
       fetchSpeechStatus(),
+      fetchUpdateStatus().catch(() => null),
     ])
     Object.assign(form, s)
     healthData.value = h
     telegramStatus.value = tStatus
     telegramUsers.value = tUsers
     speechStatus.value = spStatus
+    if (uStatus) {
+      updateStatus.value = uStatus
+    }
+
+    if (s.commercials_enabled) {
+      commercialsEnabled.value = s.commercials_enabled === '1'
+      commercialsEngine.isEnabled.value = commercialsEnabled.value
+    }
+    if (s.commercials_frequency_per_hour) {
+      commercialsFrequency.value = parseInt(s.commercials_frequency_per_hour, 10)
+      commercialsEngine.frequencyPerHour.value = commercialsFrequency.value
+    }
 
     // Init retro shaders
     retroShader.init()
