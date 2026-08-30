@@ -1,5 +1,11 @@
 <template>
   <main class="flex-1 flex flex-col w-full h-full overflow-hidden relative">
+    <!-- First-Boot Setup Wizard Modal -->
+    <SetupModal
+      :initial-setup-completed="settings?.initial_setup_completed"
+      @setup-completed="loadData"
+    />
+
     <!-- Top Pane: Spotlight Promo (45% Landscape / 34% Portrait) -->
     <div class="h-[45%] portrait-spotlight-height w-full shrink-0">
       <SpotlightPane
@@ -11,8 +17,8 @@
     <!-- Middle Ribbon: Divider Status Bar (6% Landscape / 5% Portrait) -->
     <div class="h-[6%] portrait-ribbon-height w-full shrink-0">
       <DividerRibbon
-        :metro-label="settings?.metro_label || 'NEW ORLEANS'"
-        :radius-miles="settings?.radius_miles || '35'"
+        :metro-label="settings?.metro_label || 'NEW YORK CITY'"
+        :radius-miles="settings?.radius_miles || '25'"
       />
     </div>
 
@@ -33,6 +39,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import SpotlightPane from '../components/SpotlightPane.vue'
 import DividerRibbon from '../components/DividerRibbon.vue'
 import TimelineGrid from '../components/TimelineGrid.vue'
+import SetupModal from '../components/SetupModal.vue'
 import { fetchEvents, fetchSettings, fetchVenues } from '../api/client'
 import { wsService } from '../services/websocket'
 import type { EventItem, SystemSettings, VenueItem } from '../types'

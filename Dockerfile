@@ -17,7 +17,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=8080 \
     DATA_DIR=/app/data \
-    TZ=America/Chicago
+    TZ=America/New_York
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \

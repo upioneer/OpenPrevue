@@ -22,6 +22,7 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "vhs_tracking_noise": "0",
     "time_format": "12h",
     "sync_interval_hours": "6",
+    "initial_setup_completed": "0",
 }
 
 

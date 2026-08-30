@@ -3,21 +3,21 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: openprevue:latest
+    image: ghcr.io/upioneer/openprevue:latest
     container_name: openprevue
     restart: unless-stopped
     ports:
       - "${PORT:-8080}:8080"
     environment:
-      - TZ=${TZ:-America/Chicago}
+      - TZ=${TZ:-America/New_York}
       - PORT=8080
       - DATA_DIR=/app/data
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - DEFAULT_POSTAL_CODE=${DEFAULT_POSTAL_CODE:-70112}
-      - DEFAULT_METRO_LABEL=${DEFAULT_METRO_LABEL:-NEW ORLEANS}
-      - DEFAULT_LATITUDE=${DEFAULT_LATITUDE:-29.9511}
-      - DEFAULT_LONGITUDE=${DEFAULT_LONGITUDE:--90.0715}
-      - DEFAULT_RADIUS_MILES=${DEFAULT_RADIUS_MILES:-35}
+      - DEFAULT_POSTAL_CODE=${DEFAULT_POSTAL_CODE:-10001}
+      - DEFAULT_METRO_LABEL=${DEFAULT_METRO_LABEL:-NEW YORK CITY}
+      - DEFAULT_LATITUDE=${DEFAULT_LATITUDE:-40.7128}
+      - DEFAULT_LONGITUDE=${DEFAULT_LONGITUDE:--74.0060}
+      - DEFAULT_RADIUS_MILES=${DEFAULT_RADIUS_MILES:-25}
       - TICKETMASTER_API_KEY=${TICKETMASTER_API_KEY:-}
       - SEATGEEK_CLIENT_ID=${SEATGEEK_CLIENT_ID:-}
       - SEATGEEK_CLIENT_SECRET=${SEATGEEK_CLIENT_SECRET:-}

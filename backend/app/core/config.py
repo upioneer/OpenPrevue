@@ -16,17 +16,17 @@ class Settings(BaseSettings):
     # Server parameters
     PORT: int = 8080
     HOST: str = "0.0.0.0"
-    TZ: str = "America/Chicago"
+    TZ: str = "America/New_York"
     DATA_DIR: str = "./data"
     LOG_LEVEL: str = "INFO"
     APP_ENV: str = "development"
 
-    # Aggregator defaults
-    DEFAULT_POSTAL_CODE: str = "70112"
-    DEFAULT_METRO_LABEL: str = "NEW ORLEANS"
-    DEFAULT_LATITUDE: float = 29.9511
-    DEFAULT_LONGITUDE: float = -90.0715
-    DEFAULT_RADIUS_MILES: float = 35.0
+    # Aggregator defaults (Default: New York City)
+    DEFAULT_POSTAL_CODE: str = "10001"
+    DEFAULT_METRO_LABEL: str = "NEW YORK CITY"
+    DEFAULT_LATITUDE: float = 40.7128
+    DEFAULT_LONGITUDE: float = -74.0060
+    DEFAULT_RADIUS_MILES: float = 25.0
 
     # Optional provider credentials
     TICKETMASTER_API_KEY: str | None = None
