@@ -5,6 +5,7 @@ from backend.app.api.v1.endpoints import (
     eas,
     events,
     health,
+    mcp,
     settings,
     speech,
     sync,
@@ -26,3 +27,4 @@ api_router.include_router(ws.router, tags=["WebSocket"])
 api_router.include_router(telegram.router, tags=["Telegram"])
 api_router.include_router(speech.router, tags=["Speech"])
 api_router.include_router(eas.router, tags=["Emergency Alert System"])
+api_router.include_router(mcp.router, tags=["Model Context Protocol"])
