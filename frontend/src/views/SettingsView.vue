@@ -162,7 +162,7 @@
               type="range"
               min="0"
               max="100"
-              step="5"
+              step="1"
               class="w-full accent-[#FFFF00]"
             />
           </div>
@@ -270,7 +270,7 @@
               class="px-4 py-2 border text-xs font-black tracking-wider transition-all cursor-pointer"
               :class="isAudioPreviewPlaying
                 ? 'bg-[#FF4444] text-white border-[#FF4444]'
-                : 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_8px_rgba(0,255,0,0.8)]'"
+                : 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_8px_rgba(255,255,0,0.8)]'"
               @click="toggleAudioPreview"
             >
               {{ isAudioPreviewPlaying ? '[ STOP AUDIO GENERATOR ]' : '[ TEST SOUND GENERATOR ]' }}
@@ -717,7 +717,7 @@ const easTestMessage = ref('')
 // Retro Shader Config Reactive State
 const shaderForm = reactive<ShaderConfig>({
   scanlines: true,
-  scanlineIntensity: 45,
+  scanlineIntensity: 12,
   phosphorGlow: true,
   crtCurvature: false,
   vhsNoise: false,
@@ -745,7 +745,7 @@ const form = reactive<SystemSettings>({
   radius_miles: '25',
   autoscroll_speed: '60',
   marquee_rotation_seconds: '20',
-  scanline_intensity: '45',
+  scanline_intensity: '12',
   phosphor_glow: '1',
   crt_curvature: '0',
   vhs_tracking_noise: '0',

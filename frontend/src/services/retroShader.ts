@@ -13,7 +13,7 @@ export interface ShaderConfig {
 class RetroShaderService {
   private config: ShaderConfig = {
     scanlines: true,
-    scanlineIntensity: 45,
+    scanlineIntensity: 12,
     phosphorGlow: true,
     crtCurvature: false,
     vhsNoise: false,
