@@ -29,11 +29,14 @@ class EASService:
     async def fetch_nws_alerts(self, latitude: float, longitude: float) -> list[EmergencyAlert]:
         """Fetch active meteorological warnings from National Weather Service (NWS) CAP API."""
         url = f"https://api.weather.gov/alerts/active?point={latitude:.4f},{longitude:.4f}"
-        headers = {"User-Agent": "(OpenPrevue, contact@openprevue.org)"}
+        headers = {
+            "User-Agent": "OpenPrevue/0.7.0 (contact@openprevue.org)",
+            "Accept": "application/geo+json, application/json",
+        }
         alerts: list[EmergencyAlert] = []
 
         try:
-            async with httpx.AsyncClient(timeout=8.0) as client:
+            async with httpx.AsyncClient(timeout=4.0) as client:
                 res = await client.get(url, headers=headers)
                 if res.status_code == 200:
                     data = res.json()
@@ -51,8 +54,8 @@ class EASService:
                         urgency = props.get("urgency", "Immediate")
                         area_desc = props.get("areaDesc", "Local Area")
                         instruction = props.get("instruction") or props.get("description", "Take appropriate precautions.")
-                        effective = props.get("effective", datetime.now(timezone.utc).isoformat())
-                        expires = props.get("expires", datetime.now(timezone.utc).isoformat())
+                        effective = props.get("effective") or datetime.now(timezone.utc).isoformat()
+                        expires = props.get("expires") or datetime.now(timezone.utc).isoformat()
 
                         alert = EmergencyAlert(
                             id=str(alert_id),
@@ -63,8 +66,8 @@ class EASService:
                             event_type=event_type,
                             area_description=area_desc,
                             instruction=instruction,
-                            effective_at=effective,
-                            expires_at=expires,
+                            effective_at=str(effective),
+                            expires_at=str(expires),
                             is_active=True,
                         )
                         alerts.append(alert)
@@ -75,24 +78,28 @@ class EASService:
 
     async def poll_and_broadcast_alerts(self) -> list[EmergencyAlert]:
         """Poll active emergency feeds and broadcast newly detected threats."""
-        cfg = await self.get_eas_settings()
-        if cfg.get("eas_enabled", "1") != "1":
-            return []
+        try:
+            cfg = await self.get_eas_settings()
+            if cfg.get("eas_enabled", "1") != "1":
+                return list(self.active_alerts.values())
 
-        lat = float(cfg.get("latitude", settings.DEFAULT_LATITUDE))
-        lon = float(cfg.get("longitude", settings.DEFAULT_LONGITUDE))
+            lat = float(cfg.get("latitude", settings.DEFAULT_LATITUDE))
+            lon = float(cfg.get("longitude", settings.DEFAULT_LONGITUDE))
 
-        nws_alerts = await self.fetch_nws_alerts(lat, lon)
-        current_active: dict[str, EmergencyAlert] = {}
+            nws_alerts = await self.fetch_nws_alerts(lat, lon)
+            current_active: dict[str, EmergencyAlert] = dict(self.active_alerts)
 
-        for alert in nws_alerts:
-            current_active[alert.id] = alert
-            if alert.id not in self.seen_alert_ids:
-                self.seen_alert_ids.add(alert.id)
-                logger.info("New EAS Emergency Alert detected: [%s] %s", alert.event_type, alert.headline)
-                await connection_manager.broadcast("emergency_alert", alert.model_dump())
+            for alert in nws_alerts:
+                current_active[alert.id] = alert
+                if alert.id not in self.seen_alert_ids:
+                    self.seen_alert_ids.add(alert.id)
+                    logger.info("New EAS Emergency Alert detected: [%s] %s", alert.event_type, alert.headline)
+                    await connection_manager.broadcast("emergency_alert", alert.model_dump(mode="json"))
 
-        self.active_alerts = current_active
+            self.active_alerts = current_active
+        except Exception as exc:
+            logger.debug("Error polling EAS alerts: %s", exc)
+
         return list(self.active_alerts.values())
 
     async def create_test_alert(
@@ -124,7 +131,7 @@ class EASService:
 
         self.active_alerts[test_id] = alert
         logger.info("Broadcasting simulated EAS test alert: %s", alert.headline)
-        await connection_manager.broadcast("emergency_alert", alert.model_dump())
+        await connection_manager.broadcast("emergency_alert", alert.model_dump(mode="json"))
         return alert
 
 

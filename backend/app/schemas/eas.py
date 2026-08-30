@@ -1,7 +1,6 @@
 """Pydantic schemas for Emergency Alert System (EAS) and public safety bulletins."""
 
-from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class EmergencyAlert(BaseModel):
@@ -15,8 +14,8 @@ class EmergencyAlert(BaseModel):
     event_type: str  # TORNADO WARNING, FLASH FLOOD WARNING, EARTHQUAKE, CIVIL EMERGENCY, AMBER ALERT
     area_description: str
     instruction: str | None = None
-    effective_at: str | datetime
-    expires_at: str | datetime
+    effective_at: str
+    expires_at: str
     is_active: bool = True
 
 
