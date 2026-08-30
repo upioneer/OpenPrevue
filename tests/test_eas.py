@@ -1,6 +1,6 @@
 """Unit and integration tests for Emergency Alert System (EAS) services and endpoints."""
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 from backend.app.main import app
@@ -43,7 +43,8 @@ async def test_eas_api_endpoints():
         is_active=True,
     )
 
-    with patch.object(eas_service, "fetch_nws_alerts", return_value=[mock_alert]):
+    with patch.object(eas_service, "fetch_nws_alerts", new_callable=AsyncMock) as mock_fetch:
+        mock_fetch.return_value = [mock_alert]
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             # POST /api/v1/eas/test
