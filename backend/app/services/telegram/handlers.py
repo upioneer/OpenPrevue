@@ -1,4 +1,4 @@
-"""Telegram bot command handlers and boxed interaction error guards."""
+"""Telegram bot command handlers, voice message processor, and boxed interaction error guards."""
 
 from datetime import datetime, timedelta, timezone
 from telegram import Update
@@ -6,6 +6,7 @@ from telegram.ext import ContextTypes
 
 from backend.app.core.logging import logger
 from backend.app.db.session import get_db
+from backend.app.services.speech import speech_service
 from backend.app.services.telegram.formatters import (
     format_bulletin,
     format_error_box,
@@ -72,7 +73,6 @@ async def pair_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     username = update.effective_user.username if update.effective_user else "User"
 
     async with get_db() as db:
-        # Check matching pairing code from settings or default master code
         async with db.execute("SELECT value FROM settings WHERE key = 'telegram_pair_code'") as cursor:
             row = await cursor.fetchone()
             valid_code = row["value"] if row else "PREVUE-DEMO"
@@ -170,7 +170,6 @@ async def weekend_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     now = datetime.now(timezone.utc)
-    # Calculate nearest Friday and Sunday
     days_until_friday = (4 - now.weekday()) % 7
     friday = now + timedelta(days=days_until_friday)
     sunday = friday + timedelta(days=2)
@@ -274,7 +273,6 @@ async def pin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await db.execute("UPDATE events SET is_featured = 1 WHERE id = ?", (event_id,))
         await db.commit()
 
-    # Broadcast WebSocket update to TV display
     await connection_manager.broadcast("events_updated", {"pinned_event_id": event_id})
 
     card = format_error_box(
@@ -425,6 +423,52 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
     card = format_help_menu()
     await update.effective_message.reply_text(card, parse_mode="MarkdownV2")
+
+
+async def voice_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle incoming voice memos, transcribe query, and dispatch command with optional voice reply."""
+    if not update.effective_message or not context.bot:
+        return
+
+    voice = update.effective_message.voice or update.effective_message.audio
+    if not voice:
+        return
+
+    try:
+        # Download voice audio file from Telegram
+        voice_file = await context.bot.get_file(voice.file_id)
+        voice_bytes = await voice_file.download_as_bytearray()
+
+        # Transcribe audio using SpeechService
+        transcript = await speech_service.transcribe_audio_bytes(bytes(voice_bytes))
+        logger.info("Transcribed Telegram voice note: '%s'", transcript)
+
+        # Parse spoken intent into deterministic command and arguments
+        command, args = speech_service.parse_spoken_intent(transcript)
+        context.args = args
+
+        # Route to matching command handler
+        if command == "tonight":
+            await tonight_command(update, context)
+        elif command == "weekend":
+            await weekend_command(update, context)
+        elif command == "today":
+            await today_command(update, context)
+        elif command == "status":
+            await status_command(update, context)
+        elif command == "help":
+            await help_command(update, context)
+        elif command == "pin":
+            await pin_command(update, context)
+        elif command == "watch":
+            await watch_command(update, context)
+        else:
+            await search_command(update, context)
+
+    except Exception as exc:
+        logger.warning("Error processing Telegram voice note: %s", exc)
+        card = format_error_box("VOICE PROCESSING ERROR", "Could not process audio memo", "/help for text commands")
+        await update.effective_message.reply_text(card, parse_mode="MarkdownV2")
 
 
 async def unknown_command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

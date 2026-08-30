@@ -1,4 +1,4 @@
-"""Unit tests for speech engine status, heartbeat monitoring, and diagnostic probe."""
+"""Unit tests for speech engine status, heartbeat monitoring, turnkey audio, and intent parsing."""
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -45,3 +45,36 @@ async def test_speech_api_endpoints():
         test_data = test_res.json()
         assert test_data["status"] == "passed"
         assert test_data["latency_ms"] >= 0
+
+
+def test_spoken_intent_parser():
+    """Verify natural spoken phrases map to deterministic bot commands."""
+    cmd, args = speech_service.parse_spoken_intent("What is happening tonight?")
+    assert cmd == "tonight"
+    assert args == []
+
+    cmd, args = speech_service.parse_spoken_intent("Show me the weekend schedule")
+    assert cmd == "weekend"
+
+    cmd, args = speech_service.parse_spoken_intent("What events are happening today?")
+    assert cmd == "today"
+
+    cmd, args = speech_service.parse_spoken_intent("Check system status and weather")
+    assert cmd == "status"
+
+    cmd, args = speech_service.parse_spoken_intent("Search Preservation Hall Jazz")
+    assert cmd == "search"
+    assert "Preservation" in args or "preservation" in args
+
+    cmd, args = speech_service.parse_spoken_intent("Track New Orleans Saints")
+    assert cmd == "watch"
+    assert "saints" in [a.lower() for a in args]
+
+
+@pytest.mark.asyncio
+async def test_turnkey_audio_synthesis():
+    """Verify turnkey audio generation produces a valid WAV audio buffer."""
+    audio_bytes = await speech_service.synthesize_speech_bytes("Test announcement")
+    assert len(audio_bytes) > 44  # Minimum valid WAV header size
+    assert audio_bytes[:4] == b"RIFF"
+    assert audio_bytes[8:12] == b"WAVE"

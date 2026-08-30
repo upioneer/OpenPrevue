@@ -23,6 +23,7 @@ from backend.app.services.telegram.handlers import (
     unknown_command_handler,
     unpin_command,
     unwatch_command,
+    voice_message_handler,
     watch_command,
     watchlist_command,
     weekend_command,
@@ -85,6 +86,9 @@ class TelegramBotService:
             self.app.add_handler(CommandHandler("watchlist", watchlist_command))
             self.app.add_handler(CommandHandler("status", status_command))
             self.app.add_handler(CommandHandler("help", help_command))
+
+            # Register voice memo handler
+            self.app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, voice_message_handler))
 
             # Register boxed interaction fallback error guards
             self.app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
