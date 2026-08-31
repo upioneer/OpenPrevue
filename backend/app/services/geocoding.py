@@ -135,7 +135,12 @@ async def resolve_location_query(query: str) -> list[GeocodeResult]:
     # 3. Local Popular City Dictionary Fallback
     query_lower = clean_query.lower()
     for key, city in FALLBACK_POPULAR_CITIES.items():
-        if query_lower == key or query_lower in key or key in query_lower:
+        if (
+            query_lower == key
+            or query_lower in key
+            or key in query_lower
+            or query_lower == str(city.get("postal_code", "")).lower()
+        ):
             results.append(
                 GeocodeResult(
                     name=city["metro_label"].split(",")[0],
