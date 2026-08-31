@@ -42,6 +42,7 @@ def inspect_run_jobs(run_id: int) -> bool:
             print(f"\n--- Run {run_id} Job Breakdown ---")
             all_completed = True
             for j in jobs:
+                jid = j.get("id")
                 name = j.get("name")
                 status = j.get("status")
                 conclusion = j.get("conclusion")
@@ -50,6 +51,19 @@ def inspect_run_jobs(run_id: int) -> bool:
                 print(f"Job: {name} | Status: {status} | Conclusion: {conclusion} | Duration: {started_at} -> {completed_at}")
                 if status != "completed":
                     all_completed = False
+                elif conclusion == "failure":
+                    # Fetch annotations for job
+                    try:
+                        ann_req = urllib.request.Request(
+                            f"https://api.github.com/repos/{REPO}/check-runs/{jid}/annotations",
+                            headers={"User-Agent": "OpenPrevue-CI-Checker", "Accept": "application/vnd.github.v3+json"},
+                        )
+                        with urllib.request.urlopen(ann_req) as a_resp:
+                            annotations = json.loads(a_resp.read().decode("utf-8"))
+                            for a in annotations:
+                                print(f"  [ANNOTATION] {a.get('path')}:{a.get('start_line')} - {a.get('message')}")
+                    except Exception:
+                        pass
             return all_completed
     except Exception as e:
         print(f"Error fetching jobs for run {run_id}: {e}")

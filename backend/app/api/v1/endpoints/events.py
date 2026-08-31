@@ -178,6 +178,9 @@ async def update_event(event_id: str, payload: EventUpdate) -> EventResponse:
             params.append(event_id)
 
             sql = f"UPDATE events SET {', '.join(update_fields)} WHERE id = ?"
+            await db.execute(sql, params)
+            await db.commit()
+
     return await get_event(event_id)
 
 
