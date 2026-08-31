@@ -2,26 +2,42 @@
 
 Self-hosted local event aggregator and interactive retro display system styled after 1990s scrolling cable channel guides.
 
-![OpenPrevue 16:9 Hero Dashboard](./project_details/changelog/v0.16.1/dashboard_landscape.png)
+![OpenPrevue 16:9 Hero Dashboard](./project_details/changelog/v0.17.0/dashboard_landscape.png)
 
 ---
 
 ## Visual Showcase
 
-### Standard 16:9 Retro Cable Guide Display (Hero View)
-![OpenPrevue 16:9 Landscape Dashboard](./project_details/changelog/v0.16.1/dashboard_landscape.png)
+### Channel Schedule Presentation Scales & Density Modes
 
-### Vertical 9:16 Portrait Kiosk & Wall Display
-![OpenPrevue 9:16 Vertical Portrait Kiosk](./project_details/changelog/v0.16.1/dashboard_portrait.png)
+#### 1. Classic TV Mode (4 Rows - True-to-Scale 1990s Broadcast)
+Authentic 1:1 reproduction of the 1990s Prevue Channel on an NTSC CRT television with large chunky typography and team badges.
 
-### Small Touchscreen & Raspberry Pi 7" Display
-![OpenPrevue Small Screen Display](./project_details/changelog/v0.16.1/dashboard_small_pi.png)
+![OpenPrevue Classic TV Presentation Mode](./project_details/changelog/v0.17.0/density_classic_tv.png)
 
-### First-Boot Regional Setup Wizard
-![OpenPrevue Setup Wizard Modal](./project_details/changelog/v0.16.1/setup_wizard_modal.png)
+#### 2. Balanced Mode (7 Rows - Default Standard Layout)
+The default presentation balance between vintage broadcast scale and listing visibility, rendering 7 comfortable channel rows.
 
-### Settings Control Center & Audio Synthesizer
-![OpenPrevue Settings Control Center](./project_details/changelog/v0.16.1/settings_control_center.png)
+![OpenPrevue Balanced Presentation Mode](./project_details/changelog/v0.17.0/density_balanced.png)
+
+#### 3. Dense Mode (12 Rows - High Density Information Overview)
+Information-dense mode displaying up to 12 simultaneous channels on screen for command-center monitoring.
+
+![OpenPrevue Dense Presentation Mode](./project_details/changelog/v0.17.0/density_dense.png)
+
+### Multi-Device & Display Orientation Showcase
+
+#### Vertical 9:16 Portrait Kiosk & Wall Display
+![OpenPrevue 9:16 Vertical Portrait Kiosk](./project_details/changelog/v0.17.0/dashboard_portrait.png)
+
+#### Small Touchscreen & Raspberry Pi 7" Display
+![OpenPrevue Small Screen Display](./project_details/changelog/v0.17.0/dashboard_small_pi.png)
+
+#### First-Boot Regional Setup Wizard
+![OpenPrevue Setup Wizard Modal](./project_details/changelog/v0.17.0/setup_wizard_modal.png)
+
+#### Settings Control Center & Audio Synthesizer
+![OpenPrevue Settings Control Center](./project_details/changelog/v0.17.0/settings_control_center.png)
 
 ---
 

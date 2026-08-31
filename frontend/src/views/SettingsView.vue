@@ -727,6 +727,87 @@
           </div>
         </div>
 
+        <!-- TripAdvisor & Viator Public Trip / Wishlist Sync Card -->
+        <div class="bg-[#000033] border border-[#00FFFF] p-4 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
+            <div>
+              <span class="text-xs font-black text-[#00FFFF] block uppercase tracking-wider">
+                TripAdvisor & Viator Public Wishlists / Trips Sync
+              </span>
+              <span class="text-[11px] text-[#8888AA]">
+                Paste public TripAdvisor Trip or Viator Wishlist URLs to automatically sync your saved tours, attractions, and activities.
+              </span>
+            </div>
+            <span class="text-[10px] text-[#FFFF00] bg-[#000066] px-2 py-0.5 border border-[#FFFF00] font-bold shrink-0">
+              ZERO-API KEY REQUIRED
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block font-bold">Public TripAdvisor Trip / Saves URL:</label>
+              <input
+                v-model="form.tripadvisor_wishlist_url"
+                type="url"
+                placeholder="https://www.tripadvisor.com/Trips/..."
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1.5 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none font-mono"
+              />
+              <span class="text-[10px] text-[#8888AA] block">
+                In TripAdvisor, go to <strong>Trips / Saves</strong> &gt; <strong>Share</strong> &gt; copy the public link.
+              </span>
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block font-bold">Public Viator Wishlist / Experience URL:</label>
+              <input
+                v-model="form.viator_wishlist_url"
+                type="url"
+                placeholder="https://www.viator.com/..."
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1.5 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none font-mono"
+              />
+              <span class="text-[10px] text-[#8888AA] block">
+                Paste any shared Viator Wishlist or experience page.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1-Click Instant URL Ingestion Dropzone -->
+        <div class="bg-[#000033] border border-[#FFFF00] p-4 space-y-3">
+          <div class="flex items-center justify-between border-b border-[#FFFF00]/40 pb-2">
+            <div>
+              <span class="text-xs font-black text-[#FFFF00] block uppercase tracking-wider">
+                1-Click Web Link Ingest
+              </span>
+              <span class="text-[11px] text-[#8888AA]">
+                Paste ANY event, tour, or ticket link (TripAdvisor, Viator, Ticketmaster, Eventbrite, Venue site) to immediately scrape and add it to your channel guide.
+              </span>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row items-center gap-2">
+            <input
+              v-model="quickIngestUrl"
+              type="url"
+              placeholder="https://www.viator.com/tours/... or https://www.tripadvisor.com/..."
+              class="flex-1 w-full bg-[#000022] border border-[#333366] px-2 py-1.5 text-xs text-[#00FF00] focus:border-[#FFFF00] outline-none font-mono"
+              @keydown.enter.prevent="handleQuickIngestUrl"
+            />
+            <button
+              type="button"
+              :disabled="isIngestingUrl || !quickIngestUrl"
+              class="w-full sm:w-auto bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-4 py-1.5 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-50 transition-colors shrink-0"
+              @click="handleQuickIngestUrl"
+            >
+              {{ isIngestingUrl ? '[ SCRAPING... ]' : '[ INGEST TO GUIDE ]' }}
+            </button>
+          </div>
+
+          <div v-if="quickIngestMessage" class="p-2 text-xs border" :class="quickIngestIsError ? 'bg-[#330000] border-[#FF4444] text-[#FF8888]' : 'bg-[#003300] border-[#00FF00] text-[#00FF00]'">
+            {{ quickIngestMessage }}
+          </div>
+        </div>
+
         <!-- Local AI Support (Ollama Instance) -->
         <div class="bg-[#000033] border border-[#00FFFF] p-4 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
@@ -1168,6 +1249,34 @@
               class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
             />
           </div>
+          <div class="space-y-1">
+            <label class="text-xs text-[#A0A0C0] block font-bold">Viator Partner / Merchant API Key (exp-api-key):</label>
+            <input
+              v-model="form.viator_api_key"
+              type="password"
+              placeholder="Viator Exp-API Key"
+              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none font-mono"
+            />
+            <span class="text-[10px] text-[#8888AA] block">
+              Optional. From the Viator Partner Portal. Enables automatic discovery of top-rated local tours and tastings within your GPS radius.
+            </span>
+          </div>
+
+          <!-- Instant Credential Validation & Sync Trigger -->
+          <div class="pt-3 border-t border-[#333366] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div class="space-y-0.5">
+              <span class="text-xs font-bold text-[#FFFF00] block uppercase">Validate Keys & Refresh Listings</span>
+              <span class="text-[11px] text-[#8888AA] block">Query configured provider APIs immediately to pull new local events using these credentials.</span>
+            </div>
+            <button
+              type="button"
+              :disabled="isSyncing"
+              class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-4 py-1.5 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-50 transition-colors shrink-0"
+              @click="handleManualSync"
+            >
+              {{ isSyncing ? '[ QUERYING PROVIDERS... ]' : '[ TEST KEYS & REFRESH LISTINGS ]' }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1295,7 +1404,7 @@
 
       <!-- Action Bar -->
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t-2 border-[#FFFF00]">
-        <div class="flex items-center space-x-3">
+        <div class="flex flex-wrap items-center gap-3">
           <button
             class="bg-[#FFFF00] text-[#000033] hover:bg-[#FFFFFF] px-5 py-2 text-xs font-black tracking-wider cursor-pointer shadow-[0_0_10px_rgba(255,255,0,0.8)] transition-all"
             @click="saveAllSettings"
@@ -1306,8 +1415,9 @@
             :disabled="isSyncing"
             class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-4 py-2 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-50 transition-colors"
             @click="handleManualSync"
+            title="Manually query all event providers (Ticketmaster, SeatGeek, Sports leagues, local calendars) to fetch new upcoming events right now"
           >
-            {{ isSyncing ? '[ SYNCHRONIZING... ]' : '[ TRIGGER INSTANT SYNC ]' }}
+            {{ isSyncing ? '[ FETCHING LATEST EVENTS... ]' : '[ REFRESH LOCAL LISTINGS NOW ]' }}
           </button>
         </div>
 
@@ -1332,6 +1442,7 @@ import {
   fetchUpdateStatus,
   generateTelegramPairCode,
   geocodeLocationQuery,
+  ingestUrl,
   pingOllamaInstance,
   refreshWeather,
   sendTelegramTestMessage,
@@ -1418,6 +1529,31 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const ingestionMessage = ref('')
 const ingestionIsError = ref(false)
 
+// 1-Click Quick URL Ingestion State
+const quickIngestUrl = ref('')
+const isIngestingUrl = ref(false)
+const quickIngestMessage = ref('')
+const quickIngestIsError = ref(false)
+
+async function handleQuickIngestUrl() {
+  if (!quickIngestUrl.value || !quickIngestUrl.value.trim()) return
+  isIngestingUrl.value = true
+  quickIngestMessage.value = ''
+  quickIngestIsError.value = false
+
+  try {
+    const res = await ingestUrl(quickIngestUrl.value.trim(), 1, 0)
+    quickIngestMessage.value = `[INGESTED] ${res.title} (${res.venue_name}) - Added to guide!`
+    quickIngestIsError.value = false
+    quickIngestUrl.value = ''
+  } catch (err: any) {
+    quickIngestMessage.value = `[ERROR] ${err.message || 'Failed to ingest URL'}`
+    quickIngestIsError.value = true
+  } finally {
+    isIngestingUrl.value = false
+  }
+}
+
 const form = reactive<SystemSettings>({
   postal_code: '10001',
   metro_label: 'NEW YORK CITY',
@@ -1425,7 +1561,7 @@ const form = reactive<SystemSettings>({
   longitude: '-74.0060',
   radius_miles: '25',
   autoscroll_speed: '30',
-  grid_density: 'classic_tv',
+  grid_density: 'balanced',
   scroll_pause_duration: '4',
   scroll_page_interval: '6',
   marquee_rotation_seconds: '20',
@@ -1457,6 +1593,9 @@ const form = reactive<SystemSettings>({
   auto_update_notifs: '0',
   commercials_enabled: '0',
   commercials_frequency_per_hour: '4',
+  tripadvisor_wishlist_url: '',
+  viator_wishlist_url: '',
+  viator_api_key: '',
 })
 
 const computedSpotifyEmbedUrl = computed(() => {

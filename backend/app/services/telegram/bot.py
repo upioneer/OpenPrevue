@@ -11,6 +11,7 @@ from backend.app.db.session import get_db
 from backend.app.providers.base import RawEvent
 from backend.app.services.telegram.formatters import format_bulletin, format_error_box
 from backend.app.services.telegram.handlers import (
+    add_command,
     help_command,
     pair_command,
     pin_command,
@@ -75,6 +76,7 @@ class TelegramBotService:
             # Register standard commands
             self.app.add_handler(CommandHandler("start", start_command))
             self.app.add_handler(CommandHandler("pair", pair_command))
+            self.app.add_handler(CommandHandler("add", add_command))
             self.app.add_handler(CommandHandler("today", today_command))
             self.app.add_handler(CommandHandler("tonight", tonight_command))
             self.app.add_handler(CommandHandler("weekend", weekend_command))

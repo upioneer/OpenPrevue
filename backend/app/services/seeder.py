@@ -15,7 +15,7 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "longitude": str(settings.DEFAULT_LONGITUDE),
     "radius_miles": str(settings.DEFAULT_RADIUS_MILES),
     "autoscroll_speed": "30",
-    "grid_density": "classic_tv",
+    "grid_density": "balanced",
     "scroll_pause_duration": "4",
     "scroll_page_interval": "6",
     "marquee_rotation_seconds": "20",
@@ -28,6 +28,9 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "initial_setup_completed": "0",
     "update_check_interval": "disabled",
     "auto_update_notifs": "0",
+    "tripadvisor_wishlist_url": "",
+    "viator_wishlist_url": "",
+    "viator_api_key": "",
 }
 
 
@@ -62,4 +65,4 @@ async def seed_initial_data() -> None:
                 center,
                 settings.DEFAULT_RADIUS_MILES,
             )
-            logger.info("Initial mock seed completed. Result: %s", result)
+            logger.info("Initial seed completed: %s", result)

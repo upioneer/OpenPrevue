@@ -316,7 +316,7 @@ const props = withDefaults(
   }>(),
   {
     scrollSpeed: 30,
-    gridDensity: 'classic_tv',
+    gridDensity: 'balanced',
     pauseDurationSeconds: 4,
     pageIntervalSeconds: 6,
   }

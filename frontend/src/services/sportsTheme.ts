@@ -533,3 +533,190 @@ export function resolveTeamBranding(rawName: string): TeamBranding {
     textColor: '#FFFFFF',
   }
 }
+
+export interface LeagueBranding {
+  name: string
+  shortName: string
+  logoUrl?: string
+  primaryColor: string
+  textColor: string
+}
+
+export interface ProviderBranding {
+  name: string
+  shortName: string
+  brandColor: string
+  textColor: string
+  logoUrl?: string
+  badgeText: string
+}
+
+const LEAGUES_DATABASE: Record<string, LeagueBranding> = {
+  nba: {
+    name: 'National Basketball Association',
+    shortName: 'NBA',
+    logoUrl: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nba.png',
+    primaryColor: '#1D428A',
+    textColor: '#FFFFFF',
+  },
+  nfl: {
+    name: 'National Football League',
+    shortName: 'NFL',
+    logoUrl: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nfl.png',
+    primaryColor: '#013369',
+    textColor: '#FFFFFF',
+  },
+  mlb: {
+    name: 'Major League Baseball',
+    shortName: 'MLB',
+    logoUrl: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/mlb.png',
+    primaryColor: '#002D72',
+    textColor: '#FFFFFF',
+  },
+  nhl: {
+    name: 'National Hockey League',
+    shortName: 'NHL',
+    logoUrl: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nhl.png',
+    primaryColor: '#000000',
+    textColor: '#FFFFFF',
+  },
+  mls: {
+    name: 'Major League Soccer',
+    shortName: 'MLS',
+    logoUrl: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/mls.png',
+    primaryColor: '#101820',
+    textColor: '#FFFFFF',
+  },
+  'premier league': {
+    name: 'English Premier League',
+    shortName: 'EPL',
+    logoUrl: 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/23.png',
+    primaryColor: '#38003C',
+    textColor: '#00FF87',
+  },
+  epl: {
+    name: 'English Premier League',
+    shortName: 'EPL',
+    logoUrl: 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/23.png',
+    primaryColor: '#38003C',
+    textColor: '#00FF87',
+  },
+  f1: {
+    name: 'Formula 1',
+    shortName: 'F1',
+    logoUrl: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/f1.png',
+    primaryColor: '#E10600',
+    textColor: '#FFFFFF',
+  },
+  nascar: {
+    name: 'NASCAR',
+    shortName: 'NASCAR',
+    logoUrl: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nascar.png',
+    primaryColor: '#FFD100',
+    textColor: '#000000',
+  },
+  ufc: {
+    name: 'Ultimate Fighting Championship',
+    shortName: 'UFC',
+    logoUrl: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/mma.png',
+    primaryColor: '#D20A0A',
+    textColor: '#FFFFFF',
+  },
+}
+
+const PROVIDERS_DATABASE: Record<string, ProviderBranding> = {
+  ticketmaster: {
+    name: 'Ticketmaster',
+    shortName: 'TM',
+    brandColor: '#026CDF',
+    textColor: '#FFFFFF',
+    badgeText: 'TICKETMASTER',
+  },
+  seatgeek: {
+    name: 'SeatGeek',
+    shortName: 'SG',
+    brandColor: '#1673E6',
+    textColor: '#FFFFFF',
+    badgeText: 'SEATGEEK',
+  },
+  eventbrite: {
+    name: 'Eventbrite',
+    shortName: 'EB',
+    brandColor: '#F05537',
+    textColor: '#FFFFFF',
+    badgeText: 'EVENTBRITE',
+  },
+  sports_leagues: {
+    name: 'Official League Box Office',
+    shortName: 'LEAGUE',
+    brandColor: '#000088',
+    textColor: '#00FFFF',
+    badgeText: 'OFFICIAL BOX OFFICE',
+  },
+  secondary_ticketing: {
+    name: 'Exchange Marketplace',
+    shortName: 'EXCHANGE',
+    brandColor: '#332200',
+    textColor: '#FFFF00',
+    badgeText: 'TICKET EXCHANGE',
+  },
+  ical: {
+    name: 'Local Calendar Feed',
+    shortName: 'CAL',
+    brandColor: '#003300',
+    textColor: '#00FF00',
+    badgeText: 'COMMUNITY CALENDAR',
+  },
+  mock: {
+    name: 'Broadcast Demo Feed',
+    shortName: 'PREVUE',
+    brandColor: '#000044',
+    textColor: '#FFFF00',
+    badgeText: 'PREVUE FEED',
+  },
+}
+
+export function resolveLeagueBranding(leagueName?: string): LeagueBranding | null {
+  if (!leagueName) return null
+  const clean = leagueName.trim().toLowerCase()
+  for (const [key, value] of Object.entries(LEAGUES_DATABASE)) {
+    if (clean === key || clean.includes(key)) {
+      return value
+    }
+  }
+  return {
+    name: leagueName.toUpperCase(),
+    shortName: leagueName.slice(0, 4).toUpperCase(),
+    primaryColor: '#000066',
+    textColor: '#FFFF00',
+  }
+}
+
+export function resolveProviderBranding(providerName?: string): ProviderBranding {
+  if (!providerName) {
+    return {
+      name: 'Direct Box Office',
+      shortName: 'VENUE',
+      brandColor: '#000033',
+      textColor: '#00FFFF',
+      badgeText: 'VENUE TICKETS',
+    }
+  }
+  const clean = providerName.trim().toLowerCase()
+  if (PROVIDERS_DATABASE[clean]) {
+    return PROVIDERS_DATABASE[clean]
+  }
+  for (const [key, value] of Object.entries(PROVIDERS_DATABASE)) {
+    if (clean.includes(key)) {
+      return value
+    }
+  }
+  return {
+    name: providerName.toUpperCase(),
+    shortName: providerName.slice(0, 3).toUpperCase(),
+    brandColor: '#000033',
+    textColor: '#E0E0E0',
+    badgeText: providerName.toUpperCase(),
+  }
+}
+

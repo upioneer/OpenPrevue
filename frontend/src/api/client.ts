@@ -35,6 +35,23 @@ export async function updateEvent(eventId: string, data: Partial<EventItem>): Pr
   return res.json()
 }
 
+export async function ingestUrl(url: string, isFeatured: number = 1, hasTicket: number = 0): Promise<any> {
+  const res = await fetch(`${API_BASE}/events/ingest-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      url,
+      is_featured: isFeatured,
+      has_ticket: hasTicket,
+    }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || `Failed to ingest URL: ${res.statusText}`)
+  }
+  return res.json()
+}
+
 export async function fetchVenues(): Promise<VenueItem[]> {
   const res = await fetch(`${API_BASE}/venues`)
   if (!res.ok) throw new Error(`Failed to fetch venues: ${res.statusText}`)

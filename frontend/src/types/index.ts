@@ -140,5 +140,8 @@ export interface SystemSettings {
   auto_update_notifs?: string
   ai_ollama_url?: string
   ai_ollama_model?: string
+  tripadvisor_wishlist_url?: string
+  viator_wishlist_url?: string
+  viator_api_key?: string
   [key: string]: string | undefined
 }

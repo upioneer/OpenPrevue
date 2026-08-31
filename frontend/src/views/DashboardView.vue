@@ -65,7 +65,7 @@ const scrollSpeed = computed(() => {
 })
 
 const gridDensity = computed(() => {
-  return settings.value?.grid_density || 'classic_tv'
+  return settings.value?.grid_density || 'balanced'
 })
 
 const pauseDurationSeconds = computed(() => {

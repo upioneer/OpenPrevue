@@ -487,9 +487,91 @@ async def unknown_command_handler(update: Update, context: ContextTypes.DEFAULT_
     await update.effective_message.reply_text(card, parse_mode="MarkdownV2")
 
 
-async def plain_text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Boxed fallback handler for unformatted plain text messages."""
+async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /add <url> command to ingest TripAdvisor, Viator, or external event links."""
+    from backend.app.providers.travel_wishlist import TravelWishlistProvider
+    from backend.app.providers.json_ld import JsonLdEventProvider
+    from backend.app.services.ingestion import ingestion_service
+    from backend.app.providers.base import GeoPoint
+
     if not update.effective_message:
+        return
+
+    chat_id = update.effective_chat.id if update.effective_chat else 0
+    if not await is_user_paired(chat_id):
+        card = format_error_box("DEVICE UNPAIRED", "Pair your bot with OpenPrevue first", "/pair PREVUE-XXXX")
+        await update.effective_message.reply_text(card, parse_mode="MarkdownV2")
+        return
+
+    args = context.args or []
+    if not args:
+        card = format_error_box("MISSING URL", "Provide a TripAdvisor, Viator, or ticket URL", "/add https://viator.com/...")
+        await update.effective_message.reply_text(card, parse_mode="MarkdownV2")
+        return
+
+    url = args[0].strip()
+    if not url.startswith("http://") and not url.startswith("https://"):
+        card = format_error_box("INVALID URL", "URL must start with http:// or https://", "/add https://...")
+        await update.effective_message.reply_text(card, parse_mode="MarkdownV2")
+        return
+
+    try:
+        travel_prov = TravelWishlistProvider(target_urls=[url])
+        raw_events = await travel_prov.fetch_events(GeoPoint(latitude=0, longitude=0), 10000)
+
+        if not raw_events:
+            jsonld_prov = JsonLdEventProvider(target_urls=[url])
+            raw_events = await jsonld_prov.fetch_events(GeoPoint(latitude=0, longitude=0), 10000)
+
+        if not raw_events:
+            card = format_error_box("SCRAPE FAILED", "Could not parse event metadata from URL", "Check if link is public")
+            await update.effective_message.reply_text(card, parse_mode="MarkdownV2")
+            return
+
+        raw = raw_events[0]
+        raw.is_featured = 1
+
+        async with get_db() as db:
+            venue_id = await ingestion_service._resolve_or_create_venue(db, raw)
+            await ingestion_service._persist_event(db, raw, venue_id)
+            canonical_id = ingestion_service._generate_canonical_event_id(raw, venue_id)
+            await db.commit()
+
+        await connection_manager.broadcast("events_updated", {
+            "action": "ingest_url",
+            "event_id": canonical_id,
+            "title": raw.title,
+            "source": raw.source,
+        })
+
+        event_dict = {
+            "title": raw.title,
+            "venue_name": raw.venue_name,
+            "category": raw.category,
+            "start_time": raw.start_time,
+            "price_min": raw.price_min,
+            "price_max": raw.price_max,
+            "has_ticket": 1,
+        }
+        msg = format_bulletin("EVENT INGESTED", [event_dict], raw.source.upper())
+        await update.effective_message.reply_text(msg, parse_mode="MarkdownV2")
+
+    except Exception as exc:
+        logger.warning("Error ingesting URL via Telegram bot: %s", exc)
+        card = format_error_box("INGESTION ERROR", "Failed to parse link", "Try another URL")
+        await update.effective_message.reply_text(card, parse_mode="MarkdownV2")
+
+
+async def plain_text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Boxed fallback handler for unformatted plain text messages, with URL auto-ingestion."""
+    if not update.effective_message or not update.effective_message.text:
+        return
+
+    text = update.effective_message.text.strip()
+    if text.startswith("http://") or text.startswith("https://"):
+        # Auto-ingest shared web link
+        context.args = [text]
+        await add_command(update, context)
         return
 
     card = format_error_box(
@@ -503,3 +585,4 @@ async def plain_text_message_handler(update: Update, context: ContextTypes.DEFAU
 def MathRound(val: float) -> int:
     """Round float to integer."""
     return int(round(val))
+

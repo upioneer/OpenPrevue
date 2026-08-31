@@ -99,6 +99,7 @@ def format_help_menu() -> str:
         "| /tonight          - Events >= 5:00 PM  |",
         "| /weekend          - Fri-Sun listings   |",
         "| /search <query>   - Search artist/venue|",
+        "| /add <url>        - Ingest travel link |",
         "| /pin <event_id>   - Pin to TV spotlight|",
         "| /unpin <event_id> - Unpin from display |",
         "| /watch <keyword>  - Track alert keyword|",

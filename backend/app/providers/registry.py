@@ -10,6 +10,8 @@ from backend.app.providers.seatgeek import SeatGeekProvider
 from backend.app.providers.sports import SportsLeagueProvider
 from backend.app.providers.ticketing import SecondaryTicketingProvider
 from backend.app.providers.ticketmaster import TicketmasterProvider
+from backend.app.providers.travel_wishlist import TravelWishlistProvider
+from backend.app.providers.viator import ViatorPartnerProvider
 
 
 class ProviderRegistry:
@@ -29,6 +31,8 @@ class ProviderRegistry:
         self.register(ICalEventProvider())
         self.register(SportsLeagueProvider())
         self.register(SecondaryTicketingProvider())
+        self.register(TravelWishlistProvider())
+        self.register(ViatorPartnerProvider())
 
     def register(self, provider: BaseProvider) -> None:
         """Register a provider instance."""

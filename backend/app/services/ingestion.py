@@ -42,7 +42,7 @@ class IngestionService:
         from backend.app.providers.registry import provider_registry
 
         async with get_db() as db:
-            async with db.execute("SELECT key, value FROM settings WHERE key IN ('latitude', 'longitude', 'radius_miles')") as cursor:
+            async with db.execute("SELECT key, value FROM settings") as cursor:
                 rows = await cursor.fetchall()
                 settings_map = {row["key"]: row["value"] for row in rows}
 
@@ -50,6 +50,28 @@ class IngestionService:
         lon = float(settings_map.get("longitude", settings.DEFAULT_LONGITUDE))
         radius = float(settings_map.get("radius_miles", settings.DEFAULT_RADIUS_MILES))
         center = GeoPoint(latitude=lat, longitude=lon)
+
+        # Configure dynamic provider parameters
+        tm_prov = provider_registry.get("ticketmaster")
+        if tm_prov and hasattr(tm_prov, "api_key"):
+            tm_prov.api_key = settings_map.get("ticketmaster_api_key", "")
+
+        sg_prov = provider_registry.get("seatgeek")
+        if sg_prov and hasattr(sg_prov, "client_id"):
+            sg_prov.client_id = settings_map.get("seatgeek_client_id", "")
+
+        viator_prov = provider_registry.get("viator")
+        if viator_prov and hasattr(viator_prov, "api_key"):
+            viator_prov.api_key = settings_map.get("viator_api_key", "")
+
+        travel_prov = provider_registry.get("travel_wishlist")
+        if travel_prov and hasattr(travel_prov, "target_urls"):
+            wishlist_urls = []
+            if settings_map.get("tripadvisor_wishlist_url"):
+                wishlist_urls.append(settings_map["tripadvisor_wishlist_url"].strip())
+            if settings_map.get("viator_wishlist_url"):
+                wishlist_urls.append(settings_map["viator_wishlist_url"].strip())
+            travel_prov.target_urls = [u for u in wishlist_urls if u]
 
         total_inserted = 0
         total_updated = 0

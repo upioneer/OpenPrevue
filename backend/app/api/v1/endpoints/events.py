@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Query
 import aiosqlite
 
 from backend.app.db.session import get_db
+from backend.app.providers.base import GeoPoint
 from backend.app.schemas.event import EventResponse, EventUpdate, TicketLinkResponse
 from backend.app.services.ingestion import calculate_haversine_distance
 
@@ -177,7 +178,68 @@ async def update_event(event_id: str, payload: EventUpdate) -> EventResponse:
             params.append(event_id)
 
             sql = f"UPDATE events SET {', '.join(update_fields)} WHERE id = ?"
-            await db.execute(sql, params)
-            await db.commit()
-
     return await get_event(event_id)
+
+
+class UrlIngestRequest(EventUpdate):
+    """Payload for 1-click URL ingestion."""
+    url: str
+    is_featured: int = 1
+    has_ticket: int = 0
+
+
+@router.post("/events/ingest-url", response_model=dict)
+async def ingest_url(payload: UrlIngestRequest) -> dict:
+    """Ingest, parse, and persist an event directly from a TripAdvisor, Viator, or generic event URL."""
+    from backend.app.providers.travel_wishlist import TravelWishlistProvider
+    from backend.app.providers.json_ld import JsonLdEventProvider
+    from backend.app.services.ingestion import ingestion_service
+    from backend.app.services.websocket import connection_manager
+
+    url = payload.url.strip()
+    if not url.startswith("http://") and not url.startswith("https://"):
+        raise HTTPException(status_code=400, detail="Invalid URL format. Must start with http:// or https://")
+
+    # 1. Fetch using TravelWishlistProvider or JsonLdEventProvider
+    travel_prov = TravelWishlistProvider(target_urls=[url])
+    raw_events = await travel_prov.fetch_events(GeoPoint(latitude=0, longitude=0), 10000)
+
+    if not raw_events:
+        jsonld_prov = JsonLdEventProvider(target_urls=[url])
+        raw_events = await jsonld_prov.fetch_events(GeoPoint(latitude=0, longitude=0), 10000)
+
+    if not raw_events:
+        raise HTTPException(status_code=422, detail="Unable to extract structured event or experience metadata from the provided URL.")
+
+    raw = raw_events[0]
+    raw.is_featured = payload.is_featured
+
+    async with get_db() as db:
+        venue_id = await ingestion_service._resolve_or_create_venue(db, raw)
+        persist_status = await ingestion_service._persist_event(db, raw, venue_id)
+        canonical_id = ingestion_service._generate_canonical_event_id(raw, venue_id)
+
+        if payload.has_ticket:
+            await db.execute("UPDATE events SET has_ticket = ? WHERE id = ?", (payload.has_ticket, canonical_id))
+
+        await db.commit()
+
+    # Broadcast real-time schedule update to all connected CRT clients
+    await connection_manager.broadcast("events_updated", {
+        "action": "ingest_url",
+        "event_id": canonical_id,
+        "title": raw.title,
+        "source": raw.source,
+    })
+
+    return {
+        "status": "success",
+        "action": persist_status,
+        "event_id": canonical_id,
+        "title": raw.title,
+        "venue_name": raw.venue_name,
+        "start_time": raw.start_time,
+        "source": raw.source,
+        "ticket_url": raw.ticket_url,
+    }
+

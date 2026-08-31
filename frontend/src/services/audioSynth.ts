@@ -19,13 +19,15 @@ class AnalogAudioService {
   public isTapeHissPlaying = ref<boolean>(false);
   public isAutoPlayOptedIn = ref<boolean>(true);
   public isEASSirenPlaying = ref<boolean>(false);
+  public masterVolume = ref<number>(80); // 0 - 100
+  public isMuted = ref<boolean>(false);
 
   // Backward-compatible aliases
   public get isMuzakPlaying() {
-    return this.isAudioActive.value;
+    return this.isAudioActive.value && !this.isMuted.value;
   }
   public get isAudioStreamPlaying() {
-    return this.isAudioActive.value;
+    return this.isAudioActive.value && !this.isMuted.value;
   }
 
   private audioCtx: AudioContext | null = null;
@@ -73,6 +75,8 @@ class AnalogAudioService {
       isTapeHissPlaying: this.isTapeHissPlaying.value,
       isAudioStreamPlaying: this.isAudioActive.value,
       isMuzakPlaying: this.isAudioActive.value,
+      masterVolume: this.masterVolume.value,
+      isMuted: this.isMuted.value,
     };
   }
 
@@ -83,8 +87,8 @@ class AnalogAudioService {
   }
 
   public playAudioStream(): void {
-    if (this.isAudioActive.value) {
-      this.startTapeHiss(35);
+    if (this.isAudioActive.value && !this.isMuted.value) {
+      this.startTapeHiss(this.masterVolume.value);
     }
   }
 
@@ -113,8 +117,70 @@ class AnalogAudioService {
       if (optIn !== null) {
         this.isAutoPlayOptedIn.value = optIn === "1";
       }
+
+      const savedVol = localStorage.getItem("openprevue_master_volume");
+      if (savedVol !== null) {
+        const parsed = parseInt(savedVol, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+          this.masterVolume.value = parsed;
+        }
+      }
+
+      const savedMute = localStorage.getItem("openprevue_is_muted");
+      if (savedMute !== null) {
+        this.isMuted.value = savedMute === "1";
+      }
     } catch {
       // Use default true
+    }
+  }
+
+  public setMasterVolume(vol: number): void {
+    const clamped = Math.max(0, Math.min(100, Math.round(vol)));
+    this.masterVolume.value = clamped;
+
+    if (clamped > 0 && this.isMuted.value) {
+      this.isMuted.value = false;
+    } else if (clamped === 0) {
+      this.isMuted.value = true;
+    }
+
+    try {
+      localStorage.setItem("openprevue_master_volume", clamped.toString());
+      localStorage.setItem("openprevue_is_muted", this.isMuted.value ? "1" : "0");
+    } catch {
+      // Ignore
+    }
+
+    this.applyMasterGain();
+  }
+
+  public toggleMute(): boolean {
+    this.isMuted.value = !this.isMuted.value;
+    if (!this.isMuted.value && this.masterVolume.value === 0) {
+      this.masterVolume.value = 80;
+    }
+
+    try {
+      localStorage.setItem("openprevue_is_muted", this.isMuted.value ? "1" : "0");
+      localStorage.setItem("openprevue_master_volume", this.masterVolume.value.toString());
+    } catch {
+      // Ignore
+    }
+
+    this.applyMasterGain();
+    return this.isMuted.value;
+  }
+
+  private applyMasterGain(): void {
+    if (!this.audioCtx || !this.masterGain) return;
+    const t = this.audioCtx.currentTime;
+    const targetGain = this.isMuted.value ? 0.0001 : (this.masterVolume.value / 100);
+    this.masterGain.gain.cancelScheduledValues(t);
+    this.masterGain.gain.linearRampToValueAtTime(targetGain, t + 0.05);
+
+    if (this.isTapeHissPlaying.value) {
+      this.setTapeHissVolume(this.masterVolume.value);
     }
   }
 
@@ -146,19 +212,14 @@ class AnalogAudioService {
   }
 
   public startTurnkeyAudio(): void {
-    this.startTapeHiss(35);
     this.isAudioActive.value = true;
+    if (!this.isMuted.value) {
+      this.startTapeHiss(this.masterVolume.value);
+    }
   }
 
   public toggleMasterAudio(): boolean {
-    if (this.isAudioActive.value || this.isTapeHissPlaying.value) {
-      this.stopTapeHiss();
-      this.isAudioActive.value = false;
-      return false;
-    } else {
-      this.startTurnkeyAudio();
-      return true;
-    }
+    return this.toggleMute();
   }
 
   private initAudioContext(): void {
@@ -173,6 +234,9 @@ class AnalogAudioService {
       this.highShelfFilter = this.audioCtx.createBiquadFilter();
       this.lowPassFilter = this.audioCtx.createBiquadFilter();
       this.masterGain = this.audioCtx.createGain();
+
+      const initialGain = this.isMuted.value ? 0.0001 : (this.masterVolume.value / 100);
+      this.masterGain.gain.setValueAtTime(initialGain, this.audioCtx.currentTime);
 
       // Serial filter chain
       this.highPassFilter.connect(this.peakingFilter);
@@ -322,11 +386,11 @@ class AnalogAudioService {
     if (!this.audioCtx) return;
     const t = this.audioCtx.currentTime;
     if (this.hissGain) {
-      const gainVal = Math.max(0, Math.min(1, (volumePercent / 100) * 0.08));
+      const gainVal = this.isMuted.value ? 0.0001 : Math.max(0, Math.min(1, (volumePercent / 100) * 0.08));
       this.hissGain.gain.linearRampToValueAtTime(gainVal, t + 0.1);
     }
     if (this.humGain) {
-      const humVal = Math.max(0, Math.min(1, (volumePercent / 100) * 0.012));
+      const humVal = this.isMuted.value ? 0.0001 : Math.max(0, Math.min(1, (volumePercent / 100) * 0.012));
       this.humGain.gain.linearRampToValueAtTime(humVal, t + 0.1);
     }
   }
