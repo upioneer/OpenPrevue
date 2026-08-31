@@ -17,6 +17,7 @@ class EmergencyAlert(BaseModel):
     effective_at: str
     expires_at: str
     is_active: bool = True
+    duration_seconds: int = 30
 
 
 class EASTestRequest(BaseModel):

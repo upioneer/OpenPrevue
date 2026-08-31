@@ -12,18 +12,23 @@
     --status-live: #FF4444;
     --status-soon: #FFAA00;
     --scanline-opacity: 0.12;
+    font-size: 16px;
   }
 
   body {
     background-color: var(--bg-deep);
     color: var(--text-body);
     font-family: 'Share Tech Mono', 'VT323', 'Courier New', monospace;
-    letter-spacing: 0.5px;
+    font-size: 1rem;
+    line-height: 1.35;
+    letter-spacing: 0.75px;
     margin: 0;
     padding: 0;
     width: 100vw;
     height: 100vh;
     overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 }
 
@@ -164,7 +169,7 @@ body.crt-curvature-active {
 /* Small Raspberry Pi Touchscreen Display (<= 800px width or <= 480px height) */
 @media (max-width: 800px), (max-height: 480px) {
   .small-screen-text-scale {
-    font-size: 11px !important;
+    font-size: 12px !important;
   }
   .small-screen-hide {
     display: none !important;

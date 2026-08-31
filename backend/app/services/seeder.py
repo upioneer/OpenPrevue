@@ -14,7 +14,10 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "latitude": str(settings.DEFAULT_LATITUDE),
     "longitude": str(settings.DEFAULT_LONGITUDE),
     "radius_miles": str(settings.DEFAULT_RADIUS_MILES),
-    "autoscroll_speed": "60",
+    "autoscroll_speed": "30",
+    "grid_density": "classic_tv",
+    "scroll_pause_duration": "4",
+    "scroll_page_interval": "6",
     "marquee_rotation_seconds": "20",
     "scanline_intensity": "12",
     "phosphor_glow": "1",
@@ -59,6 +62,4 @@ async def seed_initial_data() -> None:
                 center,
                 settings.DEFAULT_RADIUS_MILES,
             )
-            logger.info("Initial mock seeding completed: %s", result)
-    else:
-        logger.info("Datastore contains %d active events. Skipping initial mock seed.", event_count)
+            logger.info("Initial mock seed completed. Result: %s", result)

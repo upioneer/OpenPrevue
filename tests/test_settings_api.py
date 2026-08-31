@@ -25,6 +25,7 @@ async def test_get_settings():
         assert "postal_code" in data
         assert "radius_miles" in data
         assert "autoscroll_speed" in data
+        assert data["autoscroll_speed"] == "30"
 
 
 @pytest.mark.asyncio
@@ -33,14 +34,16 @@ async def test_update_setting():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.put(
-            "/api/v1/settings/autoscroll_speed",
-            json={"value": "95"},
+            "/api/v1/settings/test_setting_key",
+            json={"value": "test_value_123"},
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["key"] == "autoscroll_speed"
-        assert data["value"] == "95"
+        assert data["key"] == "test_setting_key"
+        assert data["value"] == "test_value_123"
 
         # Verify on get
         get_res = await client.get("/api/v1/settings")
-        assert get_res.json()["autoscroll_speed"] == "95"
+        assert get_res.json()["test_setting_key"] == "test_value_123"
+        # Ensure autoscroll_speed remains 30
+        assert get_res.json()["autoscroll_speed"] == "30"

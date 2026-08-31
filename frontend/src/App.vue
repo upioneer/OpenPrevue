@@ -10,6 +10,12 @@
     <HeaderBar />
     <router-view />
     <UpdateToast />
+    <SpotifyPlayerModal
+      :is-open="isSpotifyModalOpen"
+      :custom-playlist-url="customPlaylistUrl"
+      @open="openSpotifyModal"
+      @close="closeSpotifyModal"
+    />
   </div>
 </template>
 
@@ -18,11 +24,15 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import HeaderBar from './components/HeaderBar.vue'
 import EASBanner from './components/EASBanner.vue'
 import UpdateToast from './components/UpdateToast.vue'
+import SpotifyPlayerModal from './components/SpotifyPlayerModal.vue'
 import { fetchSettings } from './api/client'
 import { wsService } from './services/websocket'
+import { audioSynth } from './services/audioSynth'
+import { isSpotifyModalOpen, openSpotifyModal, closeSpotifyModal } from './services/spotifyModalState'
 
 const isScanlinesEnabled = ref(true)
 const isCrtCurvatureEnabled = ref(false)
+const customPlaylistUrl = ref('')
 let unsubscribeSettings: (() => void) | null = null
 
 async function loadDisplaySettings() {
@@ -38,6 +48,9 @@ async function loadDisplaySettings() {
     } else {
       isCrtCurvatureEnabled.value = false
     }
+    if (s.spotify_playlist_url) {
+      customPlaylistUrl.value = s.spotify_playlist_url
+    }
   } catch {
     // Default fallback
   }
@@ -46,6 +59,7 @@ async function loadDisplaySettings() {
 onMounted(() => {
   wsService.connect()
   loadDisplaySettings()
+  audioSynth.initAutoPlayTrigger()
 
   unsubscribeSettings = wsService.on('settings_updated', () => {
     loadDisplaySettings()

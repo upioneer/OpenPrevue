@@ -1,4 +1,14 @@
-import type { EventItem, HealthData, SystemSettings, UpdateStatusResponse, VenueItem, WeatherData } from '../types'
+import type {
+  EventItem,
+  GeocodeResult,
+  HealthData,
+  OllamaPingResponse,
+  SpotifyMetadataResponse,
+  SystemSettings,
+  UpdateStatusResponse,
+  VenueItem,
+  WeatherData,
+} from '../types'
 
 const API_BASE = '/api/v1'
 
@@ -155,5 +165,68 @@ export async function fetchUpdateStatus(): Promise<UpdateStatusResponse> {
 export async function checkUpdatesNow(): Promise<UpdateStatusResponse> {
   const res = await fetch(`${API_BASE}/updates/check`, { method: 'POST' })
   if (!res.ok) throw new Error(`Failed to check updates: ${res.statusText}`)
+  return res.json()
+}
+
+export async function fetchCommercialClips(): Promise<{
+  status: string
+  dropzone_directory: string
+  total_clips: number
+  clips: Array<{
+    id: string
+    name: string
+    filename: string
+    size_bytes: number
+    size_formatted: string
+    url: string
+    is_user_uploaded: boolean
+  }>
+  specifications: Record<string, any>
+}> {
+  const res = await fetch(`${API_BASE}/commercials`)
+  if (!res.ok) throw new Error(`Failed to fetch commercial clips: ${res.statusText}`)
+  return res.json()
+}
+
+export async function uploadCommercialClipFile(file: File): Promise<any> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetch(`${API_BASE}/commercials/upload`, {
+    method: 'POST',
+    body: formData,
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || `Upload failed: ${res.statusText}`)
+  }
+  return res.json()
+}
+
+export async function pingOllamaInstance(ollamaUrl: string, model?: string): Promise<OllamaPingResponse> {
+  const res = await fetch(`${API_BASE}/ai/ollama/ping`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ollama_url: ollamaUrl,
+      model: model || null,
+    }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || `Ollama ping failed: ${res.statusText}`)
+  }
+  return res.json()
+}
+
+export async function geocodeLocationQuery(query: string): Promise<GeocodeResult[]> {
+  const res = await fetch(`${API_BASE}/weather/geocode?query=${encodeURIComponent(query)}`)
+  if (!res.ok) throw new Error(`Geocoding lookup failed: ${res.statusText}`)
+  return res.json()
+}
+
+export async function fetchSpotifyMetadata(url?: string): Promise<SpotifyMetadataResponse> {
+  const q = url ? `?url=${encodeURIComponent(url)}` : ''
+  const res = await fetch(`${API_BASE}/spotify/metadata${q}`)
+  if (!res.ok) throw new Error(`Failed fetching Spotify metadata: ${res.statusText}`)
   return res.json()
 }

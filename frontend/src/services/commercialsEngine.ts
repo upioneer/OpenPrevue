@@ -1,15 +1,18 @@
 /** 
  * Retro 1990s Television Commercial and Station Bumper Playback Engine for OpenPrevue.
- * Manages periodic video commercial interruption intervals, user video dropzones, and audio ducking.
+ * Manages periodic video commercial interruption intervals, server dropzone synchronization, and audio ducking.
  */
 
 import { ref } from "vue";
 import { audioSynth } from "./audioSynth";
+import { fetchCommercialClips, uploadCommercialClipFile } from "../api/client";
 
 export interface CommercialClip {
   id: string;
   name: string;
   url: string;
+  filename?: string;
+  sizeBytes?: number;
   durationSeconds?: number;
   isUserUploaded?: boolean;
 }
@@ -20,12 +23,14 @@ class CommercialsEngine {
   public isPlayingCommercial = ref<boolean>(false);
   public currentClip = ref<CommercialClip | null>(null);
   public clips = ref<CommercialClip[]>([]);
+  public dropzoneDirectory = ref<string>("./data/commercials");
   private timer: ReturnType<typeof setInterval> | null = null;
-  private wasMuzakPlayingBeforeVideo: boolean = false;
+  private wasAudioPlayingBeforeVideo: boolean = false;
 
   constructor() {
     this.loadSettings();
     this.initDefaultClips();
+    this.syncWithServerDropzone();
   }
 
   private loadSettings(): void {
@@ -66,6 +71,28 @@ class CommercialsEngine {
     ];
   }
 
+  public async syncWithServerDropzone(): Promise<void> {
+    try {
+      const res = await fetchCommercialClips();
+      if (res.dropzone_directory) {
+        this.dropzoneDirectory.value = res.dropzone_directory;
+      }
+      if (res.clips && res.clips.length > 0) {
+        const serverClips: CommercialClip[] = res.clips.map(c => ({
+          id: c.id,
+          name: c.name,
+          filename: c.filename,
+          sizeBytes: c.size_bytes,
+          url: c.url,
+          isUserUploaded: true,
+        }));
+        this.clips.value = serverClips;
+      }
+    } catch {
+      // Keep defaults if offline/server error
+    }
+  }
+
   public updateConfig(enabled: boolean, frequencyPerHour: number): void {
     this.isEnabled.value = enabled;
     this.frequencyPerHour.value = Math.max(1, Math.min(10, frequencyPerHour));
@@ -73,12 +100,14 @@ class CommercialsEngine {
     this.restartTimer();
   }
 
-  public addUploadedClip(file: File): CommercialClip {
-    const objectUrl = URL.createObjectURL(file);
+  public async uploadClipToServer(file: File): Promise<CommercialClip> {
+    const res = await uploadCommercialClipFile(file);
     const clip: CommercialClip = {
-      id: `user_${Date.now()}`,
-      name: file.name,
-      url: objectUrl,
+      id: res.clip.id,
+      name: res.clip.name,
+      filename: res.clip.filename,
+      sizeBytes: res.clip.size_bytes,
+      url: res.clip.url,
       isUserUploaded: true,
     };
     this.clips.value.push(clip);
@@ -101,11 +130,11 @@ class CommercialsEngine {
     this.currentClip.value = clip;
     this.isPlayingCommercial.value = true;
 
-    // Duck / Pause background Muzak
+    // Duck / Pause background audio
     const audioState = audioSynth.getPlaybackState();
-    this.wasMuzakPlayingBeforeVideo = audioState.isMuzakPlaying;
-    if (this.wasMuzakPlayingBeforeVideo) {
-      audioSynth.pauseMuzak();
+    this.wasAudioPlayingBeforeVideo = audioState.isAudioActive || audioState.isAudioStreamPlaying;
+    if (this.wasAudioPlayingBeforeVideo) {
+      audioSynth.pauseAudioStream();
     }
   }
 
@@ -114,8 +143,8 @@ class CommercialsEngine {
     this.currentClip.value = null;
 
     // Resume background audio if it was playing before
-    if (this.wasMuzakPlayingBeforeVideo) {
-      audioSynth.playMuzakStream();
+    if (this.wasAudioPlayingBeforeVideo) {
+      audioSynth.playAudioStream();
     }
   }
 

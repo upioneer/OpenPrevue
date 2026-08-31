@@ -1,35 +1,24 @@
 <template>
   <div
     v-if="currentAlert"
-    class="fixed top-0 left-0 right-0 z-50 bg-[#AA0000] border-b-4 border-[#FFFF00] text-[#FFFFFF] font-mono p-3 shadow-2xl animate-pulse select-none"
+    class="w-full bg-[#CC0000] text-white border-b-4 border-[#FFFF00] px-4 py-2 font-mono select-none z-50 animate-pulse shadow-2xl relative"
   >
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-      <!-- Left: Hazard Badge and Headline -->
-      <div class="space-y-1 flex-1">
-        <div class="flex items-center space-x-2">
-          <span class="bg-[#FFFF00] text-[#AA0000] font-black text-xs px-2 py-0.5 tracking-widest uppercase">
-            [{{ currentAlert.event_type }}]
-          </span>
-          <span class="text-xs text-[#FFFF77] font-bold uppercase tracking-wider">
-            ISSUED BY: {{ currentAlert.sender }}
-          </span>
-        </div>
-        <p class="text-sm font-black text-[#FFFFFF] tracking-wide uppercase">
-          {{ currentAlert.headline }}
-        </p>
-        <p v-if="currentAlert.instruction" class="text-xs text-[#E0E0E0] line-clamp-2">
-          {{ currentAlert.instruction }}
-        </p>
+    <div class="flex items-center justify-between">
+      <!-- Left: High-Visibility Emergency Header & Pulsing Beacon -->
+      <div class="flex items-center space-x-2">
+        <span class="bg-[#FFFF00] text-[#000033] font-black px-2 py-0.5 text-xs tracking-wider uppercase">
+          [ EMERGENCY ALERT SYSTEM ]
+        </span>
+        <span class="text-xs sm:text-sm font-black tracking-widest text-[#FFFF00] uppercase">
+          {{ currentAlert.event_type }}
+        </span>
       </div>
 
-      <!-- Right: Area & Dismiss -->
-      <div class="flex items-center space-x-3 self-end md:self-center">
-        <div class="text-right hidden lg:block">
-          <p class="text-[10px] text-[#FFAAAA]">AFFECTED AREA:</p>
-          <p class="text-xs text-[#FFFF00] font-bold">{{ currentAlert.area_description }}</p>
-        </div>
+      <!-- Right: Direct Dismiss Action Control -->
+      <div class="flex items-center space-x-2">
         <button
-          class="bg-[#000033] hover:bg-[#000055] border-2 border-[#FFFF00] text-[#FFFF00] px-3 py-1.5 text-xs font-black tracking-widest uppercase cursor-pointer transition-colors shadow"
+          type="button"
+          class="bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-2 py-0.5 text-xs font-black uppercase cursor-pointer transition-all"
           @click="dismissAlert"
         >
           [ DISMISS ]
@@ -37,8 +26,21 @@
       </div>
     </div>
 
-    <!-- Auto-Dismiss Progress Bar -->
-    <div class="w-full bg-[#550000] h-1 mt-2 overflow-hidden">
+    <!-- Alert Headline & Scope -->
+    <div class="mt-1">
+      <div class="text-sm sm:text-base font-black text-[#FFFF00] uppercase leading-tight">
+        {{ currentAlert.headline }}
+      </div>
+      <div class="text-xs text-[#E0E0E0] mt-0.5 font-bold">
+        AFFECTED AREA: <span class="text-white">{{ currentAlert.area_description }}</span>
+      </div>
+      <div v-if="currentAlert.instruction" class="text-xs text-[#FFFFCC] mt-0.5 font-medium">
+        {{ currentAlert.instruction }}
+      </div>
+    </div>
+
+    <!-- Live Duration Depletion Progress Bar -->
+    <div class="w-full bg-[#550000] h-1.5 mt-2 overflow-hidden">
       <div
         class="bg-[#FFFF00] h-full transition-all duration-100 ease-linear"
         :style="{ width: `${progressPercent}%` }"
@@ -50,6 +52,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { wsService } from '../services/websocket'
+import { audioSynth } from '../services/audioSynth'
 
 export interface EmergencyAlertData {
   id: string
@@ -63,6 +66,7 @@ export interface EmergencyAlertData {
   effective_at: string
   expires_at: string
   is_active: boolean
+  duration_seconds?: number
 }
 
 const currentAlert = ref<EmergencyAlertData | null>(null)
@@ -70,44 +74,13 @@ const progressPercent = ref(100)
 let timerInterval: ReturnType<typeof setInterval> | null = null
 let unsubscribeWs: (() => void) | null = null
 
-function playEASAttentionTone() {
-  try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
-    if (!AudioCtx) return
-
-    const ctx = new AudioCtx()
-    const now = ctx.currentTime
-
-    // 853 Hz oscillator
-    const osc1 = ctx.createOscillator()
-    osc1.frequency.setValueAtTime(853, now)
-
-    // 960 Hz oscillator
-    const osc2 = ctx.createOscillator()
-    osc2.frequency.setValueAtTime(960, now)
-
-    // Gain node to control volume
-    const gainNode = ctx.createGain()
-    gainNode.gain.setValueAtTime(0.08, now)
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 1.2)
-
-    osc1.connect(gainNode)
-    osc2.connect(gainNode)
-    gainNode.connect(ctx.destination)
-
-    osc1.start(now)
-    osc2.start(now)
-    osc1.stop(now + 1.2)
-    osc2.stop(now + 1.2)
-  } catch (err) {
-    console.debug('EAS Audio tone error:', err)
-  }
-}
-
 function showAlert(alert: EmergencyAlertData, durationSeconds: number = 30) {
   currentAlert.value = alert
   progressPercent.value = 100
-  playEASAttentionTone()
+
+  // Play one-shot sustained 8-second dual-tone attention signal (853 Hz + 960 Hz) then auto-stop
+  const toneDuration = Math.min(10, Math.max(6, Math.round(durationSeconds / 3)))
+  audioSynth.playEASSiren(toneDuration)
 
   if (timerInterval) clearInterval(timerInterval)
 
@@ -126,6 +99,7 @@ function showAlert(alert: EmergencyAlertData, durationSeconds: number = 30) {
 }
 
 function dismissAlert() {
+  audioSynth.stopEASSiren()
   if (timerInterval) {
     clearInterval(timerInterval)
     timerInterval = null
@@ -136,12 +110,14 @@ function dismissAlert() {
 onMounted(() => {
   unsubscribeWs = wsService.on('emergency_alert', (alert: EmergencyAlertData) => {
     if (alert) {
-      showAlert(alert, 30)
+      const displayDuration = alert.duration_seconds || 30
+      showAlert(alert, displayDuration)
     }
   })
 })
 
 onUnmounted(() => {
+  audioSynth.stopEASSiren()
   if (timerInterval) clearInterval(timerInterval)
   if (unsubscribeWs) unsubscribeWs()
 })

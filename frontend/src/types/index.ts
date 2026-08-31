@@ -90,6 +90,35 @@ export interface UpdateStatusResponse {
   last_error?: string | null
 }
 
+export interface OllamaPingResponse {
+  status: string
+  ollama_url: string
+  latency_ms: number
+  models: string[]
+  version?: string | null
+  error?: string | null
+}
+
+export interface GeocodeResult {
+  name: string
+  admin1?: string | null
+  country?: string | null
+  metro_label: string
+  latitude: number
+  longitude: number
+  postal_code?: string | null
+  display_label: string
+}
+
+export interface SpotifyMetadataResponse {
+  title: string
+  author_name?: string | null
+  thumbnail_url?: string | null
+  embed_url?: string | null
+  playlist_url: string
+  provider: string
+}
+
 export interface SystemSettings {
   postal_code: string
   metro_label: string
@@ -97,6 +126,9 @@ export interface SystemSettings {
   longitude: string
   radius_miles: string
   autoscroll_speed: string
+  grid_density?: 'classic_tv' | 'balanced' | 'dense' | string
+  scroll_pause_duration?: string
+  scroll_page_interval?: string
   marquee_rotation_seconds: string
   scanline_intensity: string
   phosphor_glow: string
@@ -106,5 +138,7 @@ export interface SystemSettings {
   sync_interval_hours: string
   update_check_interval?: string
   auto_update_notifs?: string
+  ai_ollama_url?: string
+  ai_ollama_model?: string
   [key: string]: string | undefined
 }

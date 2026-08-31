@@ -2,12 +2,15 @@
 
 from fastapi import APIRouter
 from backend.app.api.v1.endpoints import (
+    ai,
+    commercials,
     eas,
     events,
     health,
     mcp,
     settings,
     speech,
+    spotify,
     sync,
     telegram,
     updates,
@@ -30,3 +33,6 @@ api_router.include_router(speech.router, tags=["Speech"])
 api_router.include_router(eas.router, tags=["Emergency Alert System"])
 api_router.include_router(mcp.router, tags=["Model Context Protocol"])
 api_router.include_router(updates.router, tags=["Updates"])
+api_router.include_router(commercials.router, tags=["Commercials"])
+api_router.include_router(ai.router, tags=["AI & Ollama"])
+api_router.include_router(spotify.router, tags=["Spotify"])

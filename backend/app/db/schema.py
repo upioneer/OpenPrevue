@@ -66,7 +66,8 @@ CREATE TABLE IF NOT EXISTS ticket_links (
     url TEXT NOT NULL,
     label TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
+    FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+    UNIQUE(event_id, source)
 );
 
 CREATE TABLE IF NOT EXISTS ingestion_log (
@@ -108,5 +109,6 @@ CREATE INDEX IF NOT EXISTS idx_events_has_ticket ON events(has_ticket);
 CREATE INDEX IF NOT EXISTS idx_events_last_seen ON events(last_seen_at);
 CREATE INDEX IF NOT EXISTS idx_venue_aliases_venue ON venue_aliases(venue_id);
 CREATE INDEX IF NOT EXISTS idx_ticket_links_event ON ticket_links(event_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ticket_links_event_source ON ticket_links(event_id, source);
 CREATE INDEX IF NOT EXISTS idx_watchlist_keyword ON watchlist(keyword);
 """

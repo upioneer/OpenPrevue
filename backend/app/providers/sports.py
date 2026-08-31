@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta, timezone
 from backend.app.core.logging import logger
 from backend.app.providers.base import BaseProvider, GeoPoint, RawEvent
+from backend.app.services.ingestion import calculate_haversine_distance
 
 
 class SportsLeagueProvider(BaseProvider):
@@ -11,13 +12,13 @@ class SportsLeagueProvider(BaseProvider):
     provider_name: str = "sports_leagues"
 
     async def fetch_events(self, location: GeoPoint, radius_miles: float) -> list[RawEvent]:
-        """Fetch sports events and filter by radial geographic proximity."""
+        """Fetch sports events filtered by radial geographic proximity or national broadcast status."""
         events: list[RawEvent] = []
         now = datetime.now(timezone.utc)
 
         # Motorsport & League Calendar Database
         fixtures = [
-            # Formula 1
+            # National Motorsport Broadcasts
             {
                 "id": "f1-cota-usgp",
                 "title": "FORMULA 1 UNITED STATES GRAND PRIX",
@@ -35,26 +36,8 @@ class SportsLeagueProvider(BaseProvider):
                 "price_max": 850.0,
                 "url": "https://www.formula1.com/en/racing/2026/United_States.html",
                 "desc": "Official Formula 1 World Championship Sunday Grand Prix race session.",
+                "is_national": True,
             },
-            {
-                "id": "f1-miami-gp",
-                "title": "FORMULA 1 CRYPTO.COM MIAMI GRAND PRIX",
-                "league": "Formula 1",
-                "venue_name": "Miami International Autodrome",
-                "address": "347 Don Shula Dr",
-                "city": "Miami Gardens",
-                "state": "FL",
-                "postal": "33056",
-                "lat": 25.9580,
-                "lon": -80.2389,
-                "days_offset": 12,
-                "hour": 15,
-                "price_min": 210.0,
-                "price_max": 1200.0,
-                "url": "https://www.formula1.com/en/racing/2026/Miami.html",
-                "desc": "Round 6 of the FIA Formula 1 World Championship around Hard Rock Stadium.",
-            },
-            # NASCAR Cup Series
             {
                 "id": "nascar-talladega-500",
                 "title": "NASCAR CUP SERIES: GEICO 500",
@@ -72,8 +55,8 @@ class SportsLeagueProvider(BaseProvider):
                 "price_max": 240.0,
                 "url": "https://www.nascar.com/schedule",
                 "desc": "High banks superspeedway pack racing in the NASCAR Cup Series.",
+                "is_national": True,
             },
-            # NTT IndyCar Series
             {
                 "id": "indycar-barber-gp",
                 "title": "INDYCAR: CHILDREN'S OF ALABAMA INDY GRAND PRIX",
@@ -91,8 +74,8 @@ class SportsLeagueProvider(BaseProvider):
                 "price_max": 180.0,
                 "url": "https://www.indycar.com/Schedule",
                 "desc": "NTT INDYCAR SERIES natural road course championship race.",
+                "is_national": True,
             },
-            # MotoGP
             {
                 "id": "motogp-americas-gp",
                 "title": "MOTOGP: GRAND PRIX OF THE AMERICAS",
@@ -110,8 +93,9 @@ class SportsLeagueProvider(BaseProvider):
                 "price_max": 350.0,
                 "url": "https://www.motogp.com/en/calendar",
                 "desc": "FIM MotoGP World Championship premier class motorcycle racing.",
+                "is_national": True,
             },
-            # NFL: Saints at Superdome
+            # New Orleans Regional Sports
             {
                 "id": "nfl-saints-vs-falcons",
                 "title": "NFL: NEW ORLEANS SAINTS VS ATLANTA FALCONS",
@@ -129,8 +113,8 @@ class SportsLeagueProvider(BaseProvider):
                 "price_max": 420.0,
                 "url": "https://www.neworleanssaints.com/schedule",
                 "desc": "NFC South rivalry matchup live under the dome.",
+                "is_national": False,
             },
-            # NBA: Pelicans at Smoothie King Center
             {
                 "id": "nba-pelicans-vs-lakers",
                 "title": "NBA: NEW ORLEANS PELICANS VS LOS ANGELES LAKERS",
@@ -148,8 +132,48 @@ class SportsLeagueProvider(BaseProvider):
                 "price_max": 380.0,
                 "url": "https://www.nba.com/pelicans/schedule",
                 "desc": "Western Conference showdown at the Smoothie King Center.",
+                "is_national": False,
             },
-            # MLB
+            # New York Regional Sports
+            {
+                "id": "nba-knicks-vs-celtics",
+                "title": "NBA: NEW YORK KNICKS VS BOSTON CELTICS",
+                "league": "NBA",
+                "venue_name": "Madison Square Garden",
+                "address": "4 Pennsylvania Plaza",
+                "city": "New York",
+                "state": "NY",
+                "postal": "10001",
+                "lat": 40.7505,
+                "lon": -73.9934,
+                "days_offset": 1,
+                "hour": 19,
+                "price_min": 95.0,
+                "price_max": 480.0,
+                "url": "https://www.nba.com/knicks/schedule",
+                "desc": "Eastern Conference rivalry matchup at MSG.",
+                "is_national": False,
+            },
+            {
+                "id": "nba-nets-vs-heat",
+                "title": "NBA: BROOKLYN NETS VS MIAMI HEAT",
+                "league": "NBA",
+                "venue_name": "Barclays Center",
+                "address": "620 Atlantic Ave",
+                "city": "Brooklyn",
+                "state": "NY",
+                "postal": "11217",
+                "lat": 40.6826,
+                "lon": -73.9754,
+                "days_offset": 3,
+                "hour": 19,
+                "price_min": 45.0,
+                "price_max": 320.0,
+                "url": "https://www.nba.com/nets/schedule",
+                "desc": "Atlantic Division basketball matchup in Brooklyn.",
+                "is_national": False,
+            },
+            # Houston Regional Sports
             {
                 "id": "mlb-astros-vs-rangers",
                 "title": "MLB: HOUSTON ASTROS VS TEXAS RANGERS",
@@ -167,8 +191,8 @@ class SportsLeagueProvider(BaseProvider):
                 "price_max": 210.0,
                 "url": "https://www.mlb.com/astros/schedule",
                 "desc": "Lone Star Series rivalry baseball game.",
+                "is_national": True,
             },
-            # MLS
             {
                 "id": "mls-houston-dynamo-vs-austin",
                 "title": "MLS: HOUSTON DYNAMO FC VS AUSTIN FC",
@@ -186,10 +210,16 @@ class SportsLeagueProvider(BaseProvider):
                 "price_max": 160.0,
                 "url": "https://www.houstondynamofc.com/schedule",
                 "desc": "Major League Soccer regular season fixture.",
+                "is_national": True,
             },
         ]
 
         for fix in fixtures:
+            dist = calculate_haversine_distance(location.latitude, location.longitude, fix["lat"], fix["lon"])
+            # Include if within radius or national broadcast or broad query
+            if dist > radius_miles and not fix.get("is_national") and radius_miles < 500:
+                continue
+
             event_date = now + timedelta(days=fix["days_offset"])
             event_dt = event_date.replace(hour=fix["hour"], minute=0, second=0, microsecond=0)
             iso_start = event_dt.isoformat()
@@ -214,9 +244,9 @@ class SportsLeagueProvider(BaseProvider):
                 price_max=fix["price_max"],
                 currency="USD",
                 ticket_url=fix["url"],
-                is_featured=1 if fix["league"] in ["NFL", "Formula 1"] else 0,
+                is_featured=1 if fix["league"] in ["NFL", "Formula 1", "NBA"] else 0,
             )
             events.append(raw_event)
 
-        logger.info("SportsLeagueProvider parsed %d fixtures across F1, NASCAR, IndyCar, MotoGP, NFL, NBA, MLB, MLS.", len(events))
+        logger.info("SportsLeagueProvider loaded %d fixtures for location (%.4f, %.4f).", len(events), location.latitude, location.longitude)
         return events

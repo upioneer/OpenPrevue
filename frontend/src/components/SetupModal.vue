@@ -43,55 +43,103 @@
           </div>
         </div>
 
-        <!-- Custom Fields -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#333366]">
-          <div>
-            <label class="block text-[#8888AA] font-bold mb-1">METRO / CHANNEL LABEL:</label>
-            <input
-              v-model="metroLabel"
-              type="text"
-              class="w-full bg-[#000022] border border-[#333366] text-[#FFFF00] font-bold px-2 py-1 uppercase focus:border-[#FFFF00] outline-hidden"
-              placeholder="e.g. NEW YORK CITY"
-            />
+        <!-- Custom Fields & Geocoding Resolver -->
+        <div class="space-y-3 pt-2 border-t border-[#333366]">
+          <div class="flex items-center justify-between">
+            <label class="block text-[#00FFFF] font-bold uppercase">CUSTOM CITY OR POSTAL CODE LOOKUP:</label>
+            <span v-if="isGeocoding" class="text-[#FFFF00] animate-pulse font-bold">[ LOCATING... ]</span>
           </div>
 
-          <div>
-            <label class="block text-[#8888AA] font-bold mb-1">POSTAL / ZIP CODE:</label>
-            <input
-              v-model="postalCode"
-              type="text"
-              class="w-full bg-[#000022] border border-[#333366] text-[#FFFF00] font-bold px-2 py-1 focus:border-[#FFFF00] outline-hidden"
-              placeholder="e.g. 10001"
-            />
-          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[#8888AA] font-bold mb-1">CITY / CHANNEL BROADCAST LABEL:</label>
+              <div class="flex space-x-1">
+                <input
+                  v-model="metroLabel"
+                  type="text"
+                  class="flex-1 bg-[#000022] border border-[#333366] text-[#FFFF00] font-bold px-2 py-1 uppercase focus:border-[#FFFF00] outline-hidden"
+                  placeholder="e.g. AUSTIN, TX"
+                  @blur="handleAutoGeocode(metroLabel)"
+                  @keydown.enter.prevent="handleAutoGeocode(metroLabel)"
+                />
+                <button
+                  type="button"
+                  class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-2 py-1 text-[10px] font-bold cursor-pointer transition-colors"
+                  @click="handleAutoGeocode(metroLabel)"
+                >
+                  [ RESOLVE ]
+                </button>
+              </div>
+            </div>
 
-          <div>
-            <label class="block text-[#8888AA] font-bold mb-1">LATITUDE / LONGITUDE:</label>
-            <div class="flex space-x-1">
+            <div>
+              <label class="block text-[#8888AA] font-bold mb-1">POSTAL / ZIP CODE:</label>
+              <div class="flex space-x-1">
+                <input
+                  v-model="postalCode"
+                  type="text"
+                  class="flex-1 bg-[#000022] border border-[#333366] text-[#FFFF00] font-bold px-2 py-1 focus:border-[#FFFF00] outline-hidden"
+                  placeholder="e.g. 78701"
+                  @blur="handleAutoGeocode(postalCode)"
+                  @keydown.enter.prevent="handleAutoGeocode(postalCode)"
+                />
+                <button
+                  type="button"
+                  class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-2 py-1 text-[10px] font-bold cursor-pointer transition-colors"
+                  @click="handleAutoGeocode(postalCode)"
+                >
+                  [ RESOLVE ]
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[#8888AA] font-bold mb-1">RESOLVED COORDINATES (LAT / LON):</label>
+              <div class="flex space-x-1">
+                <input
+                  v-model="latitude"
+                  type="text"
+                  class="w-1/2 bg-[#000022] border border-[#333366] text-[#E0E0E0] px-2 py-1 text-[11px] focus:border-[#00FFFF] outline-hidden"
+                  placeholder="Lat"
+                />
+                <input
+                  v-model="longitude"
+                  type="text"
+                  class="w-1/2 bg-[#000022] border border-[#333366] text-[#E0E0E0] px-2 py-1 text-[11px] focus:border-[#00FFFF] outline-hidden"
+                  placeholder="Lon"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[#8888AA] font-bold mb-1">DISCOVERY RADIUS (MILES):</label>
               <input
-                v-model="latitude"
-                type="text"
-                class="w-1/2 bg-[#000022] border border-[#333366] text-[#E0E0E0] px-2 py-1 text-[11px] focus:border-[#00FFFF] outline-hidden"
-                placeholder="Lat"
-              />
-              <input
-                v-model="longitude"
-                type="text"
-                class="w-1/2 bg-[#000022] border border-[#333366] text-[#E0E0E0] px-2 py-1 text-[11px] focus:border-[#00FFFF] outline-hidden"
-                placeholder="Lon"
+                v-model="radiusMiles"
+                type="number"
+                class="w-full bg-[#000022] border border-[#333366] text-[#E0E0E0] px-2 py-1 text-[11px] focus:border-[#00FFFF] outline-hidden"
+                placeholder="25"
               />
             </div>
           </div>
 
-          <div>
-            <label class="block text-[#8888AA] font-bold mb-1">DISCOVERY RADIUS (MILES):</label>
-            <input
-              v-model="radiusMiles"
-              type="number"
-              class="w-full bg-[#000022] border border-[#333366] text-[#E0E0E0] px-2 py-1 text-[11px] focus:border-[#00FFFF] outline-hidden"
-              placeholder="25"
-            />
+          <div v-if="geocodeMessage" class="p-2 border text-xs" :class="geocodeIsError ? 'bg-[#330000] border-[#FF4444] text-[#FF8888]' : 'bg-[#003300] border-[#00FF00] text-[#00FF00] font-bold'">
+            {{ geocodeMessage }}
           </div>
+        </div>
+
+        <!-- Audio Atmosphere Opt-In Toggle -->
+        <div class="bg-[#000033] p-3 border border-[#00FFFF] space-y-1">
+          <label class="flex items-center space-x-2 text-xs font-bold text-[#00FFFF] cursor-pointer">
+            <input
+              v-model="enableAudioOnBoot"
+              type="checkbox"
+              class="w-4 h-4 accent-[#00FF00]"
+            />
+            <span>Enable 1990s Analog Tape Hiss & CRT Atmosphere Automatically</span>
+          </label>
+          <p class="text-[10px] text-[#8888AA] pl-6">
+            Plays subtle analog tape atmosphere through the 12 kHz CRT filter when you start the guide.
+          </p>
         </div>
 
         <!-- Action Buttons -->
@@ -120,8 +168,9 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { triggerSync, updateSetting } from '../api/client'
+import { geocodeLocationQuery, refreshWeather, triggerSync, updateSetting } from '../api/client'
 import { REGIONAL_PRESETS, type RegionalPreset } from '../services/regionalPresets'
+import { audioSynth } from '../services/audioSynth'
 
 const props = defineProps<{
   initialSetupCompleted?: string
@@ -134,12 +183,17 @@ const emit = defineEmits<{
 const isOpen = ref(false)
 const isSaving = ref(false)
 const selectedPreset = ref('NYC')
+const enableAudioOnBoot = ref(true)
 
 const metroLabel = ref('NEW YORK CITY')
 const postalCode = ref('10001')
 const latitude = ref('40.7128')
 const longitude = ref('-74.0060')
 const radiusMiles = ref('25')
+
+const isGeocoding = ref(false)
+const geocodeMessage = ref('')
+const geocodeIsError = ref(false)
 
 function applyPreset(preset: RegionalPreset) {
   selectedPreset.value = preset.label
@@ -148,17 +202,71 @@ function applyPreset(preset: RegionalPreset) {
   latitude.value = preset.lat.toString()
   longitude.value = preset.lon.toString()
   radiusMiles.value = preset.radius.toString()
+  geocodeMessage.value = `[PRESET SELECTED] ${preset.metro} (${preset.lat}, ${preset.lon})`
+  geocodeIsError.value = false
+}
+
+async function handleAutoGeocode(query: string) {
+  if (!query || query.trim().length < 2) return
+  isGeocoding.value = true
+  geocodeMessage.value = ''
+  geocodeIsError.value = false
+
+  try {
+    const results = await geocodeLocationQuery(query.trim())
+    if (results && results.length > 0) {
+      const match = results[0]
+      metroLabel.value = match.metro_label
+      if (match.postal_code) {
+        postalCode.value = match.postal_code
+      }
+      latitude.value = match.latitude.toString()
+      longitude.value = match.longitude.toString()
+      selectedPreset.value = ''
+      geocodeMessage.value = `LOCATION RESOLVED: ${match.display_label} (${match.latitude.toFixed(4)}, ${match.longitude.toFixed(4)})`
+    } else {
+      geocodeIsError.value = true
+      geocodeMessage.value = `Could not auto-locate "${query}". You may enter coordinates manually.`
+    }
+  } catch (err) {
+    geocodeIsError.value = true
+    geocodeMessage.value = `Geocoding error: ${String(err)}`
+  } finally {
+    isGeocoding.value = false
+  }
 }
 
 async function saveAndInitialize() {
   isSaving.value = true
   try {
+    // If coordinates were not resolved yet for custom input, try resolving first
+    if (metroLabel.value && (latitude.value === '40.7128' && longitude.value === '-74.0060' && metroLabel.value !== 'NEW YORK CITY')) {
+      try {
+        const results = await geocodeLocationQuery(metroLabel.value)
+        if (results && results.length > 0) {
+          latitude.value = results[0].latitude.toString()
+          longitude.value = results[0].longitude.toString()
+          if (results[0].postal_code) postalCode.value = results[0].postal_code
+        }
+      } catch {
+        // Continue with current values
+      }
+    }
+
     await updateSetting('metro_label', metroLabel.value)
     await updateSetting('postal_code', postalCode.value)
     await updateSetting('latitude', latitude.value)
     await updateSetting('longitude', longitude.value)
     await updateSetting('radius_miles', radiusMiles.value)
     await updateSetting('initial_setup_completed', '1')
+
+    // Refresh weather immediately for new location
+    refreshWeather().catch(() => {})
+
+    audioSynth.setAutoPlayOptIn(enableAudioOnBoot.value)
+    if (enableAudioOnBoot.value) {
+      audioSynth.startTurnkeyAudio()
+    }
 
     localStorage.setItem('openprevue_onboarded', '1')
     isOpen.value = false
@@ -179,6 +287,12 @@ async function dismissDefault() {
   } catch {
     // Ignore
   }
+
+  audioSynth.setAutoPlayOptIn(enableAudioOnBoot.value)
+  if (enableAudioOnBoot.value) {
+    audioSynth.startTurnkeyAudio()
+  }
+
   localStorage.setItem('openprevue_onboarded', '1')
   isOpen.value = false
   emit('setup-completed')

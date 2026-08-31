@@ -1,27 +1,43 @@
-"""System settings management API endpoints."""
+"""System settings API endpoints."""
 
 from datetime import datetime, timezone
 from fastapi import APIRouter
+from pydantic import BaseModel
+
 from backend.app.db.session import get_db
-from backend.app.schemas.setting import SettingItem, SettingUpdate
+from backend.app.services.ingestion import ingestion_service
 from backend.app.services.scheduler import reschedule_sync_interval
+from backend.app.services.weather import weather_service
 from backend.app.services.websocket import connection_manager
 
-router = APIRouter()
+router = APIRouter(prefix="/settings")
 
 
-@router.get("/settings", response_model=dict[str, str])
-async def get_all_settings() -> dict[str, str]:
-    """Retrieve all configuration settings."""
+class SettingItem(BaseModel):
+    key: str
+    value: str
+    updated_at: str | None = None
+
+
+class SettingUpdate(BaseModel):
+    value: str
+
+
+@router.get("", response_model=dict[str, str])
+async def get_settings() -> dict[str, str]:
+    """Retrieve all system settings as key-value pairs."""
+    settings: dict[str, str] = {}
     async with get_db() as db:
         async with db.execute("SELECT key, value FROM settings") as cursor:
             rows = await cursor.fetchall()
-            return {row["key"]: row["value"] for row in rows}
+            for row in rows:
+                settings[row["key"]] = row["value"]
+    return settings
 
 
-@router.put("/settings/{key}", response_model=SettingItem)
+@router.put("/{key}", response_model=SettingItem)
 async def update_setting(key: str, payload: SettingUpdate) -> SettingItem:
-    """Create or update a single configuration setting and broadcast changes."""
+    """Update a specific system setting by key."""
     now_iso = datetime.now(timezone.utc).isoformat()
     async with get_db() as db:
         await db.execute(
@@ -45,5 +61,19 @@ async def update_setting(key: str, payload: SettingUpdate) -> SettingItem:
 
     # Broadcast settings update to all active dashboard displays
     await connection_manager.broadcast("settings_updated", {"key": key, "value": payload.value})
+
+    # If location coordinate changed, refresh weather & re-sync events immediately
+    if key in ("latitude", "longitude", "metro_label", "postal_code", "radius_miles"):
+        try:
+            weather = await weather_service.get_current_weather(force_refresh=True)
+            await connection_manager.broadcast("weather_updated", weather.to_dict())
+        except Exception:
+            pass
+
+        try:
+            await ingestion_service.sync_all_registered_providers()
+            await connection_manager.broadcast("events_updated", {"trigger": "location_changed"})
+        except Exception:
+            pass
 
     return SettingItem(key=key, value=payload.value, updated_at=now_iso)

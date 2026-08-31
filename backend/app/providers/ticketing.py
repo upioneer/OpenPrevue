@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta, timezone
 from backend.app.core.logging import logger
 from backend.app.providers.base import BaseProvider, GeoPoint, RawEvent
+from backend.app.services.ingestion import calculate_haversine_distance
 
 
 class SecondaryTicketingProvider(BaseProvider):
@@ -11,12 +12,12 @@ class SecondaryTicketingProvider(BaseProvider):
     provider_name: str = "secondary_ticketing"
 
     async def fetch_events(self, location: GeoPoint, radius_miles: float) -> list[RawEvent]:
-        """Fetch promoter and marketplace inventory."""
+        """Fetch promoter and marketplace inventory filtered by location radius."""
         events: list[RawEvent] = []
         now = datetime.now(timezone.utc)
 
         listings = [
-            # Live Nation Headline Tour
+            # New Orleans Listings
             {
                 "id": "ln-chappell-roan",
                 "title": "LIVE NATION PRESENTS: CHAPPELL ROAN",
@@ -36,7 +37,6 @@ class SecondaryTicketingProvider(BaseProvider):
                 "url": "https://www.livenation.com/event/chappell-roan",
                 "desc": "Official Live Nation touring production.",
             },
-            # Vivid Seats Resale Listing
             {
                 "id": "vs-jazz-fest-pass",
                 "title": "VIVID SEATS: NEW ORLEANS JAZZ & HERITAGE FESTIVAL (WEEKEND PASS)",
@@ -56,7 +56,6 @@ class SecondaryTicketingProvider(BaseProvider):
                 "url": "https://www.vividseats.com/festivals/new-orleans-jazz-and-heritage-festival-tickets.html",
                 "desc": "Verified secondary market resale passes with 100% buyer guarantee.",
             },
-            # StubHub Resale
             {
                 "id": "sh-billy-strings",
                 "title": "STUBHUB: BILLY STRINGS 3-NIGHT RUN",
@@ -76,7 +75,6 @@ class SecondaryTicketingProvider(BaseProvider):
                 "url": "https://www.stubhub.com/billy-strings-tickets",
                 "desc": "Verified secondary marketplace concert tickets with fan protect guarantee.",
             },
-            # TripAdvisor / Viator Experience
             {
                 "id": "viator-steamboat-natchez",
                 "title": "VIATOR: STEAMBOAT NATCHEZ EVENING JAZZ & DINNER CRUISE",
@@ -96,9 +94,90 @@ class SecondaryTicketingProvider(BaseProvider):
                 "url": "https://www.viator.com/tours/New-Orleans/Steamboat-Natchez-Jazz-Dinner-Cruise",
                 "desc": "Traditional Mississippi River paddlewheel cruise with live jazz band.",
             },
+            # NYC Listings
+            {
+                "id": "ln-brooklyn-paramount",
+                "title": "LIVE NATION PRESENTS: FOALS LIVE IN BROOKLYN",
+                "provider": "Live Nation",
+                "category": "music",
+                "venue_name": "Brooklyn Paramount",
+                "address": "385 Flatbush Ave Ext",
+                "city": "Brooklyn",
+                "state": "NY",
+                "postal": "11201",
+                "lat": 40.6908,
+                "lon": -73.9818,
+                "days_offset": 2,
+                "hour": 20,
+                "price_min": 55.0,
+                "price_max": 180.0,
+                "url": "https://www.livenation.com",
+                "desc": "Official Live Nation touring concert event.",
+            },
+            {
+                "id": "vs-governors-ball",
+                "title": "VIVID SEATS: GOVERNORS BALL MUSIC FESTIVAL PASS",
+                "provider": "Vivid Seats",
+                "category": "festival",
+                "venue_name": "Flushing Meadows Corona Park",
+                "address": "Grand Central Pkwy",
+                "city": "Queens",
+                "state": "NY",
+                "postal": "11368",
+                "lat": 40.7498,
+                "lon": -73.8407,
+                "days_offset": 7,
+                "hour": 12,
+                "price_min": 145.0,
+                "price_max": 495.0,
+                "url": "https://www.vividseats.com",
+                "desc": "Verified secondary market festival passes.",
+            },
+            {
+                "id": "sh-msg-resale",
+                "title": "STUBHUB: CONCERT SERIES PASS AT MSG",
+                "provider": "StubHub",
+                "category": "music",
+                "venue_name": "Madison Square Garden",
+                "address": "4 Pennsylvania Plaza",
+                "city": "New York",
+                "state": "NY",
+                "postal": "10001",
+                "lat": 40.7505,
+                "lon": -73.9934,
+                "days_offset": 4,
+                "hour": 20,
+                "price_min": 95.0,
+                "price_max": 350.0,
+                "url": "https://www.stubhub.com",
+                "desc": "Verified secondary market concert tickets.",
+            },
+            {
+                "id": "viator-nyc-harbor",
+                "title": "VIATOR: STATUE OF LIBERTY SUNSET JAZZ CRUISE",
+                "provider": "TripAdvisor / Viator",
+                "category": "community",
+                "venue_name": "Chelsea Piers Pier 62",
+                "address": "62 Chelsea Piers",
+                "city": "New York",
+                "state": "NY",
+                "postal": "10011",
+                "lat": 40.7465,
+                "lon": -74.0086,
+                "days_offset": 0,
+                "hour": 18,
+                "price_min": 48.0,
+                "price_max": 85.0,
+                "url": "https://www.viator.com",
+                "desc": "Hudson River architectural and jazz sightseeing cruise.",
+            },
         ]
 
         for item in listings:
+            dist = calculate_haversine_distance(location.latitude, location.longitude, item["lat"], item["lon"])
+            if dist > radius_miles and radius_miles < 500:
+                continue
+
             event_date = now + timedelta(days=item["days_offset"])
             event_dt = event_date.replace(hour=item["hour"], minute=0, second=0, microsecond=0)
             iso_start = event_dt.isoformat()
@@ -127,5 +206,5 @@ class SecondaryTicketingProvider(BaseProvider):
             )
             events.append(raw_event)
 
-        logger.info("SecondaryTicketingProvider loaded %d listings across Live Nation, Vivid Seats, StubHub, Viator.", len(events))
+        logger.info("SecondaryTicketingProvider loaded %d listings for location (%.4f, %.4f).", len(events), location.latitude, location.longitude)
         return events

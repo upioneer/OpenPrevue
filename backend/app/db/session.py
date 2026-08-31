@@ -32,6 +32,13 @@ async def init_db(database_path: Path | None = None) -> None:
             logger.warning("Pre-schema column migration check error: %s", exc)
 
         await db.executescript(SCHEMA_SQL)
+
+        # Ensure unique index on ticket_links(event_id, source)
+        try:
+            await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_ticket_links_event_source ON ticket_links(event_id, source);")
+        except Exception:
+            pass
+
         await db.commit()
 
         # Verify WAL mode

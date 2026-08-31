@@ -37,9 +37,12 @@
 
       <!-- Tab 1: Location & Radial Discovery -->
       <div v-if="activeTab === 'location'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
-        <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
-          Location & Radial Event Aggregation
-        </h2>
+        <div class="flex items-center justify-between border-b border-[#333366] pb-1">
+          <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
+            Location, City Geocoding & Radial Event Aggregation
+          </h2>
+          <span v-if="isGeocodingLocation" class="text-xs text-[#FFFF00] animate-pulse font-bold">[ RESOLVING LOCATION... ]</span>
+        </div>
 
         <!-- Quick Regional Presets -->
         <div class="bg-[#000033] p-3 border border-[#333366] space-y-2">
@@ -62,21 +65,47 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Metro Area Label:</label>
-            <input
-              v-model="form.metro_label"
-              type="text"
-              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
-            />
+            <label class="text-xs text-[#A0A0C0] block font-bold">Metro Area / Channel Broadcast Label:</label>
+            <div class="flex space-x-1">
+              <input
+                v-model="form.metro_label"
+                type="text"
+                class="flex-1 bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+                placeholder="e.g. AUSTIN, TX or CHICAGO, IL"
+                @blur="handleSettingsGeocode(form.metro_label)"
+                @keydown.enter.prevent="handleSettingsGeocode(form.metro_label)"
+              />
+              <button
+                type="button"
+                class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-2 py-1 text-[10px] font-bold cursor-pointer transition-colors"
+                @click="handleSettingsGeocode(form.metro_label)"
+              >
+                [ RESOLVE ]
+              </button>
+            </div>
           </div>
+
           <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Postal Code (ZIP):</label>
-            <input
-              v-model="form.postal_code"
-              type="text"
-              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
-            />
+            <label class="text-xs text-[#A0A0C0] block font-bold">Postal Code (ZIP):</label>
+            <div class="flex space-x-1">
+              <input
+                v-model="form.postal_code"
+                type="text"
+                class="flex-1 bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+                placeholder="e.g. 78701 or 60601"
+                @blur="handleSettingsGeocode(form.postal_code)"
+                @keydown.enter.prevent="handleSettingsGeocode(form.postal_code)"
+              />
+              <button
+                type="button"
+                class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-2 py-1 text-[10px] font-bold cursor-pointer transition-colors"
+                @click="handleSettingsGeocode(form.postal_code)"
+              >
+                [ RESOLVE ]
+              </button>
+            </div>
           </div>
+
           <div class="space-y-1">
             <label class="text-xs text-[#A0A0C0] block">Search Radius: {{ form.radius_miles }} miles</label>
             <input
@@ -88,6 +117,7 @@
               class="w-full accent-[#FFFF00]"
             />
           </div>
+
           <div class="space-y-1">
             <label class="text-xs text-[#A0A0C0] block">Provider Ingestion Interval: {{ form.sync_interval_hours }}h</label>
             <input
@@ -99,6 +129,7 @@
               class="w-full accent-[#FFFF00]"
             />
           </div>
+
           <div class="space-y-1">
             <label class="text-xs text-[#A0A0C0] block">Center Latitude:</label>
             <input
@@ -107,6 +138,7 @@
               class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
             />
           </div>
+
           <div class="space-y-1">
             <label class="text-xs text-[#A0A0C0] block">Center Longitude:</label>
             <input
@@ -116,14 +148,161 @@
             />
           </div>
         </div>
+
+        <div v-if="locationResolutionMsg" class="p-2 border text-xs" :class="locationResolutionIsError ? 'bg-[#330000] border-[#FF4444] text-[#FF8888]' : 'bg-[#003300] border-[#00FF00] text-[#00FF00] font-bold'">
+          {{ locationResolutionMsg }}
+        </div>
       </div>
 
-      <!-- Tab 2: Retro Shader & CRT Display -->
+      <!-- Tab 2: Display & Scan Speed -->
       <div v-if="activeTab === 'display'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
-          Retro Shader & CRT Video Emulation
+          Display Controls, Channel Scan Speed & Retro CRT Shaders
         </h2>
+
+        <!-- Channel Schedule Presentation Scale & Density Presets -->
+        <div class="bg-[#000033] p-4 border-2 border-[#FFFF00] space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase">
+              Schedule Presentation Scale & Density
+            </h3>
+            <span class="text-xs text-[#00FFFF] font-bold">
+              ACTIVE: {{ form.grid_density === 'dense' ? '12 ROWS (DENSE)' : (form.grid_density === 'balanced' ? '7 ROWS (HAPPY MEDIUM)' : '4 ROWS (AUTHENTIC CLASSIC TV)') }}
+            </span>
+          </div>
+          <p class="text-xs text-[#8888AA]">
+            Select your preferred channel schedule row scale and typography density across landscape, 1080p, and portrait monitors.
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+            <!-- Classic TV (4 Rows) -->
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.grid_density === 'classic_tv' || !form.grid_density
+                ? 'bg-[#000066] border-[#FFFF00] text-[#FFFF00] shadow-[0_0_10px_rgba(255,255,0,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.grid_density = 'classic_tv'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ 4 ROWS // CLASSIC TV ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">True-to-scale authentic 1990s TV broadcast layout with huge chunky typography and large team cards.</div>
+            </button>
+
+            <!-- Balanced (7 Rows) -->
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.grid_density === 'balanced'
+                ? 'bg-[#000066] border-[#00FFFF] text-[#00FFFF] shadow-[0_0_10px_rgba(0,255,255,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.grid_density = 'balanced'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ 7 ROWS // HAPPY MEDIUM ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">Balanced presentation with comfortable row spacing and higher listing visibility.</div>
+            </button>
+
+            <!-- Dense (12 Rows) -->
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.grid_density === 'dense'
+                ? 'bg-[#000066] border-[#00FF00] text-[#00FF00] shadow-[0_0_10px_rgba(0,255,0,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.grid_density = 'dense'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ 12 ROWS // DENSE OVERVIEW ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">High-density information mode displaying maximum simultaneous channels on screen.</div>
+            </button>
+          </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Autoscroll Scan Speed -->
+          <div class="bg-[#000033] p-3 border border-[#FFFF00] space-y-1">
+            <label class="text-xs text-[#FFFF00] font-bold block">
+              Channel Schedule Scroll Speed (Scan Speed): {{ form.autoscroll_speed }} px/sec
+            </label>
+            <input
+              v-model="form.autoscroll_speed"
+              type="range"
+              min="15"
+              max="150"
+              step="5"
+              class="w-full accent-[#FFFF00]"
+            />
+            <span class="text-[10px] text-[#8888AA] block">
+              Controls the autoscroll pace of the bottom TV listings grid (30 px/sec is default smooth broadcast scan speed).
+            </span>
+          </div>
+
+          <!-- Spotlight Marquee Rotation -->
+          <div class="bg-[#000033] p-3 border border-[#333366] space-y-1">
+            <label class="text-xs text-[#00FFFF] font-bold block">
+              Spotlight Marquee Rotation Interval: {{ form.marquee_rotation_seconds }}s
+            </label>
+            <input
+              v-model="form.marquee_rotation_seconds"
+              type="range"
+              min="5"
+              max="60"
+              step="5"
+              class="w-full accent-[#FFFF00]"
+            />
+            <span class="text-[10px] text-[#8888AA] block">
+              How long each featured event or sports matchup stays on screen in the top preview quadrant.
+            </span>
+          </div>
+
+          <!-- Periodic Listing Reading Pause -->
+          <div class="bg-[#000033] p-3 border border-[#00FF00] space-y-1">
+            <label class="text-xs text-[#00FF00] font-bold block">
+              Periodic Schedule Reading Pause Duration: {{ form.scroll_pause_duration || '4' }}s
+            </label>
+            <input
+              v-model="form.scroll_pause_duration"
+              type="range"
+              min="0"
+              max="10"
+              step="1"
+              class="w-full accent-[#00FF00]"
+            />
+            <span class="text-[10px] text-[#8888AA] block">
+              Authentic 1990s TV Guide cadence. Holds position for 4s so viewers can comfortably read listings before scrolling (0s = continuous scroll).
+            </span>
+          </div>
+
+          <!-- Scroll Movement Window Duration -->
+          <div class="bg-[#000033] p-3 border border-[#333366] space-y-1">
+            <label class="text-xs text-[#00FFFF] font-bold block">
+              Scroll Active Motion Window: {{ form.scroll_page_interval || '6' }}s
+            </label>
+            <input
+              v-model="form.scroll_page_interval"
+              type="range"
+              min="3"
+              max="15"
+              step="1"
+              class="w-full accent-[#00FFFF]"
+            />
+            <span class="text-[10px] text-[#8888AA] block">
+              How many seconds the schedule scrolls before pausing on the next set of channel rows.
+            </span>
+          </div>
+
+          <!-- Scanline Intensity -->
+          <div class="space-y-1">
+            <label class="text-xs text-[#A0A0C0] block">Scanline Opacity: {{ shaderForm.scanlineIntensity }}%</label>
+            <input
+              v-model="shaderForm.scanlineIntensity"
+              @input="handleShaderChange"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              class="w-full accent-[#FFFF00]"
+            />
+          </div>
+
+          <!-- Color Palette Preset -->
           <div class="space-y-1">
             <label class="text-xs text-[#A0A0C0] block">Color Palette Preset:</label>
             <select
@@ -140,6 +319,7 @@
             </select>
           </div>
 
+          <!-- Resolution Downsampler -->
           <div class="space-y-1">
             <label class="text-xs text-[#A0A0C0] block">Resolution Downsampler Scaling:</label>
             <select
@@ -154,44 +334,8 @@
             </select>
           </div>
 
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Scanline Opacity: {{ shaderForm.scanlineIntensity }}%</label>
-            <input
-              v-model="shaderForm.scanlineIntensity"
-              @input="handleShaderChange"
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              class="w-full accent-[#FFFF00]"
-            />
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Autoscroll Speed: {{ form.autoscroll_speed }} px/sec</label>
-            <input
-              v-model="form.autoscroll_speed"
-              type="range"
-              min="20"
-              max="150"
-              step="5"
-              class="w-full accent-[#FFFF00]"
-            />
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Marquee Rotation Interval: {{ form.marquee_rotation_seconds }}s</label>
-            <input
-              v-model="form.marquee_rotation_seconds"
-              type="range"
-              min="5"
-              max="60"
-              step="5"
-              class="w-full accent-[#FFFF00]"
-            />
-          </div>
-
-          <div class="flex items-center space-x-4 pt-2">
+          <!-- CRT Effects Toggles -->
+          <div class="flex items-center space-x-4 pt-4">
             <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
               <input
                 v-model="shaderForm.phosphorGlow"
@@ -215,140 +359,71 @@
         </div>
       </div>
 
-      <!-- Tab 3: Audio, Spotify, Commercials & Muzak Synthesizer -->
+      <!-- Tab 3: Spotify & Vintage Audio -->
       <div v-if="activeTab === 'audio'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
-          Background Audio, Spotify, Retro Commercials & RF Filter
+          Spotify Playlist Pairing & Vintage Tape Audio Filter
         </h2>
 
-        <!-- Retro Video Commercials & Bumpers Engine Card -->
-        <div class="bg-[#000033] border border-[#FFFF00] p-4 space-y-4">
-          <div class="flex items-center justify-between border-b border-[#333366] pb-2">
-            <div>
-              <span class="text-xs font-bold text-[#FFFF00] block uppercase">
-                1990s Television Commercials & Station Bumpers Engine
-              </span>
-              <span class="text-[11px] text-[#8888AA]">
-                Periodically plays retro commercial breaks and station IDs in the top preview quadrant.
-              </span>
-            </div>
-            <label class="flex items-center space-x-2 text-xs font-bold text-[#00FF00] cursor-pointer">
-              <input
-                v-model="commercialsEnabled"
-                @change="handleCommercialsConfigChange"
-                type="checkbox"
-                class="w-4 h-4 accent-[#00FF00]"
-              />
-              <span>{{ commercialsEnabled ? '[ COMMERCIALS ACTIVE ]' : '[ DISABLED ]' }}</span>
-            </label>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="space-y-1">
-              <label class="text-xs text-[#A0A0C0] block">
-                Commercial Break Frequency: {{ commercialsFrequency }} per hour
-                <span class="text-[#00FFFF] block text-[10px]">
-                  (Plays 1 commercial every {{ Math.round(60 / commercialsFrequency) }} minutes / ~{{ Math.round(15 / commercialsFrequency) || 1 }} songs)
-                </span>
-              </label>
-              <input
-                v-model.number="commercialsFrequency"
-                @input="handleCommercialsConfigChange"
-                type="range"
-                min="1"
-                max="10"
-                step="1"
-                class="w-full accent-[#FFFF00]"
-              />
-            </div>
-
-            <div class="flex items-center space-x-3 pt-2">
-              <button
-                type="button"
-                class="bg-[#000080] hover:bg-[#0000AA] border border-[#FFFF00] text-[#FFFF00] px-4 py-2 text-xs font-bold tracking-wider cursor-pointer transition-colors shadow"
-                @click="triggerCommercialTest"
-              >
-                [ TEST PLAY COMMERCIAL CLIP ]
-              </button>
-            </div>
-          </div>
-
-          <!-- Video Dropzone for User Commercial Rips / OEM Bumpers -->
-          <div class="pt-1 space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-[#00FFFF] uppercase">Local Commercial Video Dropzone (.MP4 / .WEBM):</span>
-              <span class="text-[10px] text-[#8888AA]">{{ commercialsEngine.clips.value.length }} clips in queue</span>
-            </div>
-            <div
-              class="border-2 border-dashed border-[#333366] hover:border-[#FFFF00] p-4 text-center rounded-xs transition-colors cursor-pointer bg-[#000022]/60"
-              @dragover.prevent
-              @drop.prevent="handleVideoDrop"
-              @click="triggerVideoFileInput"
-            >
-              <input
-                ref="videoFileInputRef"
-                type="file"
-                accept=".mp4,.webm,.m4v"
-                class="hidden"
-                @change="handleVideoFileSelected"
-              />
-              <div class="space-y-1">
-                <div class="text-xs text-[#FFFF00] font-bold">DRAG AND DROP RETRO COMMERCIAL CLIPS HERE</div>
-                <div class="text-[11px] text-[#8888AA]">Plays in top preview window during scheduled commercial breaks</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Official OpenPrevue Spotify Playlist Banner -->
-        <div class="bg-[#000033] border border-[#1DB954] p-4 space-y-3">
+        <!-- Spotify Playlist Configuration Card -->
+        <div class="bg-[#000033] border border-[#1DB954] p-4 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1DB954]/40 pb-2">
             <div class="flex items-center space-x-2">
               <span class="w-2.5 h-2.5 bg-[#1DB954] inline-block animate-pulse"></span>
               <h3 class="text-xs font-bold text-[#1DB954] uppercase tracking-wider">
-                Official OpenPrevue Spotify Playlist
+                Curated Spotify Playlist & Player Controls
               </h3>
             </div>
             <a
-              href="https://open.spotify.com/playlist/3jiPmIT4RugR8TPhli5Obk?si=22d007e309134d4f"
+              :href="form.spotify_playlist_url || 'https://open.spotify.com/playlist/3jiPmIT4RugR8TPhli5Obk?si=22d007e309134d4f'"
               target="_blank"
               rel="noopener noreferrer"
               class="bg-[#1DB954] text-[#000033] hover:bg-white px-3 py-1 text-xs font-black tracking-wider transition-all cursor-pointer inline-block text-center shadow-[0_0_10px_rgba(29,185,84,0.6)]"
             >
-              [ OPEN PLAYLIST ON SPOTIFY ]
+              [ LAUNCH PLAYLIST IN SPOTIFY ]
             </a>
           </div>
 
-          <p class="text-[11px] text-[#A0A0C0] leading-relaxed">
-            Curated vintage ambient jazz, 1990s Weather Channel smooth lounge, vaporwave acoustics, and vintage cable headend themes.
-          </p>
+          <div class="space-y-3">
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block font-bold">Custom Spotify Playlist URL (Optional Override):</label>
+              <input
+                v-model="form.spotify_playlist_url"
+                type="text"
+                placeholder="https://open.spotify.com/playlist/3jiPmIT4RugR8TPhli5Obk?si=22d007e309134d4f"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#1DB954] outline-none"
+              />
+              <span class="text-[10px] text-[#8888AA] block">
+                OpenPrevue defaults to the official curated playlist. You can paste your own Spotify playlist link above to pair custom tracks.
+              </span>
+            </div>
 
-          <!-- Spotify Embedded Player -->
-          <div class="w-full pt-1">
-            <iframe
-              style="border-radius: 4px"
-              src="https://open.spotify.com/embed/playlist/3jiPmIT4RugR8TPhli5Obk?utm_source=generator&theme=0"
-              width="100%"
-              height="152"
-              frameBorder="0"
-              allowfullscreen
-              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              loading="lazy"
-            ></iframe>
-          </div>
-        </div>
+            <div class="flex items-center space-x-4">
+              <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
+                <input
+                  v-model="spotifyAutoplayEnabled"
+                  @change="handleSpotifyAutoplayToggle"
+                  type="checkbox"
+                  class="accent-[#1DB954]"
+                />
+                <span>Auto-play Spotify embed on initial guide boot</span>
+              </label>
+            </div>
 
-        <!-- Headend Audio Encoding & Filter Guidance Banner -->
-        <div class="bg-[#000033] border border-[#333366] p-4 space-y-2">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
-              Headend Audio Encoding & Vintage Signal Specs
-            </h3>
-            <span class="text-[10px] text-[#00FF00] font-bold">12 kHz HIGH-SHELF FILTER ACTIVE</span>
+            <!-- Spotify Embedded Player -->
+            <div class="w-full pt-1">
+              <iframe
+                style="border-radius: 4px"
+                :src="computedSpotifyEmbedUrl"
+                width="100%"
+                height="152"
+                frameBorder="0"
+                allowfullscreen
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy"
+              ></iframe>
+            </div>
           </div>
-          <p class="text-[11px] text-[#A0A0C0] leading-relaxed">
-            For OpenPrevue setups, encode your audio files to <strong class="text-[#FFFF00]">128–192 kbps MP3</strong> or standard stereo <strong class="text-[#FFFF00]">16-bit 44.1 kHz WAV/OGG</strong> (depending on your audio backend configuration). If you want the full authentic 1990s analog CRT vibe, passing the audio through a mild high-shelf cut filter (around 12 kHz) replicates the classic composite/RF baseband frequency response of 90s cable headends.
-          </p>
         </div>
 
         <!-- 1990s RF / Composite Baseband Audio Filter Control Panel -->
@@ -421,102 +496,202 @@
           </div>
         </div>
 
-        <!-- Ambient Streams & Volumes -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Ambient Muzak Stream Preset:</label>
-            <select
-              v-model="selectedMuzakStream"
-              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
-            >
-              <option
-                v-for="stream in muzakStreams"
-                :key="stream.url"
-                :value="stream.url"
-              >
-                {{ stream.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Muzak Stream Volume: {{ muzakVol }}%</label>
-            <input
-              v-model="muzakVol"
-              @input="handleAudioVolumeChange"
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              class="w-full accent-[#FFFF00]"
-            />
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Analog Tape Hiss & 60Hz Hum Volume: {{ tapeHissVol }}%</label>
-            <input
-              v-model="tapeHissVol"
-              @input="handleAudioVolumeChange"
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              class="w-full accent-[#FFFF00]"
-            />
-          </div>
-
-          <div class="flex items-center space-x-3 pt-4">
+        <!-- Analog Tape Hiss & 60Hz Transformer Hum Controls -->
+        <div class="bg-[#000033] border border-[#333366] p-4 space-y-4">
+          <div class="flex items-center justify-between border-b border-[#333366] pb-2">
+            <span class="text-xs font-bold text-[#FFFF00] uppercase">
+              Analog Headend Atmosphere (Tape Hiss & 60Hz Hum)
+            </span>
             <button
               type="button"
-              class="px-4 py-2 border text-xs font-black tracking-wider transition-all cursor-pointer"
+              class="px-3 py-1 border text-xs font-bold transition-all cursor-pointer"
               :class="isAudioPreviewPlaying
                 ? 'bg-[#FF4444] text-white border-[#FF4444]'
                 : 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_8px_rgba(0,255,0,0.8)]'"
               @click="toggleAudioPreview"
             >
-              {{ isAudioPreviewPlaying ? '[ STOP AUDIO GENERATOR ]' : '[ TEST SOUND GENERATOR ]' }}
+              {{ isAudioPreviewPlaying ? '[ STOP TAPE HISS ]' : '[ TEST TAPE HISS ]' }}
             </button>
           </div>
-        </div>
 
-        <!-- Local Audio File Ingestion Player -->
-        <div class="bg-[#000033] border border-[#333366] p-4 space-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
-              Local Audio Track / Headend File Ingestion (MP3 / WAV / OGG)
-            </h3>
-            <span class="text-[10px] text-[#00FFFF]">DSP FILTER APPLIED LIVE</span>
-          </div>
-
-          <div
-            class="border-2 border-dashed border-[#333366] hover:border-[#00FFFF] p-4 text-center rounded-xs transition-colors cursor-pointer bg-[#000022]/60"
-            @dragover.prevent
-            @drop.prevent="handleAudioDrop"
-            @click="triggerAudioFileInput"
-          >
-            <input
-              ref="audioFileInputRef"
-              type="file"
-              accept=".mp3,.wav,.ogg,.flac"
-              class="hidden"
-              @change="handleAudioFileSelected"
-            />
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="space-y-1">
-              <div class="text-xs text-[#FFFF00] font-bold">DRAG AND DROP LOCAL AUDIO TRACK HERE</div>
-              <div class="text-[11px] text-[#8888AA]">Plays directly through the active 12 kHz RF headend filter</div>
+              <label class="text-xs text-[#A0A0C0] block">Analog Tape Hiss Volume: {{ tapeHissVol }}%</label>
+              <input
+                v-model="tapeHissVol"
+                @input="handleAudioVolumeChange"
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                class="w-full accent-[#FFFF00]"
+              />
             </div>
-          </div>
-
-          <div v-if="audioUploadStatus" class="p-2 text-xs border bg-[#003300] border-[#00FF00] text-[#00FF00]">
-            {{ audioUploadStatus }}
           </div>
         </div>
       </div>
 
-      <!-- Tab 4: Ticket Ingestion & AI -->
-      <div v-if="activeTab === 'ingestion'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
+      <!-- Tab 4: Retro Commercials & Station Bumpers -->
+      <div v-if="activeTab === 'commercials'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
+        <div class="flex items-center justify-between border-b border-[#333366] pb-2">
+          <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
+            1990s Television Commercials & Station Bumpers Engine
+          </h2>
+          <span
+            class="text-[11px] px-2 py-0.5 border"
+            :class="commercialsEnabled ? 'bg-[#003300] text-[#00FF00] border-[#00FF00]' : 'bg-[#330000] text-[#FF4444] border-[#FF4444]'"
+          >
+            {{ commercialsEnabled ? '[ COMMERCIALS ACTIVE ]' : '[ DISABLED ]' }}
+          </span>
+        </div>
+
+        <div class="bg-[#000033] border border-[#FFFF00] p-4 space-y-4">
+          <div class="flex items-center justify-between border-b border-[#333366] pb-2">
+            <div>
+              <span class="text-xs font-bold text-[#FFFF00] block uppercase">
+                Automatic Commercial Interruption Scheduling
+              </span>
+              <span class="text-[11px] text-[#8888AA]">
+                Periodically plays retro commercial breaks and station IDs in the top preview quadrant.
+              </span>
+            </div>
+            <label class="flex items-center space-x-2 text-xs font-bold text-[#00FF00] cursor-pointer">
+              <input
+                v-model="commercialsEnabled"
+                @change="handleCommercialsConfigChange"
+                type="checkbox"
+                class="w-4 h-4 accent-[#00FF00]"
+              />
+              <span>{{ commercialsEnabled ? '[ ENABLED ]' : '[ DISABLED ]' }}</span>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">
+                Commercial Break Frequency: {{ commercialsFrequency }} per hour
+                <span class="text-[#00FFFF] block text-[10px]">
+                  (Plays 1 commercial every {{ Math.round(60 / commercialsFrequency) }} minutes)
+                </span>
+              </label>
+              <input
+                v-model.number="commercialsFrequency"
+                @input="handleCommercialsConfigChange"
+                type="range"
+                min="1"
+                max="10"
+                step="1"
+                class="w-full accent-[#FFFF00]"
+              />
+            </div>
+
+            <div class="flex items-center space-x-3 pt-2">
+              <button
+                type="button"
+                class="bg-[#000080] hover:bg-[#0000AA] border border-[#FFFF00] text-[#FFFF00] px-4 py-2 text-xs font-bold tracking-wider cursor-pointer transition-colors shadow"
+                @click="triggerCommercialTest"
+              >
+                [ TEST PLAY COMMERCIAL CLIP ]
+              </button>
+            </div>
+          </div>
+
+          <!-- Video Dropzone & Directory Guidance -->
+          <div class="pt-1 space-y-3">
+            <div class="bg-[#000022] p-3 border border-[#333366] space-y-2 text-[11px]">
+              <div class="flex items-center justify-between text-[#00FFFF] font-bold uppercase">
+                <span>Where to place your video files:</span>
+                <span class="text-[#FFFF00]">SERVER DIRECTORY: ./data/commercials/</span>
+              </div>
+              <p class="text-[#A0A0C0] leading-relaxed">
+                You can drop video files directly into the <strong class="text-[#FFFF00]">./data/commercials/</strong> folder on your server / Docker host, or drag and drop them below. Files are instantly loaded into the rotation.
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-1 text-[10px]">
+                <div class="bg-[#000033] p-1.5 border border-[#333366]">
+                  <span class="text-[#8888AA] block">CONTAINER:</span>
+                  <span class="text-[#00FF00] font-bold">.mp4 / .webm</span>
+                </div>
+                <div class="bg-[#000033] p-1.5 border border-[#333366]">
+                  <span class="text-[#8888AA] block">VIDEO CODEC:</span>
+                  <span class="text-[#00FF00] font-bold">H.264 / VP9</span>
+                </div>
+                <div class="bg-[#000033] p-1.5 border border-[#333366]">
+                  <span class="text-[#8888AA] block">RESOLUTION:</span>
+                  <span class="text-[#00FF00] font-bold">480p SD / 720p HD</span>
+                </div>
+                <div class="bg-[#000033] p-1.5 border border-[#333366]">
+                  <span class="text-[#8888AA] block">MAX FILE SIZE:</span>
+                  <span class="text-[#00FF00] font-bold">&lt; 50 MB / clip</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Video Dropzone -->
+            <div
+              class="border-2 border-dashed border-[#333366] hover:border-[#FFFF00] p-4 text-center rounded-xs transition-colors cursor-pointer bg-[#000022]/60"
+              @dragover.prevent
+              @drop.prevent="handleVideoDrop"
+              @click="triggerVideoFileInput"
+            >
+              <input
+                ref="videoFileInputRef"
+                type="file"
+                accept=".mp4,.webm,.m4v"
+                class="hidden"
+                @change="handleVideoFileSelected"
+              />
+              <div class="space-y-1">
+                <div class="text-xs text-[#FFFF00] font-bold">DRAG AND DROP RETRO COMMERCIAL CLIPS HERE</div>
+                <div class="text-[11px] text-[#8888AA]">Plays in top preview window during scheduled commercial breaks (Max 50MB)</div>
+              </div>
+            </div>
+
+            <div v-if="videoUploadMessage" class="p-2 text-xs border" :class="videoUploadIsError ? 'bg-[#330000] border-[#FF4444] text-[#FF8888]' : 'bg-[#003300] border-[#00FF00] text-[#00FF00]'">
+              {{ videoUploadMessage }}
+            </div>
+
+            <!-- Clips List in Queue -->
+            <div v-if="commercialsEngine.clips.value.length > 0" class="space-y-1 pt-1">
+              <span class="text-xs font-bold text-[#A0A0C0] block">CURRENT VIDEO ROTATION QUEUE ({{ commercialsEngine.clips.value.length }}):</span>
+              <div class="space-y-1 max-h-36 overflow-y-auto">
+                <div
+                  v-for="clip in commercialsEngine.clips.value"
+                  :key="clip.id"
+                  class="flex items-center justify-between bg-[#000022] px-3 py-1.5 border border-[#333366] text-xs"
+                >
+                  <div class="flex items-center space-x-2 truncate">
+                    <span class="text-[#00FF00] font-bold truncate">{{ clip.name }}</span>
+                    <span v-if="clip.sizeBytes" class="text-[#8888AA] text-[10px]">
+                      ({{ (clip.sizeBytes / (1024 * 1024)).toFixed(1) }} MB)
+                    </span>
+                  </div>
+                  <div class="flex items-center space-x-2 shrink-0">
+                    <button
+                      type="button"
+                      class="text-[10px] text-[#00FFFF] hover:underline cursor-pointer"
+                      @click="commercialsEngine.playClip(clip)"
+                    >
+                      [ Play Now ]
+                    </button>
+                    <button
+                      type="button"
+                      class="text-[10px] text-[#FF4444] hover:underline cursor-pointer"
+                      @click="commercialsEngine.removeClip(clip.id)"
+                    >
+                      [ Remove ]
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 5: Ticket Ingestion & AI -->
+      <div v-if="activeTab === 'ingestion'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
-          Multi-Format Reservation Ingestion & Enhanced AI Extractor
+          Multi-Format Reservation Ingestion & Local / Cloud AI Models
         </h2>
 
         <!-- Ingestion Matrix Banner -->
@@ -552,21 +727,103 @@
           </div>
         </div>
 
-        <!-- Enhanced AI Ticket Extractor Settings -->
+        <!-- Local AI Support (Ollama Instance) -->
+        <div class="bg-[#000033] border border-[#00FFFF] p-4 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
+            <div>
+              <span class="text-xs font-black text-[#00FFFF] block uppercase tracking-wider">
+                Local AI Engine Support (Self-Hosted Ollama)
+              </span>
+              <span class="text-[11px] text-[#8888AA]">
+                Run private, offline AI extraction for indie event flyers and unstructured reservation emails.
+              </span>
+            </div>
+            <span
+              v-if="ollamaTestResult"
+              class="text-[11px] px-2 py-0.5 border shrink-0 font-bold"
+              :class="ollamaTestResult.status === 'online' ? 'bg-[#003300] text-[#00FF00] border-[#00FF00]' : 'bg-[#330000] text-[#FF4444] border-[#FF4444]'"
+            >
+              {{ ollamaTestResult.status === 'online' ? `[ ONLINE: ${ollamaTestResult.latency_ms}ms ]` : '[ OFFLINE ]' }}
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block font-bold">Ollama Instance URL:</label>
+              <input
+                v-model="form.ai_ollama_url"
+                type="text"
+                placeholder="http://localhost:11434"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1.5 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+              />
+              <span class="text-[10px] text-[#8888AA] block">
+                For Docker deployments, use <code class="text-[#00FFFF]">http://host.docker.internal:11434</code> or your LAN IP.
+              </span>
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block font-bold">Ollama Model Name:</label>
+              <div class="flex items-center space-x-2">
+                <input
+                  v-model="form.ai_ollama_model"
+                  type="text"
+                  placeholder="llama3.2"
+                  class="flex-1 bg-[#000022] border border-[#333366] px-2 py-1.5 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+                />
+                <select
+                  v-if="ollamaDetectedModels.length > 0"
+                  v-model="form.ai_ollama_model"
+                  class="bg-[#000022] border border-[#00FFFF] px-2 py-1.5 text-xs text-[#00FFFF] outline-none cursor-pointer"
+                  title="Select detected local Ollama model"
+                >
+                  <option v-for="m in ollamaDetectedModels" :key="m" :value="m">{{ m }}</option>
+                </select>
+              </div>
+              <span class="text-[10px] text-[#8888AA] block">
+                Recommended: <code class="text-[#00FF00]">llama3.2</code>, <code class="text-[#00FF00]">mistral</code>, or <code class="text-[#00FF00]">qwen2.5</code>.
+              </span>
+            </div>
+          </div>
+
+          <!-- Ollama Ping & Health Validation Action -->
+          <div class="flex flex-wrap items-center gap-3 pt-2">
+            <button
+              :disabled="isTestingOllama"
+              type="button"
+              class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-4 py-2 text-xs font-black tracking-wider cursor-pointer disabled:opacity-50 transition-colors shadow"
+              @click="handlePingOllama"
+            >
+              {{ isTestingOllama ? '[ PINGING OLLAMA SERVER... ]' : '[ TEST OLLAMA HEARTBEAT & CONNECTION ]' }}
+            </button>
+
+            <div v-if="ollamaTestResult" class="text-xs">
+              <div v-if="ollamaTestResult.status === 'online'" class="text-[#00FF00] font-bold">
+                PROBE SUCCESS: Connected to Ollama {{ ollamaTestResult.version ? `(v${ollamaTestResult.version})` : '' }} in {{ ollamaTestResult.latency_ms }}ms.
+                <span v-if="ollamaTestResult.models.length > 0" class="block text-[10px] text-[#A0A0C0]">
+                  Detected {{ ollamaTestResult.models.length }} models: {{ ollamaTestResult.models.slice(0, 4).join(', ') }}{{ ollamaTestResult.models.length > 4 ? '...' : '' }}
+                </span>
+              </div>
+              <div v-else class="text-[#FF8888] font-bold">
+                CONNECTION FAILED: {{ ollamaTestResult.error || 'Server did not respond.' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Optional Cloud AI Keys -->
         <div class="bg-[#000033] border border-[#333366] p-4 space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
-              Enhanced AI Ticket Parser (Optional Cloud Assist)
+              Optional Cloud AI Enhancements (Groq / OpenAI / Anthropic)
             </h3>
-            <span class="text-[10px] text-[#00FF00] font-bold">ZERO-CONFIG LOCAL PARSER ACTIVE</span>
+            <span class="text-[10px] text-[#8888AA]">OPTIONAL CLOUD ASSIST</span>
           </div>
 
           <p class="text-[11px] text-[#8888AA] leading-relaxed">
-            Standard calendar feeds (.ics), MIME emails (.eml), and Outlook messages (.msg) parse deterministically with 100% precision out of the box with no API keys needed.
-            Add an optional API key below to enable enhanced AI extraction for complex, unformatted indie venue flyers and irregular promoter emails.
+            Leave empty if you use local deterministic parsing or local Ollama. Adding API keys allows fast cloud extraction fallback.
           </p>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
             <div class="space-y-1">
               <label class="text-[11px] text-[#A0A0C0] block">Groq API Key (Llama 3.3 70B):</label>
               <input
@@ -598,31 +855,76 @@
         </div>
       </div>
 
-      <!-- Tab 5: Telegram & Speech -->
+      <!-- Tab 6: Telegram Bot & Voice Speech -->
       <div v-if="activeTab === 'telegram'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
-          Telegram Bot & Spoken Voice Announcer
+          Telegram Bot Assistant & Spoken Voice Announcer
         </h2>
 
-        <!-- Telegram Pairing Wizard -->
-        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
-              Telegram Device Pairing Wizard
+        <!-- Step-by-Step Interactive Telegram Bot Creation Guide -->
+        <div class="bg-[#000033] p-4 border border-[#FFFF00] space-y-3">
+          <div class="flex items-center justify-between border-b border-[#333366] pb-2">
+            <h3 class="text-xs font-black text-[#FFFF00] uppercase tracking-wider">
+              Step-by-Step Guide: How to Create and Connect Your Telegram Bot
             </h3>
             <span
               class="text-[11px] px-2 py-0.5 border"
               :class="telegramStatus?.is_running ? 'bg-[#003300] text-[#00FF00] border-[#00FF00]' : 'bg-[#330000] text-[#FF4444] border-[#FF4444]'"
             >
-              {{ telegramStatus?.is_running ? '[ BOT ACTIVE ]' : '[ BOT OFFLINE ]' }}
+              {{ telegramStatus?.is_running ? '[ BOT ACTIVE ]' : '[ BOT NOT CONFIGURED ]' }}
             </span>
           </div>
 
-          <p class="text-[11px] text-[#8888AA] leading-relaxed">
-            Pair your Telegram account to curate the channel schedule, pin featured events, search upcoming concerts, and query by voice from anywhere.
-          </p>
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-2 text-[11px]">
+            <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
+              <span class="text-[#FFFF00] font-black block">STEP 1: BOTFATHER</span>
+              <p class="text-[#A0A0C0] text-[10px]">
+                Open Telegram and message <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" class="text-[#00FFFF] underline font-bold">@BotFather</a>.
+              </p>
+            </div>
 
-          <div class="flex items-center space-x-3 pt-1">
+            <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
+              <span class="text-[#FFFF00] font-black block">STEP 2: /newbot</span>
+              <p class="text-[#A0A0C0] text-[10px]">
+                Send <code class="text-[#00FF00]">/newbot</code>, give it a title, and pick a username ending in <code class="text-[#00FF00]">bot</code>.
+              </p>
+            </div>
+
+            <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
+              <span class="text-[#FFFF00] font-black block">STEP 3: COPY TOKEN</span>
+              <p class="text-[#A0A0C0] text-[10px]">
+                Copy the HTTP API token given by BotFather (e.g. <code class="text-[#00FF00]">123456:ABC...</code>).
+              </p>
+            </div>
+
+            <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
+              <span class="text-[#FFFF00] font-black block">STEP 4: PASTE & SAVE</span>
+              <p class="text-[#A0A0C0] text-[10px]">
+                Paste the token into the input below and click <strong class="text-[#FFFF00]">Save Settings</strong>.
+              </p>
+            </div>
+
+            <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
+              <span class="text-[#FFFF00] font-black block">STEP 5: PAIR DEVICE</span>
+              <p class="text-[#A0A0C0] text-[10px]">
+                Click <strong class="text-[#00FFFF]">Generate Pairing Code</strong> and message your bot <code class="text-[#00FF00]">/pair &lt;CODE&gt;</code>.
+              </p>
+            </div>
+          </div>
+
+          <!-- Bot Token Input -->
+          <div class="space-y-1 pt-2 border-t border-[#333366]">
+            <label class="text-xs text-[#A0A0C0] block font-bold">Telegram Bot API Token (from @BotFather):</label>
+            <input
+              v-model="form.telegram_bot_token"
+              type="password"
+              placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+              class="w-full bg-[#000022] border border-[#333366] px-2 py-1.5 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+            />
+          </div>
+
+          <!-- Pairing Wizard Section -->
+          <div class="flex flex-wrap items-center gap-3 pt-2">
             <button
               class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-4 py-1.5 text-xs font-bold tracking-wider cursor-pointer transition-colors"
               @click="handleGeneratePairCode"
@@ -746,7 +1048,7 @@
         </div>
       </div>
 
-      <!-- Tab 6: Emergency Alerts (EAS) -->
+      <!-- Tab 7: Emergency Alerts (EAS) -->
       <div v-if="activeTab === 'eas'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
         <div class="flex items-center justify-between border-b border-[#333366] pb-2">
           <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
@@ -824,7 +1126,7 @@
         </div>
       </div>
 
-      <!-- Tab 7: Provider API Keys -->
+      <!-- Tab 8: Provider API Keys -->
       <div v-if="activeTab === 'providers'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
           External Ticketing & Event Provider APIs
@@ -866,19 +1168,10 @@
               class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
             />
           </div>
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Telegram Bot API Token:</label>
-            <input
-              v-model="form.telegram_bot_token"
-              type="password"
-              placeholder="From @BotFather"
-              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
-            />
-          </div>
         </div>
       </div>
 
-      <!-- Tab 8: System Updates & Version Management -->
+      <!-- Tab 9: System Updates & Version Management -->
       <div v-if="activeTab === 'updates'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
         <div class="flex items-center justify-between border-b border-[#333366] pb-2">
           <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
@@ -902,11 +1195,11 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
           <div class="bg-[#000022] p-2 border border-[#333366]">
             <span class="text-[#8888AA] block text-[10px]">CURRENT VERSION:</span>
-            <span class="text-[#FFFF00] font-bold">v{{ updateStatus?.current_version || '0.15.0' }}</span>
+            <span class="text-[#FFFF00] font-bold">v{{ updateStatus?.current_version || '0.16.0' }}</span>
           </div>
           <div class="bg-[#000022] p-2 border border-[#333366]">
             <span class="text-[#8888AA] block text-[10px]">LATEST RELEASE:</span>
-            <span class="text-[#00FFFF] font-bold">v{{ updateStatus?.latest_version || updateStatus?.current_version || '0.15.0' }}</span>
+            <span class="text-[#00FFFF] font-bold">v{{ updateStatus?.latest_version || updateStatus?.current_version || '0.16.0' }}</span>
           </div>
           <div class="bg-[#000022] p-2 border border-[#333366]">
             <span class="text-[#8888AA] block text-[10px]">LAST CHECKED:</span>
@@ -1027,7 +1320,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import {
   checkUpdatesNow,
   dispatchEASTestAlert,
@@ -1038,6 +1331,9 @@ import {
   fetchTelegramUsers,
   fetchUpdateStatus,
   generateTelegramPairCode,
+  geocodeLocationQuery,
+  pingOllamaInstance,
+  refreshWeather,
   sendTelegramTestMessage,
   testSpeechPipeline,
   triggerSync,
@@ -1048,17 +1344,18 @@ import { retroShader, type ShaderConfig } from '../services/retroShader'
 import { audioSynth, type AudioFilterConfig, type AudioFilterProfile } from '../services/audioSynth'
 import { commercialsEngine } from '../services/commercialsEngine'
 import { REGIONAL_PRESETS, type RegionalPreset } from '../services/regionalPresets'
-import type { HealthData, SystemSettings, UpdateStatusResponse } from '../types'
+import type { HealthData, OllamaPingResponse, SystemSettings, UpdateStatusResponse } from '../types'
 
 const tabs = [
-  { id: 'location', label: '[ LOCATION & DISCOVERY ]' },
-  { id: 'display', label: '[ RETRO CRT SHADER ]' },
-  { id: 'audio', label: '[ SPOTIFY & MUZAK ]' },
-  { id: 'ingestion', label: '[ TICKET INGESTION & AI ]' },
-  { id: 'telegram', label: '[ TELEGRAM & SPEECH ]' },
-  { id: 'eas', label: '[ EMERGENCY ALERTS (EAS) ]' },
-  { id: 'providers', label: '[ PROVIDER CREDENTIALS ]' },
-  { id: 'updates', label: '[ SYSTEM & UPDATES ]' },
+  { id: 'location', label: '[ 1. LOCATION & DISCOVERY ]' },
+  { id: 'display', label: '[ 2. DISPLAY & SCAN SPEED ]' },
+  { id: 'audio', label: '[ 3. SPOTIFY & VINTAGE AUDIO ]' },
+  { id: 'commercials', label: '[ 4. RETRO COMMERCIALS ]' },
+  { id: 'ingestion', label: '[ 5. TICKET INGESTION & AI ]' },
+  { id: 'telegram', label: '[ 6. TELEGRAM & SPEECH ]' },
+  { id: 'eas', label: '[ 7. EMERGENCY ALERTS (EAS) ]' },
+  { id: 'providers', label: '[ 8. PROVIDER CREDENTIALS ]' },
+  { id: 'updates', label: '[ 9. SYSTEM & UPDATES ]' },
 ]
 
 const activeTab = ref('location')
@@ -1074,16 +1371,31 @@ const speechStatus = ref<{ status: string; mode: string; speech_enabled: boolean
 const isTestingEAS = ref(false)
 const easTestMessage = ref('')
 
+// Location Geocoding State
+const isGeocodingLocation = ref(false)
+const locationResolutionMsg = ref('')
+const locationResolutionIsError = ref(false)
+
 // Commercials Engine UI State
 const commercialsEnabled = ref(commercialsEngine.isEnabled.value)
 const commercialsFrequency = ref(commercialsEngine.frequencyPerHour.value)
 const videoFileInputRef = ref<HTMLInputElement | null>(null)
+const videoUploadMessage = ref('')
+const videoUploadIsError = ref(false)
+
+// Spotify State
+const spotifyAutoplayEnabled = ref(false)
 
 // Update Tracking State
 const updateStatus = ref<UpdateStatusResponse | null>(null)
 const isCheckingUpdates = ref(false)
 const updateProbeMessage = ref('')
 const copiedCommand = ref(false)
+
+// Ollama Local AI State
+const isTestingOllama = ref(false)
+const ollamaTestResult = ref<OllamaPingResponse | null>(null)
+const ollamaDetectedModels = ref<string[]>([])
 
 // Retro Shader Config Reactive State
 const shaderForm = reactive<ShaderConfig>({
@@ -1099,14 +1411,7 @@ const shaderForm = reactive<ShaderConfig>({
 // Web Audio State & DSP RF Filter Config
 const isAudioPreviewPlaying = ref(false)
 const tapeHissVol = ref(35)
-const muzakVol = ref(50)
-const muzakStreams = audioSynth.getPlaybackState().streams
-const selectedMuzakStream = ref(muzakStreams[0].url)
 const audioFilterForm = reactive<AudioFilterConfig>(audioSynth.getFilterConfig())
-
-// Audio File Ingestion State
-const audioFileInputRef = ref<HTMLInputElement | null>(null)
-const audioUploadStatus = ref('')
 
 // Ticket Ingestion State
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -1119,7 +1424,10 @@ const form = reactive<SystemSettings>({
   latitude: '40.7128',
   longitude: '-74.0060',
   radius_miles: '25',
-  autoscroll_speed: '60',
+  autoscroll_speed: '30',
+  grid_density: 'classic_tv',
+  scroll_pause_duration: '4',
+  scroll_page_interval: '6',
   marquee_rotation_seconds: '20',
   scanline_intensity: '12',
   phosphor_glow: '1',
@@ -1127,6 +1435,7 @@ const form = reactive<SystemSettings>({
   vhs_tracking_noise: '0',
   time_format: '12h',
   sync_interval_hours: '6',
+  spotify_playlist_url: 'https://open.spotify.com/playlist/3jiPmIT4RugR8TPhli5Obk?si=22d007e309134d4f',
   spotify_autoplay: '0',
   eas_enabled: '1',
   eas_sound_enabled: '1',
@@ -1139,6 +1448,8 @@ const form = reactive<SystemSettings>({
   telegram_bot_token: '',
   groq_api_key: '',
   elevenlabs_api_key: '',
+  ai_ollama_url: 'http://localhost:11434',
+  ai_ollama_model: 'llama3.2',
   ai_groq_key: '',
   ai_openai_key: '',
   ai_anthropic_key: '',
@@ -1148,12 +1459,50 @@ const form = reactive<SystemSettings>({
   commercials_frequency_per_hour: '4',
 })
 
+const computedSpotifyEmbedUrl = computed(() => {
+  const url = form.spotify_playlist_url || 'https://open.spotify.com/playlist/3jiPmIT4RugR8TPhli5Obk?si=22d007e309134d4f'
+  const match = url.match(/playlist\/([a-zA-Z0-9]+)/)
+  const playlistId = match ? match[1] : '3jiPmIT4RugR8TPhli5Obk'
+  return `https://open.spotify.com/embed/playlist/${playlistId}?utm_source=generator&theme=0`
+})
+
 function applyRegionalPreset(preset: RegionalPreset) {
   form.metro_label = preset.metro
   form.postal_code = preset.zip
   form.latitude = preset.lat.toString()
   form.longitude = preset.lon.toString()
   form.radius_miles = preset.radius.toString()
+  locationResolutionMsg.value = `[PRESET APPLIED] ${preset.metro} (${preset.lat}, ${preset.lon})`
+  locationResolutionIsError.value = false
+}
+
+async function handleSettingsGeocode(query?: string) {
+  if (!query || query.trim().length < 2) return
+  isGeocodingLocation.value = true
+  locationResolutionMsg.value = ''
+  locationResolutionIsError.value = false
+
+  try {
+    const results = await geocodeLocationQuery(query.trim())
+    if (results && results.length > 0) {
+      const match = results[0]
+      form.metro_label = match.metro_label
+      if (match.postal_code) {
+        form.postal_code = match.postal_code
+      }
+      form.latitude = match.latitude.toString()
+      form.longitude = match.longitude.toString()
+      locationResolutionMsg.value = `LOCATION RESOLVED: ${match.display_label} (${match.latitude.toFixed(4)}, ${match.longitude.toFixed(4)})`
+    } else {
+      locationResolutionIsError.value = true
+      locationResolutionMsg.value = `Could not resolve "${query}". You may enter coordinates manually.`
+    }
+  } catch (err) {
+    locationResolutionIsError.value = true
+    locationResolutionMsg.value = `Geocoding lookup error: ${String(err)}`
+  } finally {
+    isGeocodingLocation.value = false
+  }
 }
 
 function handleShaderChange() {
@@ -1171,42 +1520,20 @@ function handleFilterProfileSelect() {
 
 function handleAudioVolumeChange() {
   audioSynth.setTapeHissVolume(tapeHissVol.value)
-  audioSynth.setMuzakVolume(muzakVol.value)
 }
 
 function toggleAudioPreview() {
   if (isAudioPreviewPlaying.value) {
-    audioSynth.pauseMuzak()
     audioSynth.stopTapeHiss()
     isAudioPreviewPlaying.value = false
   } else {
-    audioSynth.playMuzakStream(selectedMuzakStream.value)
     audioSynth.startTapeHiss(tapeHissVol.value)
     isAudioPreviewPlaying.value = true
   }
 }
 
-function triggerAudioFileInput() {
-  audioFileInputRef.value?.click()
-}
-
-function handleAudioFileSelected(e: Event) {
-  const target = e.target as HTMLInputElement
-  if (target.files && target.files.length > 0) {
-    playLocalTrack(target.files[0])
-  }
-}
-
-function handleAudioDrop(e: DragEvent) {
-  if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-    playLocalTrack(e.dataTransfer.files[0])
-  }
-}
-
-function playLocalTrack(file: File) {
-  audioSynth.playLocalAudioFile(file, muzakVol.value)
-  audioUploadStatus.value = `[PLAYING LIVE] ${file.name} (${Math.round(file.size / 1024)} KB) via 12 kHz High-Shelf RF Filter`
-  isAudioPreviewPlaying.value = true
+function handleSpotifyAutoplayToggle() {
+  form.spotify_autoplay = spotifyAutoplayEnabled.value ? '1' : '0'
 }
 
 function handleCommercialsConfigChange() {
@@ -1223,16 +1550,29 @@ function triggerVideoFileInput() {
   videoFileInputRef.value?.click()
 }
 
-function handleVideoFileSelected(e: Event) {
+async function handleVideoFileSelected(e: Event) {
   const target = e.target as HTMLInputElement
   if (target.files && target.files.length > 0) {
-    commercialsEngine.addUploadedClip(target.files[0])
+    await processVideoUpload(target.files[0])
   }
 }
 
-function handleVideoDrop(e: DragEvent) {
+async function handleVideoDrop(e: DragEvent) {
   if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-    commercialsEngine.addUploadedClip(e.dataTransfer.files[0])
+    await processVideoUpload(e.dataTransfer.files[0])
+  }
+}
+
+async function processVideoUpload(file: File) {
+  videoUploadIsError.value = false
+  videoUploadMessage.value = `Uploading '${file.name}' (${(file.size / (1024 * 1024)).toFixed(1)} MB)...`
+  try {
+    const clip = await commercialsEngine.uploadClipToServer(file)
+    videoUploadMessage.value = `SUCCESS: Added '${clip.name}' to rotation queue.`
+    setTimeout(() => { videoUploadMessage.value = '' }, 4000)
+  } catch (err) {
+    videoUploadIsError.value = true
+    videoUploadMessage.value = `UPLOAD ERROR: ${String(err)}`
   }
 }
 
@@ -1263,11 +1603,35 @@ function processUploadedFile(file: File) {
     return
   }
 
-  // Graceful simulated ingestion handling
   ingestionMessage.value = `[PARSING] Ingesting ${file.name} (${Math.round(file.size / 1024)} KB)...`
   setTimeout(() => {
     ingestionMessage.value = `[SUCCESS] Successfully parsed ticket commitment from ${file.name}. Saved to calendar.`
   }, 1200)
+}
+
+async function handlePingOllama() {
+  isTestingOllama.value = true
+  ollamaTestResult.value = null
+  try {
+    const res = await pingOllamaInstance(form.ai_ollama_url || 'http://localhost:11434', form.ai_ollama_model)
+    ollamaTestResult.value = res
+    if (res.models && res.models.length > 0) {
+      ollamaDetectedModels.value = res.models
+      if (!form.ai_ollama_model || !res.models.includes(form.ai_ollama_model)) {
+        form.ai_ollama_model = res.models[0]
+      }
+    }
+  } catch (err) {
+    ollamaTestResult.value = {
+      status: 'offline',
+      ollama_url: form.ai_ollama_url || 'http://localhost:11434',
+      latency_ms: 0,
+      models: [],
+      error: String(err),
+    }
+  } finally {
+    isTestingOllama.value = false
+  }
 }
 
 async function handleCheckUpdatesNow() {
@@ -1322,6 +1686,10 @@ async function loadAll() {
       updateStatus.value = uStatus
     }
 
+    if (s.spotify_autoplay) {
+      spotifyAutoplayEnabled.value = s.spotify_autoplay === '1'
+    }
+
     if (s.commercials_enabled) {
       commercialsEnabled.value = s.commercials_enabled === '1'
       commercialsEngine.isEnabled.value = commercialsEnabled.value
@@ -1330,6 +1698,9 @@ async function loadAll() {
       commercialsFrequency.value = parseInt(s.commercials_frequency_per_hour, 10)
       commercialsEngine.frequencyPerHour.value = commercialsFrequency.value
     }
+
+    // Sync server-side commercials
+    await commercialsEngine.syncWithServerDropzone()
 
     // Init retro shaders
     retroShader.init()
@@ -1414,11 +1785,29 @@ async function handleDispatchEASTest() {
 
 async function saveAllSettings() {
   try {
+    // If coordinates were not updated for custom text, attempt geocode
+    if (form.metro_label && form.latitude === '40.7128' && form.longitude === '-74.0060' && form.metro_label !== 'NEW YORK CITY') {
+      try {
+        const results = await geocodeLocationQuery(form.metro_label)
+        if (results && results.length > 0) {
+          form.latitude = results[0].latitude.toString()
+          form.longitude = results[0].longitude.toString()
+          if (results[0].postal_code) form.postal_code = results[0].postal_code
+        }
+      } catch {
+        // Continue
+      }
+    }
+
     for (const [k, v] of Object.entries(form)) {
       if (v !== undefined) {
         await updateSetting(k, String(v))
       }
     }
+
+    // Refresh weather immediately for new coordinates
+    refreshWeather().catch(() => {})
+
     saveMessage.value = 'SUCCESS: Settings saved and applied across system datastore.'
     setTimeout(() => {
       saveMessage.value = ''

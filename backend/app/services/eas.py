@@ -69,6 +69,7 @@ class EASService:
                             effective_at=str(effective),
                             expires_at=str(expires),
                             is_active=True,
+                            duration_seconds=30,
                         )
                         alerts.append(alert)
         except Exception as exc:
@@ -127,6 +128,7 @@ class EASService:
             effective_at=now_iso,
             expires_at=now_iso,
             is_active=True,
+            duration_seconds=duration_seconds,
         )
 
         self.active_alerts[test_id] = alert

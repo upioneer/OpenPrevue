@@ -28,6 +28,9 @@
         :venues="venues"
         :events="events"
         :scroll-speed="scrollSpeed"
+        :grid-density="gridDensity"
+        :pause-duration-seconds="pauseDurationSeconds"
+        :page-interval-seconds="pageIntervalSeconds"
         @ticket-toggled="handleTicketToggled"
       />
     </div>
@@ -57,8 +60,22 @@ const marqueeRotationSeconds = computed(() => {
 })
 
 const scrollSpeed = computed(() => {
-  if (!settings.value?.autoscroll_speed) return 60
-  return parseInt(settings.value.autoscroll_speed, 10) || 60
+  if (!settings.value?.autoscroll_speed) return 30
+  return parseInt(settings.value.autoscroll_speed, 10) || 30
+})
+
+const gridDensity = computed(() => {
+  return settings.value?.grid_density || 'classic_tv'
+})
+
+const pauseDurationSeconds = computed(() => {
+  if (!settings.value?.scroll_pause_duration) return 4
+  return parseInt(settings.value.scroll_pause_duration, 10) || 4
+})
+
+const pageIntervalSeconds = computed(() => {
+  if (!settings.value?.scroll_page_interval) return 6
+  return parseInt(settings.value.scroll_page_interval, 10) || 6
 })
 
 async function loadData() {

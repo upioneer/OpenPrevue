@@ -6,6 +6,7 @@ import re
 import aiosqlite
 
 from backend.app.core.circuit_breaker import circuit_registry
+from backend.app.core.config import settings
 from backend.app.core.logging import logger
 from backend.app.db.session import get_db
 from backend.app.providers.base import BaseProvider, GeoPoint, RawEvent
@@ -35,6 +36,33 @@ def generate_canonical_id(name: str) -> str:
 
 class IngestionService:
     """Orchestrates event fetching, normalization, deduplication, and database persistence."""
+
+    async def sync_all_registered_providers(self) -> dict[str, int | str]:
+        """Trigger synchronization cycle across all registered providers using active system settings."""
+        from backend.app.providers.registry import provider_registry
+
+        async with get_db() as db:
+            async with db.execute("SELECT key, value FROM settings WHERE key IN ('latitude', 'longitude', 'radius_miles')") as cursor:
+                rows = await cursor.fetchall()
+                settings_map = {row["key"]: row["value"] for row in rows}
+
+        lat = float(settings_map.get("latitude", settings.DEFAULT_LATITUDE))
+        lon = float(settings_map.get("longitude", settings.DEFAULT_LONGITUDE))
+        radius = float(settings_map.get("radius_miles", settings.DEFAULT_RADIUS_MILES))
+        center = GeoPoint(latitude=lat, longitude=lon)
+
+        total_inserted = 0
+        total_updated = 0
+        for provider in provider_registry.get_all():
+            res = await self.sync_provider(provider, center, radius)
+            total_inserted += int(res.get("events_inserted", 0))
+            total_updated += int(res.get("events_updated", 0))
+
+        return {
+            "status": "completed",
+            "events_inserted": total_inserted,
+            "events_updated": total_updated,
+        }
 
     async def sync_provider(
         self,
@@ -183,60 +211,86 @@ class IngestionService:
                 raw.venue_longitude,
             ),
         )
-
-        # Map alias
-        await db.execute(
-            "INSERT OR IGNORE INTO venue_aliases (alias, venue_id, source) VALUES (?, ?, ?)",
-            (raw.venue_name.lower(), canonical_id, raw.source),
-        )
-
         return canonical_id
 
     async def _persist_event(self, db: aiosqlite.Connection, raw: RawEvent, venue_id: str) -> str:
-        """Persist or fuse incoming event into datastore."""
+        """Deduplicate and insert or update event record."""
         event_id = f"{raw.source}-{raw.source_event_id}"
         now_iso = datetime.now(timezone.utc).isoformat()
 
-        # Check existing event
-        async with db.execute("SELECT id, price_min, price_max FROM events WHERE id = ?", (event_id,)) as cursor:
+        # Check existing event by ID
+        async with db.execute("SELECT id, updated_at FROM events WHERE id = ?", (event_id,)) as cursor:
             existing = await cursor.fetchone()
 
-        if existing:
-            # Data fusion: preserve lowest min price, highest max price, update last_seen_at
-            new_price_min = min(filter(None, [existing["price_min"], raw.price_min])) if (existing["price_min"] or raw.price_min) else None
-            new_price_max = max(filter(None, [existing["price_max"], raw.price_max])) if (existing["price_max"] or raw.price_max) else None
+        # Fuzzy match title and venue within 24 hours to prevent cross-provider duplicates
+        if not existing:
+            async with db.execute(
+                """
+                SELECT id FROM events
+                WHERE venue_id = ?
+                AND lower(title) = lower(?)
+                AND abs(strftime('%s', start_time) - strftime('%s', ?)) < 86400
+                """,
+                (venue_id, raw.title, raw.start_time),
+            ) as cursor:
+                fuzzy_match = await cursor.fetchone()
+                if fuzzy_match:
+                    event_id = fuzzy_match["id"]
+                    existing = fuzzy_match
 
+        if existing:
+            # Update existing event record
             await db.execute(
                 """
                 UPDATE events SET
+                    venue_id = ?,
                     title = ?,
                     description = COALESCE(?, description),
                     category = ?,
                     start_time = ?,
-                    end_time = ?,
-                    price_min = ?,
-                    price_max = ?,
+                    end_time = COALESCE(?, end_time),
+                    price_min = COALESCE(?, price_min),
+                    price_max = COALESCE(?, price_max),
                     image_url = COALESCE(?, image_url),
-                    ticket_url = ?,
-                    is_featured = MAX(is_featured, ?),
+                    ticket_url = COALESCE(?, ticket_url),
+                    is_featured = ?,
+                    status = 'active',
                     last_seen_at = ?,
                     updated_at = ?
                 WHERE id = ?
                 """,
                 (
+                    venue_id,
                     raw.title,
                     raw.description,
                     raw.category,
                     raw.start_time,
                     raw.end_time,
-                    new_price_min,
-                    new_price_max,
+                    raw.price_min,
+                    raw.price_max,
                     raw.image_url,
                     raw.ticket_url,
                     raw.is_featured,
                     now_iso,
                     now_iso,
                     event_id,
+                ),
+            )
+
+            # Insert or update secondary ticket link
+            await db.execute(
+                """
+                INSERT INTO ticket_links (event_id, source, url, label)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(event_id, source) DO UPDATE SET
+                    url = excluded.url,
+                    label = excluded.label
+                """,
+                (
+                    event_id,
+                    raw.source,
+                    raw.ticket_url,
+                    f"Official {raw.source.title()} Tickets",
                 ),
             )
 

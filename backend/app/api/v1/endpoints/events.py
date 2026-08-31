@@ -1,4 +1,4 @@
-"""Event management and retrieval API endpoints."""
+"""Event management and retrieval API endpoints with geographic radius enforcement."""
 
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Query
@@ -6,6 +6,7 @@ import aiosqlite
 
 from backend.app.db.session import get_db
 from backend.app.schemas.event import EventResponse, EventUpdate, TicketLinkResponse
+from backend.app.services.ingestion import calculate_haversine_distance
 
 router = APIRouter()
 
@@ -34,16 +35,19 @@ async def list_events(
     has_ticket: int | None = Query(None, description="Filter committed/ticketed events (1 or 0)"),
     status: str | None = Query("active", description="Filter by event status (active, stale, archived, all)"),
     search: str | None = Query(None, description="Search term in title or description"),
+    enforce_radius: bool = Query(True, description="Strictly filter events within active broadcast radius"),
     limit: int = Query(200, ge=1, le=500),
 ) -> list[EventResponse]:
-    """Retrieve normalized event listings with venue metadata and ticket links."""
+    """Retrieve normalized event listings with venue metadata, ticket links, and geographic filtering."""
     query = """
         SELECT
             e.*,
             v.name AS venue_name,
             v.address AS venue_address,
             v.city AS venue_city,
-            v.state AS venue_state
+            v.state AS venue_state,
+            v.latitude AS venue_latitude,
+            v.longitude AS venue_longitude
         FROM events e
         LEFT JOIN venues v ON e.venue_id = v.id
         WHERE 1=1
@@ -75,18 +79,52 @@ async def list_events(
         pattern = f"%{search}%"
         params.extend([pattern, pattern, pattern])
 
-    query += " ORDER BY e.start_time ASC LIMIT ?"
-    params.append(limit)
+    query += " ORDER BY e.start_time ASC"
 
     results: list[EventResponse] = []
     async with get_db() as db:
+        # Load user geographic settings for proximity enforcement
+        center_lat = 40.7128
+        center_lon = -74.0060
+        radius_miles = 25.0
+
+        if enforce_radius:
+            try:
+                async with db.execute("SELECT key, value FROM settings WHERE key IN ('latitude', 'longitude', 'radius_miles')") as cursor:
+                    settings_rows = await cursor.fetchall()
+                    settings_map = {row["key"]: row["value"] for row in settings_rows}
+                    if "latitude" in settings_map:
+                        center_lat = float(settings_map["latitude"])
+                    if "longitude" in settings_map:
+                        center_lon = float(settings_map["longitude"])
+                    if "radius_miles" in settings_map:
+                        radius_miles = float(settings_map["radius_miles"])
+            except Exception:
+                pass
+
         async with db.execute(query, params) as cursor:
             rows = await cursor.fetchall()
             for row in rows:
-                event_dict = dict(row)
+                row_dict = dict(row)
+                v_lat = row_dict.get("venue_latitude")
+                v_lon = row_dict.get("venue_longitude")
+
+                # Filter out of radius events
+                if enforce_radius and v_lat is not None and v_lon is not None:
+                    dist = calculate_haversine_distance(center_lat, center_lon, float(v_lat), float(v_lon))
+                    if dist > radius_miles:
+                        continue
+
+                # Remove raw lat/lon not part of EventResponse model
+                row_dict.pop("venue_latitude", None)
+                row_dict.pop("venue_longitude", None)
+
                 links = await _fetch_ticket_links(db, row["id"])
-                event_dict["ticket_links"] = links
-                results.append(EventResponse(**event_dict))
+                row_dict["ticket_links"] = links
+                results.append(EventResponse(**row_dict))
+
+                if len(results) >= limit:
+                    break
 
     return results
 
