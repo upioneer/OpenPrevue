@@ -1,7 +1,7 @@
 """Unit tests for WebSocket connection manager and real-time endpoints."""
 
 import pytest
-from starlette.testclient import TestClient
+from fastapi.testclient import TestClient
 from backend.app.main import app
 from backend.app.services.websocket import ConnectionManager
 
