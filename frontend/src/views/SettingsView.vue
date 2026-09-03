@@ -357,16 +357,159 @@
             </label>
           </div>
         </div>
+
+        <!-- Kiosk Screen Wake Lock & Physical Display Power Management -->
+        <div class="bg-[#000033] border border-[#00FFFF] p-4 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
+            <div>
+              <span class="text-xs font-bold text-[#00FFFF] block uppercase">
+                Kiosk Screen Wake Lock & Display Power Management
+              </span>
+              <span class="text-[11px] text-[#8888AA]">
+                Keep wall screens awake and trigger hardware display sleep/wake commands via CEC / Raspberry Pi.
+              </span>
+            </div>
+            <label class="flex items-center space-x-2 text-xs font-bold text-[#FFFF00] cursor-pointer shrink-0">
+              <input
+                v-model="wakeLockEnabled"
+                @change="handleWakeLockToggle"
+                type="checkbox"
+                class="w-4 h-4 accent-[#00FF00]"
+              />
+              <span>{{ wakeLockEnabled ? '[ WAKE LOCK ACTIVE ]' : '[ SCREEN SLEEP ALLOWED ]' }}</span>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block font-bold">Scheduled Display Sleep:</label>
+              <select
+                v-model="form.display_sleep_schedule"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+              >
+                <option value="disabled">Disabled (Continuous 24/7 Always On)</option>
+                <option value="nightly">Nightly Sleep Window (e.g. 11:00 PM - 7:00 AM)</option>
+              </select>
+            </div>
+
+            <div v-if="form.display_sleep_schedule === 'nightly'" class="grid grid-cols-2 gap-2">
+              <div class="space-y-1">
+                <label class="text-[11px] text-[#A0A0C0] block">Sleep Time:</label>
+                <input
+                  v-model="form.display_sleep_time"
+                  type="time"
+                  class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+                />
+              </div>
+              <div class="space-y-1">
+                <label class="text-[11px] text-[#A0A0C0] block">Wake Time:</label>
+                <input
+                  v-model="form.display_wake_time"
+                  type="time"
+                  class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Hardware CEC / Display Control Trigger -->
+          <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-[#333366]">
+            <span class="text-xs text-[#8888AA] font-bold">Hardware Kiosk Power:</span>
+            <button
+              type="button"
+              class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FF00] text-[#00FF00] px-3 py-1 text-xs font-bold tracking-wider cursor-pointer"
+              @click="triggerDisplayPower('on')"
+            >
+              [ TURN ON TV (CEC) ]
+            </button>
+            <button
+              type="button"
+              class="bg-[#330000] hover:bg-[#550000] border border-[#FF4444] text-[#FF8888] px-3 py-1 text-xs font-bold tracking-wider cursor-pointer"
+              @click="triggerDisplayPower('off')"
+            >
+              [ TURN OFF TV (CEC) ]
+            </button>
+            <span v-if="displayPowerMsg" class="text-xs text-[#FFFF00] font-bold">
+              {{ displayPowerMsg }}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <!-- Tab 3: Spotify & Vintage Audio -->
+      <!-- Tab 3: Audio Stream Source & Spotify -->
       <div v-if="activeTab === 'audio'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
-          Spotify Playlist Pairing & Vintage Tape Audio Filter
+          Background Audio Stream Source & Vintage Audio Filter
         </h2>
 
+        <!-- Stream Source Selector Card -->
+        <div class="bg-[#000033] border border-[#00FFFF] p-4 space-y-4">
+          <div class="flex items-center justify-between border-b border-[#00FFFF]/40 pb-2">
+            <div>
+              <span class="text-xs font-bold text-[#00FFFF] block uppercase">
+                Background Audio Stream Source
+              </span>
+              <span class="text-[11px] text-[#8888AA]">
+                Select between the curated Spotify retro playlist (default), live 1990s weather jazz radio, ambient downtempo, or synth chimes.
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block font-bold">Active Audio Stream Source:</label>
+              <select
+                v-model="form.audio_source"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1.5 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+              >
+                <option value="spotify">Spotify Curated Playlist (Default: Retro Cable Muzak)</option>
+                <option value="weatherscan">1990s WeatherScan Smooth Jazz (Live Stream)</option>
+                <option value="somafm_groovesalad">SomaFM Groove Salad (Ambient Downtempo)</option>
+                <option value="somafm_dronezone">SomaFM Drone Zone (Atmospheric Ambient)</option>
+                <option value="nightwave_plaza">Nightwave Plaza (Retro Vaporwave & Synth)</option>
+                <option value="custom">Custom Icecast / MP3 Stream URL</option>
+                <option value="synth">Turnkey Retro Synthesizer Chimes (Offline)</option>
+                <option value="muted">Mute / Disabled</option>
+              </select>
+            </div>
+
+            <div v-if="form.audio_source === 'custom'" class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block font-bold">Custom Stream URL (MP3 / AAC / Icecast):</label>
+              <input
+                v-model="form.icecast_custom_url"
+                type="url"
+                placeholder="https://stream.example.com/live.mp3"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1.5 text-xs text-[#00FF00] focus:border-[#00FFFF] outline-none font-mono"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Radio Stream Preview Player (Shown when radio streams are selected) -->
+        <div v-if="form.audio_source !== 'spotify' && form.audio_source !== 'synth' && form.audio_source !== 'muted'" class="bg-[#000033] border border-[#00FFFF] p-4 space-y-3">
+          <div class="flex items-center justify-between border-b border-[#00FFFF]/40 pb-2">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 bg-[#00FFFF] inline-block animate-pulse"></span>
+              <h3 class="text-xs font-bold text-[#00FFFF] uppercase tracking-wider">
+                Live Internet Radio Stream Player
+              </h3>
+            </div>
+            <span class="text-[11px] text-[#00FF00] font-bold">[ DIRECT MP3/ICECAST STREAM ]</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <audio
+              controls
+              :src="computedRadioStreamUrl"
+              class="w-full bg-[#000022] rounded"
+            ></audio>
+          </div>
+          <span class="text-[10px] text-[#8888AA] block">
+            Streams live background jazz/ambient music directly into your CRT guide.
+          </span>
+        </div>
+
         <!-- Spotify Playlist Configuration Card -->
-        <div class="bg-[#000033] border border-[#1DB954] p-4 space-y-4">
+        <div v-if="form.audio_source === 'spotify' || !form.audio_source" class="bg-[#000033] border border-[#1DB954] p-4 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1DB954]/40 pb-2">
             <div class="flex items-center space-x-2">
               <span class="w-2.5 h-2.5 bg-[#1DB954] inline-block animate-pulse"></span>
@@ -936,7 +1079,249 @@
         </div>
       </div>
 
-      <!-- Tab 6: Telegram Bot & Voice Speech -->
+      <!-- Tab 6: Calendar Feeds & Home Assistant Smart Home Integration -->
+      <div v-if="activeTab === 'integrations'" class="bg-[#000044] p-5 border border-[#333366] space-y-6">
+        <!-- Section 1: Outbound RFC 5545 iCalendar Feeds -->
+        <div class="space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#333366] pb-2">
+            <div>
+              <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
+                Outbound Calendar Subscriptions (RFC 5545 iCal / .ics)
+              </h2>
+              <span class="text-[11px] text-[#8888AA]">
+                Subscribe directly on your phone or desktop (Apple Calendar, Google Calendar, Outlook) to auto-sync events.
+              </span>
+            </div>
+            <span class="text-[11px] text-[#00FF00] border border-[#00FF00] px-2 py-0.5 bg-[#003300] font-bold shrink-0">
+              [ REAL-TIME SYNC ]
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <!-- Feed 1: Committed Tickets -->
+            <div class="bg-[#000033] border border-[#FFFF00] p-3 flex flex-col justify-between space-y-3">
+              <div>
+                <div class="flex items-center space-x-1.5">
+                  <span class="w-2 h-2 bg-[#FFFF00] inline-block"></span>
+                  <span class="text-xs font-black text-[#FFFF00] uppercase">Committed Tickets Feed</span>
+                </div>
+                <p class="text-[11px] text-[#8888AA] mt-1">
+                  Events you marked with a [TICKET] commitment. Includes 2-hour departure reminder alarms.
+                </p>
+              </div>
+              <div class="space-y-1.5 pt-2 border-t border-[#333366]">
+                <a
+                  :href="getWebcalUrl('committed')"
+                  class="block w-full text-center bg-[#FFFF00] text-[#000033] hover:bg-white py-1 text-[11px] font-black uppercase cursor-pointer transition-all shadow-[0_0_8px_rgba(255,255,0,0.6)]"
+                >
+                  [ SUBSCRIBE (WEBCAL) ]
+                </a>
+                <div class="flex gap-1">
+                  <a
+                    :href="getGoogleCalendarSubUrl('committed')"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex-1 text-center bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] py-0.5 text-[10px] font-bold"
+                  >
+                    Google Cal
+                  </a>
+                  <a
+                    :href="'/api/v1/calendar/feed.ics?filter=committed'"
+                    download="openprevue-committed.ics"
+                    class="flex-1 text-center bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] py-0.5 text-[10px] font-bold"
+                  >
+                    .ICS File
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Feed 2: Spotlight Events -->
+            <div class="bg-[#000033] border border-[#00FFFF] p-3 flex flex-col justify-between space-y-3">
+              <div>
+                <div class="flex items-center space-x-1.5">
+                  <span class="w-2 h-2 bg-[#00FFFF] inline-block"></span>
+                  <span class="text-xs font-black text-[#00FFFF] uppercase">Spotlight Events Feed</span>
+                </div>
+                <p class="text-[11px] text-[#8888AA] mt-1">
+                  Curated headline concerts, major games, and theater featured in the top display carousel.
+                </p>
+              </div>
+              <div class="space-y-1.5 pt-2 border-t border-[#333366]">
+                <a
+                  :href="getWebcalUrl('featured')"
+                  class="block w-full text-center bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] py-1 text-[11px] font-bold uppercase cursor-pointer transition-all"
+                >
+                  [ SUBSCRIBE (WEBCAL) ]
+                </a>
+                <div class="flex gap-1">
+                  <a
+                    :href="getGoogleCalendarSubUrl('featured')"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex-1 text-center bg-[#000055] hover:bg-[#000080] border border-[#333366] text-[#E0E0E0] py-0.5 text-[10px] font-bold"
+                  >
+                    Google Cal
+                  </a>
+                  <a
+                    :href="'/api/v1/calendar/feed.ics?filter=featured'"
+                    download="openprevue-spotlight.ics"
+                    class="flex-1 text-center bg-[#000055] hover:bg-[#000080] border border-[#333366] text-[#E0E0E0] py-0.5 text-[10px] font-bold"
+                  >
+                    .ICS File
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Feed 3: All Metro Listings -->
+            <div class="bg-[#000033] border border-[#333366] p-3 flex flex-col justify-between space-y-3">
+              <div>
+                <div class="flex items-center space-x-1.5">
+                  <span class="w-2 h-2 bg-[#8888AA] inline-block"></span>
+                  <span class="text-xs font-black text-[#E0E0E0] uppercase">All Metro Listings</span>
+                </div>
+                <p class="text-[11px] text-[#8888AA] mt-1">
+                  Complete aggregated community schedule across all ticketing APIs and local venues.
+                </p>
+              </div>
+              <div class="space-y-1.5 pt-2 border-t border-[#333366]">
+                <a
+                  :href="getWebcalUrl('all')"
+                  class="block w-full text-center bg-[#000055] hover:bg-[#000080] border border-[#333366] text-[#E0E0E0] py-1 text-[11px] font-bold uppercase cursor-pointer transition-all"
+                >
+                  [ SUBSCRIBE (WEBCAL) ]
+                </a>
+                <div class="flex gap-1">
+                  <a
+                    :href="getGoogleCalendarSubUrl('all')"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex-1 text-center bg-[#000055] hover:bg-[#000080] border border-[#333366] text-[#8888AA] py-0.5 text-[10px] font-bold"
+                  >
+                    Google Cal
+                  </a>
+                  <a
+                    :href="'/api/v1/calendar/feed.ics?filter=all'"
+                    download="openprevue-all.ics"
+                    class="flex-1 text-center bg-[#000055] hover:bg-[#000080] border border-[#333366] text-[#8888AA] py-0.5 text-[10px] font-bold"
+                  >
+                    .ICS File
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Home Assistant Smart Home Integration -->
+        <div class="space-y-4 pt-4 border-t border-[#333366]">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#333366] pb-2">
+            <div>
+              <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
+                Home Assistant Smart Home Integration
+              </h2>
+              <span class="text-[11px] text-[#8888AA]">
+                Expose today's events, active spotlight cards, and EAS alerts directly to Home Assistant dashboards & automations.
+              </span>
+            </div>
+            <span class="text-[11px] text-[#FFFF00] font-bold shrink-0">[ REST & MQTT READY ]</span>
+          </div>
+
+          <!-- Live Home Assistant Sensor Readout Cards -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+            <div class="bg-[#000022] p-2.5 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px]">TODAY'S EVENTS:</span>
+              <span class="text-[#FFFF00] font-bold text-sm">{{ haSensorsData?.counts?.today_events_count ?? 0 }} listings</span>
+            </div>
+            <div class="bg-[#000022] p-2.5 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px]">COMMITTED TICKETS:</span>
+              <span class="text-[#00FF00] font-bold text-sm">{{ haSensorsData?.counts?.committed_tickets ?? 0 }} active</span>
+            </div>
+            <div class="bg-[#000022] p-2.5 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px]">ACTIVE SPOTLIGHT:</span>
+              <span class="text-[#00FFFF] font-bold truncate block">{{ haSensorsData?.spotlight?.title || 'OpenPrevue Guide' }}</span>
+            </div>
+            <div class="bg-[#000022] p-2.5 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px]">EAS ALERT SENSOR:</span>
+              <span :class="haSensorsData?.eas?.is_active ? 'text-[#FF4444] font-black animate-pulse' : 'text-[#8888AA] font-bold'">
+                {{ haSensorsData?.eas?.is_active ? `[ ${haSensorsData.eas.headline} ]` : 'NORMAL' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 1-Click Home Assistant configuration.yaml Snippet -->
+          <div class="bg-[#000033] p-4 border border-[#333366] space-y-2">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-bold text-[#FFFF00] uppercase">
+                Home Assistant configuration.yaml Snippet
+              </h4>
+              <button
+                type="button"
+                class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-3 py-1 text-xs font-bold cursor-pointer transition-colors"
+                @click="copyHomeAssistantYaml"
+              >
+                {{ copiedHaYaml ? '[ COPIED TO CLIPBOARD ]' : '[ COPY CONFIGURATION.YAML ]' }}
+              </button>
+            </div>
+            <p class="text-[11px] text-[#8888AA]">
+              Paste this block into your Home Assistant <code>configuration.yaml</code> and restart Home Assistant to auto-register all entities.
+            </p>
+            <pre class="bg-[#000022] p-3 border border-[#333366] text-[#00FF00] text-[11px] max-h-56 overflow-y-auto whitespace-pre font-mono">{{ haYamlText || 'Loading configuration...' }}</pre>
+          </div>
+
+          <!-- MQTT Broker Configuration (Optional) -->
+          <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+            <div class="flex items-center justify-between border-b border-[#333366] pb-1">
+              <h4 class="text-xs font-bold text-[#00FFFF] uppercase">
+                MQTT Auto-Discovery Settings (Optional)
+              </h4>
+              <label class="flex items-center space-x-2 text-xs font-bold text-[#FFFF00] cursor-pointer">
+                <input
+                  v-model="form.ha_mqtt_enabled"
+                  type="checkbox"
+                  true-value="1"
+                  false-value="0"
+                  class="accent-[#00FF00]"
+                />
+                <span>{{ form.ha_mqtt_enabled === '1' ? '[ MQTT ENABLED ]' : '[ MQTT DISABLED ]' }}</span>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div class="space-y-1">
+                <label class="text-[#A0A0C0] block">MQTT Broker Host:</label>
+                <input
+                  v-model="form.ha_mqtt_broker"
+                  type="text"
+                  placeholder="192.168.1.50 or localhost"
+                  class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+                />
+              </div>
+              <div class="space-y-1">
+                <label class="text-[#A0A0C0] block">Broker Port:</label>
+                <input
+                  v-model="form.ha_mqtt_port"
+                  type="number"
+                  placeholder="1883"
+                  class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+                />
+              </div>
+              <div class="space-y-1">
+                <label class="text-[#A0A0C0] block">Topic Prefix:</label>
+                <input
+                  v-model="form.ha_mqtt_topic_prefix"
+                  type="text"
+                  placeholder="homeassistant"
+                  class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 7: Telegram Bot & Voice Speech -->
       <div v-if="activeTab === 'telegram'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
           Telegram Bot Assistant & Spoken Voice Announcer
@@ -1433,8 +1818,12 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
   checkUpdatesNow,
+  commandDisplayPower,
   dispatchEASTestAlert,
+  fetchAudioPresets,
   fetchHealth,
+  fetchHomeAssistantSensors,
+  fetchHomeAssistantYaml,
   fetchSpeechStatus,
   fetchSettings,
   fetchTelegramStatus,
@@ -1455,18 +1844,20 @@ import { retroShader, type ShaderConfig } from '../services/retroShader'
 import { audioSynth, type AudioFilterConfig, type AudioFilterProfile } from '../services/audioSynth'
 import { commercialsEngine } from '../services/commercialsEngine'
 import { REGIONAL_PRESETS, type RegionalPreset } from '../services/regionalPresets'
+import { wakeLockService } from '../services/wakeLock'
 import type { HealthData, OllamaPingResponse, SystemSettings, UpdateStatusResponse } from '../types'
 
 const tabs = [
   { id: 'location', label: '[ 1. LOCATION & DISCOVERY ]' },
-  { id: 'display', label: '[ 2. DISPLAY & SCAN SPEED ]' },
-  { id: 'audio', label: '[ 3. SPOTIFY & VINTAGE AUDIO ]' },
+  { id: 'display', label: '[ 2. DISPLAY & KIOSK POWER ]' },
+  { id: 'audio', label: '[ 3. AUDIO STREAM & SPOTIFY ]' },
   { id: 'commercials', label: '[ 4. RETRO COMMERCIALS ]' },
   { id: 'ingestion', label: '[ 5. TICKET INGESTION & AI ]' },
-  { id: 'telegram', label: '[ 6. TELEGRAM & SPEECH ]' },
-  { id: 'eas', label: '[ 7. EMERGENCY ALERTS (EAS) ]' },
-  { id: 'providers', label: '[ 8. PROVIDER CREDENTIALS ]' },
-  { id: 'updates', label: '[ 9. SYSTEM & UPDATES ]' },
+  { id: 'integrations', label: '[ 6. CALENDAR & SMART HOME ]' },
+  { id: 'telegram', label: '[ 7. TELEGRAM & SPEECH ]' },
+  { id: 'eas', label: '[ 8. EMERGENCY ALERTS (EAS) ]' },
+  { id: 'providers', label: '[ 9. PROVIDER CREDENTIALS ]' },
+  { id: 'updates', label: '[ 10. SYSTEM & UPDATES ]' },
 ]
 
 const activeTab = ref('location')
@@ -1494,8 +1885,18 @@ const videoFileInputRef = ref<HTMLInputElement | null>(null)
 const videoUploadMessage = ref('')
 const videoUploadIsError = ref(false)
 
-// Spotify State
+// Spotify & Audio Stream State
 const spotifyAutoplayEnabled = ref(false)
+const audioPresets = ref<Array<any>>([])
+
+// Kiosk Screen Wake Lock & Display Power State
+const wakeLockEnabled = ref(wakeLockService.isWakeLockActive.value)
+const displayPowerMsg = ref('')
+
+// Smart Home & Calendar State
+const haSensorsData = ref<any>(null)
+const haYamlText = ref('')
+const copiedHaYaml = ref(false)
 
 // Update Tracking State
 const updateStatus = ref<UpdateStatusResponse | null>(null)
@@ -1571,8 +1972,21 @@ const form = reactive<SystemSettings>({
   vhs_tracking_noise: '0',
   time_format: '12h',
   sync_interval_hours: '6',
+  audio_source: 'spotify',
   spotify_playlist_url: 'https://open.spotify.com/playlist/3jiPmIT4RugR8TPhli5Obk?si=22d007e309134d4f',
   spotify_autoplay: '0',
+  icecast_stream_preset: 'weatherscan',
+  icecast_custom_url: '',
+  screen_wake_lock_enabled: '1',
+  display_sleep_schedule: 'disabled',
+  display_sleep_time: '23:00',
+  display_wake_time: '07:00',
+  ha_mqtt_enabled: '0',
+  ha_mqtt_broker: 'localhost',
+  ha_mqtt_port: '1883',
+  ha_mqtt_username: '',
+  ha_mqtt_password: '',
+  ha_mqtt_topic_prefix: 'homeassistant',
   eas_enabled: '1',
   eas_sound_enabled: '1',
   eas_min_severity: 'Moderate',
@@ -1604,6 +2018,53 @@ const computedSpotifyEmbedUrl = computed(() => {
   const playlistId = match ? match[1] : '3jiPmIT4RugR8TPhli5Obk'
   return `https://open.spotify.com/embed/playlist/${playlistId}?utm_source=generator&theme=0`
 })
+
+const computedRadioStreamUrl = computed(() => {
+  if (form.audio_source === 'weatherscan') return 'https://stream.zeno.fm/f3wvbbqmdg8uv'
+  if (form.audio_source === 'somafm_groovesalad') return 'https://ice1.somafm.com/groovesalad-128-mp3'
+  if (form.audio_source === 'somafm_dronezone') return 'https://ice1.somafm.com/dronezone-128-mp3'
+  if (form.audio_source === 'nightwave_plaza') return 'https://plaza.one/mp3'
+  if (form.audio_source === 'custom' && form.icecast_custom_url) return form.icecast_custom_url
+  return ''
+})
+
+async function handleWakeLockToggle() {
+  wakeLockService.toggleWakeLock(wakeLockEnabled.value)
+  form.screen_wake_lock_enabled = wakeLockEnabled.value ? '1' : '0'
+}
+
+async function triggerDisplayPower(state: 'on' | 'off' | 'toggle') {
+  displayPowerMsg.value = `[ SENDING ${state.toUpperCase()} COMMAND... ]`
+  try {
+    const res = await commandDisplayPower(state)
+    displayPowerMsg.value = `[ SUCCESS: TV DISPLAY ${res.requested_state.toUpperCase()} ]`
+    setTimeout(() => { displayPowerMsg.value = '' }, 3500)
+  } catch (err) {
+    displayPowerMsg.value = `[ ERROR: ${String(err)} ]`
+  }
+}
+
+function getWebcalUrl(filter: string): string {
+  if (typeof window === 'undefined') return ''
+  const host = window.location.host
+  const protocol = window.location.protocol === 'https:' ? 'webcals:' : 'webcal:'
+  return `${protocol}//${host}/api/v1/calendar/feed.ics?filter=${filter}`
+}
+
+function getGoogleCalendarSubUrl(filter: string): string {
+  if (typeof window === 'undefined') return ''
+  const origin = window.location.origin
+  const icsUrl = `${origin}/api/v1/calendar/feed.ics?filter=${filter}`
+  return `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(icsUrl)}`
+}
+
+function copyHomeAssistantYaml() {
+  if (haYamlText.value) {
+    navigator.clipboard.writeText(haYamlText.value)
+    copiedHaYaml.value = true
+    setTimeout(() => { copiedHaYaml.value = false }, 3000)
+  }
+}
 
 function applyRegionalPreset(preset: RegionalPreset) {
   form.metro_label = preset.metro
@@ -1828,6 +2289,16 @@ async function loadAll() {
     if (s.spotify_autoplay) {
       spotifyAutoplayEnabled.value = s.spotify_autoplay === '1'
     }
+
+    if (s.screen_wake_lock_enabled) {
+      wakeLockEnabled.value = s.screen_wake_lock_enabled !== '0'
+      wakeLockService.toggleWakeLock(wakeLockEnabled.value)
+    }
+
+    // Load Integrations Telemetry
+    fetchHomeAssistantSensors().then(data => { haSensorsData.value = data }).catch(() => null)
+    fetchHomeAssistantYaml().then(res => { haYamlText.value = res.yaml }).catch(() => null)
+    fetchAudioPresets().then(p => { audioPresets.value = p }).catch(() => null)
 
     if (s.commercials_enabled) {
       commercialsEnabled.value = s.commercials_enabled === '1'

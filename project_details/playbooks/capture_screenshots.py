@@ -6,7 +6,7 @@ from pathlib import Path
 import sqlite3
 from playwright.async_api import async_playwright
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost:8080"
 DB_PATH = Path("data") / "openprevue.db"
 
 

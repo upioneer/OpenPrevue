@@ -31,6 +31,20 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "tripadvisor_wishlist_url": "",
     "viator_wishlist_url": "",
     "viator_api_key": "",
+    "audio_source": "spotify",
+    "spotify_playlist_url": "https://open.spotify.com/playlist/3jiPmIT4RugR8TPhli5Obk",
+    "icecast_stream_preset": "weatherscan",
+    "icecast_custom_url": "",
+    "screen_wake_lock_enabled": "1",
+    "display_sleep_schedule": "disabled",
+    "display_sleep_time": "23:00",
+    "display_wake_time": "07:00",
+    "ha_mqtt_enabled": "0",
+    "ha_mqtt_broker": "localhost",
+    "ha_mqtt_port": "1883",
+    "ha_mqtt_username": "",
+    "ha_mqtt_password": "",
+    "ha_mqtt_topic_prefix": "homeassistant",
 }
 
 

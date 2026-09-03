@@ -2,7 +2,7 @@
 
 Self-hosted local event aggregator and interactive retro display system styled after 1990s scrolling cable channel guides.
 
-![OpenPrevue 16:9 Hero Dashboard](./project_details/changelog/v0.17.0/dashboard_landscape.png)
+![OpenPrevue 16:9 Hero Dashboard](./project_details/changelog/v0.18.0/dashboard_landscape.png)
 
 ---
 
@@ -13,31 +13,31 @@ Self-hosted local event aggregator and interactive retro display system styled a
 #### 1. Classic TV Mode (4 Rows - True-to-Scale 1990s Broadcast)
 Authentic 1:1 reproduction of the 1990s Prevue Channel on an NTSC CRT television with large chunky typography and team badges.
 
-![OpenPrevue Classic TV Presentation Mode](./project_details/changelog/v0.17.0/density_classic_tv.png)
+![OpenPrevue Classic TV Presentation Mode](./project_details/changelog/v0.18.0/density_classic_tv.png)
 
 #### 2. Balanced Mode (7 Rows - Default Standard Layout)
 The default presentation balance between vintage broadcast scale and listing visibility, rendering 7 comfortable channel rows.
 
-![OpenPrevue Balanced Presentation Mode](./project_details/changelog/v0.17.0/density_balanced.png)
+![OpenPrevue Balanced Presentation Mode](./project_details/changelog/v0.18.0/density_balanced.png)
 
 #### 3. Dense Mode (12 Rows - High Density Information Overview)
 Information-dense mode displaying up to 12 simultaneous channels on screen for command-center monitoring.
 
-![OpenPrevue Dense Presentation Mode](./project_details/changelog/v0.17.0/density_dense.png)
+![OpenPrevue Dense Presentation Mode](./project_details/changelog/v0.18.0/density_dense.png)
 
 ### Multi-Device & Display Orientation Showcase
 
 #### Vertical 9:16 Portrait Kiosk & Wall Display
-![OpenPrevue 9:16 Vertical Portrait Kiosk](./project_details/changelog/v0.17.0/dashboard_portrait.png)
+![OpenPrevue 9:16 Vertical Portrait Kiosk](./project_details/changelog/v0.18.0/dashboard_portrait.png)
 
 #### Small Touchscreen & Raspberry Pi 7" Display
-![OpenPrevue Small Screen Display](./project_details/changelog/v0.17.0/dashboard_small_pi.png)
+![OpenPrevue Small Screen Display](./project_details/changelog/v0.18.0/dashboard_small_pi.png)
 
 #### First-Boot Regional Setup Wizard
-![OpenPrevue Setup Wizard Modal](./project_details/changelog/v0.17.0/setup_wizard_modal.png)
+![OpenPrevue Setup Wizard Modal](./project_details/changelog/v0.18.0/setup_wizard_modal.png)
 
 #### Settings Control Center & Audio Synthesizer
-![OpenPrevue Settings Control Center](./project_details/changelog/v0.17.0/settings_control_center.png)
+![OpenPrevue Settings Control Center](./project_details/changelog/v0.18.0/settings_control_center.png)
 
 ---
 
@@ -50,10 +50,14 @@ OpenPrevue aggregates local event listings across developer ticketing APIs, spor
 ## Key Features
 
 * **Authentic 1990s Prevue Experience:** CRT scanline shaders, selectable palettes (EGA 16, Commodore 64, Amber, Green phosphor), and Web Audio analog tape hiss with 60 Hz mains hum.
+* **Outbound RFC 5545 iCalendar Feeds:** Real-time `.ics` and `webcal://` calendar subscriptions for Apple Calendar, Google Calendar, and Outlook with 2-hour departure notification alarms.
+* **Home Assistant Smart Home Integration:** Live REST sensor telemetry (`GET /api/v1/integrations/homeassistant/sensors`) and MQTT discovery for today's events, active spotlights, and EAS alerts.
+* **Kiosk Screen Wake Lock & Display Power:** Web Screen Wake Lock API keeps wall monitors awake 24/7 with automatic reacquisition, plus hardware CEC display power controls.
+* **Background Audio Stream Selector:** Curated vintage Spotify playlist by default, with selectable live WeatherScan smooth jazz, SomaFM downtempo, Nightwave Plaza vaporwave, and offline synthesizer chimes.
 * **Dynamic Sports Matchup Graphics:** Automatically renders vector logos and "VS" broadcast cards for all 32 NFL, 30 NBA, 30 MLB, 32 NHL, 29 MLS, and Premier League teams.
 * **1990s Television Commercials & Station Bumpers:** Periodically plays retro TV commercial breaks in the top preview quadrant with audio ducking and custom video drag-and-drop dropzone.
 * **Translucent Spotify Divider Ticker:** Overlayed bottom ticker with animated equalizer bars and 1-click launch link to the official Spotify playlist.
-* **Turnkey Multi-Format Ingestion:** Ingests events from Ticketmaster, SeatGeek, Eventbrite, iCal (.ics), MIME email (.eml), and Microsoft Outlook (.msg).
+* **Turnkey Multi-Format Ingestion:** Ingests events from Ticketmaster, SeatGeek, Eventbrite, TripAdvisor, Viator, iCal (.ics), MIME email (.eml), and Microsoft Outlook (.msg).
 * **Emergency Alert System (EAS):** NOAA / NWS CAP feed ingestion with 853 Hz + 960 Hz dual-tone audio attention signal.
 * **Telegram Remote Curation & Voice Notes:** Manage pins, watchlists, and queries via retro ASCII Telegram cards and spoken voice notes.
 * **Model Context Protocol (MCP):** Embedded JSON-RPC 2.0 MCP server exposing tools and resources to external AI agents.

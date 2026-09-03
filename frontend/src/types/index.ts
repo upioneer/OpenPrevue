@@ -143,5 +143,19 @@ export interface SystemSettings {
   tripadvisor_wishlist_url?: string
   viator_wishlist_url?: string
   viator_api_key?: string
+  audio_source?: string
+  spotify_playlist_url?: string
+  icecast_stream_preset?: string
+  icecast_custom_url?: string
+  screen_wake_lock_enabled?: string
+  display_sleep_schedule?: string
+  display_sleep_time?: string
+  display_wake_time?: string
+  ha_mqtt_enabled?: string
+  ha_mqtt_broker?: string
+  ha_mqtt_port?: string
+  ha_mqtt_username?: string
+  ha_mqtt_password?: string
+  ha_mqtt_topic_prefix?: string
   [key: string]: string | undefined
 }

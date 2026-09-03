@@ -45,6 +45,7 @@ import TimelineGrid from '../components/TimelineGrid.vue'
 import SetupModal from '../components/SetupModal.vue'
 import { fetchEvents, fetchSettings, fetchVenues } from '../api/client'
 import { wsService } from '../services/websocket'
+import { wakeLockService } from '../services/wakeLock'
 import type { EventItem, SystemSettings, VenueItem } from '../types'
 
 const events = ref<EventItem[]>([])
@@ -88,6 +89,10 @@ async function loadData() {
     events.value = fetchedEvents
     venues.value = fetchedVenues
     settings.value = fetchedSettings
+
+    if (fetchedSettings.screen_wake_lock_enabled !== '0') {
+      wakeLockService.requestWakeLock()
+    }
   } catch (err) {
     console.error('Failed to load dashboard data:', err)
   }

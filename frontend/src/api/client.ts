@@ -247,3 +247,52 @@ export async function fetchSpotifyMetadata(url?: string): Promise<SpotifyMetadat
   if (!res.ok) throw new Error(`Failed fetching Spotify metadata: ${res.statusText}`)
   return res.json()
 }
+
+export async function fetchCalendarSubscriptionUrls(): Promise<Record<string, { name: string; path: string; description: string }>> {
+  const res = await fetch(`${API_BASE}/calendar/subscribe-urls`)
+  if (!res.ok) throw new Error(`Failed fetching calendar URLs: ${res.statusText}`)
+  return res.json()
+}
+
+export async function fetchHomeAssistantSensors(): Promise<any> {
+  const res = await fetch(`${API_BASE}/integrations/homeassistant/sensors`)
+  if (!res.ok) throw new Error(`Failed fetching Home Assistant sensors: ${res.statusText}`)
+  return res.json()
+}
+
+export async function fetchHomeAssistantYaml(): Promise<{ status: string; base_url: string; yaml: string }> {
+  const res = await fetch(`${API_BASE}/integrations/homeassistant/yaml-config`)
+  if (!res.ok) throw new Error(`Failed fetching Home Assistant YAML: ${res.statusText}`)
+  return res.json()
+}
+
+export async function fetchAudioPresets(): Promise<Array<{
+  id: string
+  name: string
+  type: string
+  stream_url?: string
+  default_url?: string
+  is_default: boolean
+  description: string
+}>> {
+  const res = await fetch(`${API_BASE}/audio/presets`)
+  if (!res.ok) throw new Error(`Failed fetching audio presets: ${res.statusText}`)
+  return res.json()
+}
+
+export async function commandDisplayPower(state: 'on' | 'off' | 'toggle'): Promise<{
+  status: string
+  requested_state: string
+  hardware_command?: string
+  hardware_executed: boolean
+  websocket_broadcast: boolean
+}> {
+  const res = await fetch(`${API_BASE}/integrations/display/power`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state }),
+  })
+  if (!res.ok) throw new Error(`Failed sending display power command: ${res.statusText}`)
+  return res.json()
+}
+
