@@ -125,11 +125,37 @@ async def capture_changelog_screenshots(version: str) -> None:
         print(f"Captured: {setup_path}")
         await page_setup.close()
 
-        # 7. Settings Control Center (1920x1080)
+        # 7. 10" Rack Display (1920x480) - Feature Priority (Spotlight + 1 row below)
+        page_rack_feat = await browser.new_page(viewport={"width": 1920, "height": 480})
+        await page_rack_feat.add_init_script("localStorage.setItem('openprevue_onboarded', '1')")
+        await page_rack_feat.goto(f"{BASE_URL}/", wait_until="networkidle")
+        await asyncio.sleep(1.5)
+        rack_feat_path = version_dir / "rack_1920x480_feature_priority.png"
+        await page_rack_feat.screenshot(path=str(rack_feat_path))
+        print(f"Captured: {rack_feat_path}")
+        await page_rack_feat.close()
+
+        # 8. Desktop Ultrawide (3440x1440) - Panoramic Calendar Priority
+        page_desk_cal = await browser.new_page(viewport={"width": 3440, "height": 1440})
+        await page_desk_cal.add_init_script("localStorage.setItem('openprevue_onboarded', '1')")
+        await page_desk_cal.goto(f"{BASE_URL}/", wait_until="networkidle")
+        await asyncio.sleep(1.5)
+        desk_cal_path = version_dir / "desktop_3440x1440_calendar_priority.png"
+        await page_desk_cal.screenshot(path=str(desk_cal_path))
+        print(f"Captured: {desk_cal_path}")
+        await page_desk_cal.close()
+
+        # 9. Settings Control Center (1920x1080)
         page_settings = await browser.new_page(viewport={"width": 1920, "height": 1080})
         await page_settings.add_init_script("localStorage.setItem('openprevue_onboarded', '1')")
-        await page_settings.goto(f"{BASE_URL}/#/settings", wait_until="networkidle")
+        await page_settings.goto(f"{BASE_URL}/settings", wait_until="networkidle")
         await asyncio.sleep(1.5)
+        # Switch to Tab 2 to showcase display settings
+        try:
+            await page_settings.click("text=[ 2. DISPLAY & KIOSK POWER ]")
+            await asyncio.sleep(1.0)
+        except Exception:
+            pass
         settings_path = version_dir / "settings_control_center.png"
         await page_settings.screenshot(path=str(settings_path))
         print(f"Captured: {settings_path}")

@@ -337,9 +337,11 @@ let phaseTimer = 0
 let currentTargetTop = 0
 let targetRowIndex = 0
 
-// Density Computed Classes for 4 Rows (Classic TV), 7 Rows (Balanced), 12 Rows (Dense)
+// Density Computed Classes for 1 Row (Rack Bar / Ultrawide), 4 Rows (Classic TV), 7 Rows (Balanced), 12 Rows (Dense)
 const headerClasses = computed(() => {
-  if (props.gridDensity === 'dense') {
+  if (props.gridDensity === 'single_row') {
+    return 'h-6 sm:h-7 text-[10px] sm:text-xs'
+  } else if (props.gridDensity === 'dense') {
     return 'h-7 sm:h-8 text-[11px] sm:text-xs'
   } else if (props.gridDensity === 'balanced') {
     return 'h-8 sm:h-9 text-xs sm:text-sm'
@@ -349,7 +351,9 @@ const headerClasses = computed(() => {
 })
 
 const rowDensityClasses = computed(() => {
-  if (props.gridDensity === 'dense') {
+  if (props.gridDensity === 'single_row') {
+    return 'py-1 sm:py-1.5 min-h-[36px] sm:min-h-[42px]'
+  } else if (props.gridDensity === 'dense') {
     return 'py-1 sm:py-1.5 min-h-[34px] sm:min-h-[38px]'
   } else if (props.gridDensity === 'balanced') {
     return 'py-2 sm:py-2.5 min-h-[46px] sm:min-h-[52px]'
@@ -359,12 +363,14 @@ const rowDensityClasses = computed(() => {
 })
 
 const channelNumClasses = computed(() => {
+  if (props.gridDensity === 'single_row') return 'text-xs sm:text-sm font-black'
   if (props.gridDensity === 'dense') return 'text-[9px] sm:text-[10px]'
   if (props.gridDensity === 'balanced') return 'text-[10px] sm:text-xs'
   return 'text-xs sm:text-sm md:text-base font-black'
 })
 
 const venueTitleClasses = computed(() => {
+  if (props.gridDensity === 'single_row') return 'text-xs sm:text-sm font-black'
   if (props.gridDensity === 'dense') return 'text-[11px] sm:text-xs'
   if (props.gridDensity === 'balanced') return 'text-xs sm:text-sm md:text-base'
   return 'text-sm sm:text-base md:text-lg lg:text-xl'

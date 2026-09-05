@@ -157,5 +157,7 @@ export interface SystemSettings {
   ha_mqtt_username?: string
   ha_mqtt_password?: string
   ha_mqtt_topic_prefix?: string
+  ultrawide_mode?: 'auto' | 'always' | 'disabled' | string
+  ultrawide_priority?: 'feature' | 'calendar' | 'balanced' | string
   [key: string]: string | undefined
 }

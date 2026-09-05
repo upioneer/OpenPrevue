@@ -1,5 +1,8 @@
 <template>
-  <div class="w-full h-full bg-[#000044] border-b-2 border-[#FFFF00] flex flex-col justify-between overflow-hidden select-none font-mono relative">
+  <div
+    class="w-full h-full bg-[#000044] flex flex-col justify-between overflow-hidden select-none font-mono relative"
+    :class="isUltrawide ? 'border-b-0' : 'border-b-2 border-[#FFFF00]'"
+  >
     <!-- TOP 2-COLUMN SPLIT PREVIEW BODY (CLASSIC 1990S PREVUE CABLE LAYOUT) -->
     <div class="flex-1 w-full flex flex-row items-stretch min-h-0 overflow-hidden px-2 pt-1.5 gap-3">
       <!-- LEFT COLUMN (48% on desktop / 45% mobile): FEATURED EVENT ARTWORK / CRT GRAPHICS / SPORTS MATCHUP VS CARD -->
@@ -505,10 +508,12 @@ const props = withDefaults(
   defineProps<{
     events: EventItem[]
     rotationSeconds?: number
+    isUltrawide?: boolean
   }>(),
   {
     events: () => [],
     rotationSeconds: 20,
+    isUltrawide: false,
   }
 )
 

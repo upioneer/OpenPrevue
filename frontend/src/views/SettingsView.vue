@@ -167,13 +167,26 @@
               Schedule Presentation Scale & Density
             </h3>
             <span class="text-xs text-[#00FFFF] font-bold">
-              ACTIVE: {{ form.grid_density === 'dense' ? '12 ROWS (DENSE)' : (form.grid_density === 'balanced' ? '7 ROWS (HAPPY MEDIUM)' : '4 ROWS (AUTHENTIC CLASSIC TV)') }}
+              ACTIVE: {{ form.grid_density === 'single_row' ? '1 ROW (RACK BAR)' : (form.grid_density === 'dense' ? '12 ROWS (DENSE)' : (form.grid_density === 'balanced' ? '7 ROWS (HAPPY MEDIUM)' : '4 ROWS (AUTHENTIC CLASSIC TV)')) }}
             </span>
           </div>
           <p class="text-xs text-[#8888AA]">
-            Select your preferred channel schedule row scale and typography density across landscape, 1080p, and portrait monitors.
+            Select your preferred channel schedule row scale and typography density across 6"-12" rack displays, 1080p, portrait, and ultrawide monitors.
           </p>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            <!-- Single Row (1 Row) -->
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.grid_density === 'single_row'
+                ? 'bg-[#000066] border-[#00FFFF] text-[#00FFFF] shadow-[0_0_10px_rgba(0,255,255,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.grid_density = 'single_row'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ 1 ROW // RACK BAR ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">Single channel row layout designed for 6"-12" rack displays, AV sensor bars, and compact signage.</div>
+            </button>
+
             <!-- Classic TV (4 Rows) -->
             <button
               type="button"
@@ -192,11 +205,11 @@
               type="button"
               class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
               :class="form.grid_density === 'balanced'
-                ? 'bg-[#000066] border-[#00FFFF] text-[#00FFFF] shadow-[0_0_10px_rgba(0,255,255,0.6)]'
+                ? 'bg-[#000066] border-[#00FF00] text-[#00FF00] shadow-[0_0_10px_rgba(0,255,0,0.6)]'
                 : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
               @click="form.grid_density = 'balanced'"
             >
-              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ 7 ROWS // HAPPY MEDIUM ]</div>
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ 7 ROWS // BALANCED ]</div>
               <div class="text-[11px] text-[#E0E0E0] mt-1">Balanced presentation with comfortable row spacing and higher listing visibility.</div>
             </button>
 
@@ -205,13 +218,108 @@
               type="button"
               class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
               :class="form.grid_density === 'dense'
-                ? 'bg-[#000066] border-[#00FF00] text-[#00FF00] shadow-[0_0_10px_rgba(0,255,0,0.6)]'
+                ? 'bg-[#000066] border-[#FF4444] text-[#FF8888] shadow-[0_0_10px_rgba(255,68,68,0.6)]'
                 : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
               @click="form.grid_density = 'dense'"
             >
-              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ 12 ROWS // DENSE OVERVIEW ]</div>
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ 12 ROWS // DENSE ]</div>
               <div class="text-[11px] text-[#E0E0E0] mt-1">High-density information mode displaying maximum simultaneous channels on screen.</div>
             </button>
+          </div>
+        </div>
+
+        <!-- Ultrawide & Panoramic Displays (21:9, 32:9 & 6"-12" Rack Displays) -->
+        <div class="bg-[#000033] p-3 sm:p-4 border border-[#00FFFF] space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase tracking-wide">
+                Ultrawide & Panoramic Display Layout (6"-12" Racks, Bars & Desktop Monitors)
+              </h3>
+              <p class="text-xs text-[#8888AA]">
+                Optimizes screen geometry for 6"-12" server rack displays (e.g., 1920x480, 1280x400), panoramic sensor bars, and desktop ultrawides (21:9 / 32:9).
+              </p>
+            </div>
+            <!-- Live Aspect Ratio Detection Badge -->
+            <div
+              class="bg-[#000022] border px-2.5 py-1 text-xs font-black tracking-wider flex items-center space-x-1.5"
+              :class="detectedRatio >= 1.95 ? 'border-[#00FF00] text-[#00FF00]' : 'border-[#333366] text-[#A0A0C0]'"
+            >
+              <span class="w-2 h-2 rounded-full inline-block" :class="detectedRatio >= 1.95 ? 'bg-[#00FF00] animate-pulse' : 'bg-[#666688]'"></span>
+              <span>VIEWPORT: {{ detectedRatioLabel }}</span>
+            </div>
+          </div>
+
+          <!-- The Toggle: Prioritize Feature vs Prioritize Calendar -->
+          <div class="space-y-1.5 pt-1">
+            <label class="text-xs text-[#FFFF00] font-black uppercase tracking-wider block">
+              Ultrawide Presentation Priority (Layout Selection)
+            </label>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <!-- Prioritize Feature (1 Row Below) -->
+              <button
+                type="button"
+                class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+                :class="form.ultrawide_priority === 'feature'
+                  ? 'bg-[#000066] border-[#FFFF00] text-[#FFFF00] shadow-[0_0_10px_rgba(255,255,0,0.6)]'
+                  : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+                @click="form.ultrawide_priority = 'feature'"
+              >
+                <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ PRIORITIZE FEATURE // 1 ROW BELOW ]</div>
+                <div class="text-[11px] text-[#E0E0E0] mt-1">
+                  Feature Dominant: Shows primarily the featured events spotlight with a single continuous scrolling channel row below. Ideal for 6"-12" rack displays & media kiosks.
+                </div>
+              </button>
+
+              <!-- Prioritize Calendar (Full Grid) -->
+              <button
+                type="button"
+                class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+                :class="form.ultrawide_priority === 'calendar' || !form.ultrawide_priority
+                  ? 'bg-[#000066] border-[#00FFFF] text-[#00FFFF] shadow-[0_0_10px_rgba(0,255,255,0.6)]'
+                  : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+                @click="form.ultrawide_priority = 'calendar'"
+              >
+                <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ PRIORITIZE CALENDAR // FULL GRID ]</div>
+                <div class="text-[11px] text-[#E0E0E0] mt-1">
+                  Schedule Dominant: 100% full-screen channel timeline grid without featured event spotlight. Rows adapt to your chosen density setting.
+                </div>
+              </button>
+
+              <!-- Side-by-Side Dual-Pane -->
+              <button
+                type="button"
+                class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+                :class="form.ultrawide_priority === 'side_by_side'
+                  ? 'bg-[#000066] border-[#00FF00] text-[#00FF00] shadow-[0_0_10px_rgba(0,255,0,0.6)]'
+                  : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+                @click="form.ultrawide_priority = 'side_by_side'"
+              >
+                <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ DUAL-PANE SIDE-BY-SIDE ]</div>
+                <div class="text-[11px] text-[#E0E0E0] mt-1">
+                  Desktop Ultrawide: 50/50 side-by-side split (Featured Spotlight on Left, Schedule Grid on Right) for wide desktop monitors.
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Ultrawide Activation Mode -->
+          <div class="pt-2 border-t border-[#333366] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <label class="text-xs text-[#E0E0E0] font-bold block">
+                Ultrawide Layout Activation:
+              </label>
+              <span class="text-[10px] text-[#8888AA] block">
+                Choose when to engage the ultrawide rack/bar presentation.
+              </span>
+            </div>
+            <select
+              v-model="form.ultrawide_mode"
+              class="bg-[#000022] border border-[#00FFFF] text-[#00FFFF] text-xs px-2.5 py-1 font-mono font-bold focus:outline-none"
+            >
+              <option value="auto">AUTO-DETECT (ENGAGE ON &gt;= 21:9 &amp; RACK SCREENS)</option>
+              <option value="always">FORCE ULTRAWIDE (ALL ASPECT RATIOS)</option>
+              <option value="disabled">DISABLED (ALWAYS USE CLASSIC 16:9 STACK)</option>
+            </select>
           </div>
         </div>
 
@@ -1815,7 +1923,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import {
   checkUpdatesNow,
   commandDisplayPower,
@@ -1892,6 +2000,25 @@ const audioPresets = ref<Array<any>>([])
 // Kiosk Screen Wake Lock & Display Power State
 const wakeLockEnabled = ref(wakeLockService.isWakeLockActive.value)
 const displayPowerMsg = ref('')
+
+// Ultrawide Layout State
+const detectedRatio = ref(1.78)
+
+function updateViewportRatio() {
+  if (typeof window !== 'undefined') {
+    detectedRatio.value = Number((window.innerWidth / window.innerHeight).toFixed(2))
+  }
+}
+
+const detectedRatioLabel = computed(() => {
+  if (detectedRatio.value >= 3.0) return `32:9 ULTRA-WIDE (${detectedRatio.value}:1)`
+  if (detectedRatio.value >= 2.1) return `21:9 ULTRAWIDE (${detectedRatio.value}:1)`
+  if (detectedRatio.value >= 1.95) return `2:1 PANORAMIC (${detectedRatio.value}:1)`
+  if (detectedRatio.value >= 1.7) return `16:9 STANDARD (${detectedRatio.value}:1)`
+  if (detectedRatio.value >= 1.5) return `16:10 WIDE (${detectedRatio.value}:1)`
+  if (detectedRatio.value >= 1.2) return `4:3 CLASSIC TV (${detectedRatio.value}:1)`
+  return `PORTRAIT KIOSK (${detectedRatio.value}:1)`
+})
 
 // Smart Home & Calendar State
 const haSensorsData = ref<any>(null)
@@ -1987,6 +2114,8 @@ const form = reactive<SystemSettings>({
   ha_mqtt_username: '',
   ha_mqtt_password: '',
   ha_mqtt_topic_prefix: 'homeassistant',
+  ultrawide_mode: 'auto',
+  ultrawide_priority: 'calendar',
   eas_enabled: '1',
   eas_sound_enabled: '1',
   eas_min_severity: 'Moderate',
@@ -2443,6 +2572,16 @@ async function handleManualSync() {
 }
 
 onMounted(() => {
+  updateViewportRatio()
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', updateViewportRatio)
+  }
   loadAll()
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', updateViewportRatio)
+  }
 })
 </script>
