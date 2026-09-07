@@ -119,6 +119,17 @@ export interface SpotifyMetadataResponse {
   provider: string
 }
 
+export interface YouTubeValidationResponse {
+  valid: boolean
+  source_type?: string | null
+  resource_id?: string | null
+  title?: string | null
+  author_name?: string | null
+  thumbnail_url?: string | null
+  embed_url?: string | null
+  error?: string | null
+}
+
 export interface SystemSettings {
   postal_code: string
   metro_label: string
@@ -126,7 +137,7 @@ export interface SystemSettings {
   longitude: string
   radius_miles: string
   autoscroll_speed: string
-  grid_density?: 'classic_tv' | 'balanced' | 'dense' | string
+  grid_density?: 'classic_tv' | 'balanced' | 'dense' | 'single_row' | string
   scroll_pause_duration?: string
   scroll_page_interval?: string
   marquee_rotation_seconds: string
@@ -158,6 +169,10 @@ export interface SystemSettings {
   ha_mqtt_password?: string
   ha_mqtt_topic_prefix?: string
   ultrawide_mode?: 'auto' | 'always' | 'disabled' | string
-  ultrawide_priority?: 'feature' | 'calendar' | 'balanced' | string
+  ultrawide_priority?: 'feature' | 'calendar' | 'side_by_side' | string
+  spotlight_mode?: 'featured' | 'youtube' | string
+  youtube_source_url?: string
+  youtube_audio_mode?: 'mute' | 'audio' | string
+  youtube_aspect_ratio?: 'auto' | '4:3' | '16:9' | 'stretch' | string
   [key: string]: string | undefined
 }

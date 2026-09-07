@@ -8,6 +8,7 @@ import type {
   UpdateStatusResponse,
   VenueItem,
   WeatherData,
+  YouTubeValidationResponse,
 } from '../types'
 
 const API_BASE = '/api/v1'
@@ -248,6 +249,12 @@ export async function fetchSpotifyMetadata(url?: string): Promise<SpotifyMetadat
   return res.json()
 }
 
+export async function validateYouTubeSource(url: string): Promise<YouTubeValidationResponse> {
+  const res = await fetch(`${API_BASE}/youtube/validate?url=${encodeURIComponent(url)}`)
+  if (!res.ok) throw new Error(`Failed validating YouTube source: ${res.statusText}`)
+  return res.json()
+}
+
 export async function fetchCalendarSubscriptionUrls(): Promise<Record<string, { name: string; path: string; description: string }>> {
   const res = await fetch(`${API_BASE}/calendar/subscribe-urls`)
   if (!res.ok) throw new Error(`Failed fetching calendar URLs: ${res.statusText}`)
@@ -295,4 +302,3 @@ export async function commandDisplayPower(state: 'on' | 'off' | 'toggle'): Promi
   if (!res.ok) throw new Error(`Failed sending display power command: ${res.statusText}`)
   return res.json()
 }
-

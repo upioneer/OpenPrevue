@@ -323,6 +323,206 @@
           </div>
         </div>
 
+        <!-- Spotlight Presentation Mode & Video Stream Source -->
+        <div class="bg-[#000033] p-3 sm:p-4 border-2 border-[#00FFFF] space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase tracking-wide">
+                Spotlight Pane Presentation &amp; Media Source
+              </h3>
+              <p class="text-xs text-[#8888AA]">
+                Choose whether the spotlight pane showcases local event promotions or an authentic retro YouTube video/playlist stream.
+              </p>
+            </div>
+            <span class="text-xs text-[#FFFF00] font-bold">
+              ACTIVE: {{ form.spotlight_mode === 'youtube' ? 'YOUTUBE STREAM' : 'FEATURED EVENTS' }}
+            </span>
+          </div>
+
+          <!-- Mode Selector -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.spotlight_mode !== 'youtube'
+                ? 'bg-[#000066] border-[#00FFFF] text-[#00FFFF] shadow-[0_0_10px_rgba(0,255,255,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.spotlight_mode = 'featured'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ FEATURED EVENTS SHOWCASE ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">
+                Default Prevue presentation: Rotating concert headliners, sports matchup VS cards, vinyl spectrum visualizers, and scannable box office QR passes.
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.spotlight_mode === 'youtube'
+                ? 'bg-[#000066] border-[#FFFF00] text-[#FFFF00] shadow-[0_0_10px_rgba(255,255,0,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.spotlight_mode = 'youtube'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ YOUTUBE PLAYLIST / VIDEO STREAM ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">
+                Retro broadcast mode: Replaces the featured cards with continuous looping YouTube playlists, vintage 1990s TV bumps, or commercial reels.
+              </div>
+            </button>
+          </div>
+
+          <!-- YouTube Configuration Controls -->
+          <div v-if="form.spotlight_mode === 'youtube'" class="pt-3 border-t border-[#333366] space-y-4">
+            <!-- URL Input & Verification -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="text-xs text-[#FFFF00] font-black uppercase tracking-wider block">
+                  YouTube Playlist URL, Video URL, or Resource ID:
+                </label>
+                <button
+                  type="button"
+                  class="text-[11px] font-black text-[#00FFFF] hover:text-white border border-[#00FFFF] px-2 py-0.5 uppercase cursor-pointer"
+                  :disabled="isValidatingYouTube"
+                  @click="handleValidateYouTube"
+                >
+                  {{ isValidatingYouTube ? '[ PROBING... ]' : '[ TEST / VERIFY URL ]' }}
+                </button>
+              </div>
+              <input
+                v-model="form.youtube_source_url"
+                type="text"
+                placeholder="e.g. https://www.youtube.com/playlist?list=PL... or https://youtu.be/..."
+                class="w-full bg-[#000022] border border-[#00FFFF] text-white text-xs p-2 font-mono focus:outline-none"
+                @blur="handleValidateYouTube"
+              />
+              <span class="text-[10px] text-[#8888AA] block">
+                Accepts YouTube playlists, individual videos (auto-loops), and raw IDs. Automatically falls back to featured events if offline or restricted.
+              </span>
+
+              <!-- Live Validation Feedback Banner -->
+              <div v-if="youtubeValidation" class="p-2.5 border text-xs font-mono" :class="youtubeValidation.valid ? 'bg-[#002200] border-[#00FF00] text-[#00FF00]' : 'bg-[#330000] border-[#FF4444] text-[#FF8888]'">
+                <div class="flex items-center justify-between">
+                  <span class="font-black uppercase tracking-wider">
+                    {{ youtubeValidation.valid ? '[ EMBED READY // VERIFIED ]' : '[ EMBED WARNING // RESTRICTED OR INVALID ]' }}
+                  </span>
+                  <span class="text-[10px] font-bold uppercase text-[#FFFF00]" v-if="youtubeValidation.source_type">
+                    TYPE: {{ youtubeValidation.source_type }}
+                  </span>
+                </div>
+                <div v-if="youtubeValidation.title" class="text-white font-bold mt-1 truncate">
+                  TITLE: {{ youtubeValidation.title }}
+                </div>
+                <div v-if="youtubeValidation.author_name" class="text-[#A0A0C0] text-[11px]">
+                  AUTHOR: {{ youtubeValidation.author_name }}
+                </div>
+                <div v-if="youtubeValidation.error" class="text-[#FFAAAA] mt-1 font-bold">
+                  {{ youtubeValidation.error }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Video Aspect Ratio Strategy Across Form Factors -->
+            <div class="space-y-1.5">
+              <label class="text-xs text-[#00FFFF] font-black uppercase tracking-wider block">
+                Video Aspect Ratio &amp; Framing Strategy across Displays
+              </label>
+              <span class="text-[10px] text-[#8888AA] block">
+                Older 1990s TV recordings and VHS reels are 4:3. Choose 4:3 to prevent black letterbox borders and center natively with CRT pillarbox bezels.
+              </span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-1">
+                <!-- 4:3 Retro CRT -->
+                <button
+                  type="button"
+                  class="p-2.5 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+                  :class="form.youtube_aspect_ratio === '4:3' || !form.youtube_aspect_ratio
+                    ? 'bg-[#000066] border-[#FFFF00] text-[#FFFF00] shadow-[0_0_8px_rgba(255,255,0,0.5)]'
+                    : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+                  @click="form.youtube_aspect_ratio = '4:3'"
+                >
+                  <div class="font-black text-xs uppercase">[ 4:3 RETRO CRT ]</div>
+                  <div class="text-[10px] text-[#E0E0E0] mt-0.5">Authentic vintage 4:3 TV aspect ratio with retro CRT pillarbox bezels on wide screens.</div>
+                </button>
+
+                <!-- 16:9 Widescreen -->
+                <button
+                  type="button"
+                  class="p-2.5 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+                  :class="form.youtube_aspect_ratio === '16:9'
+                    ? 'bg-[#000066] border-[#00FFFF] text-[#00FFFF] shadow-[0_0_8px_rgba(0,255,255,0.5)]'
+                    : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+                  @click="form.youtube_aspect_ratio = '16:9'"
+                >
+                  <div class="font-black text-xs uppercase">[ 16:9 WIDESCREEN ]</div>
+                  <div class="text-[10px] text-[#E0E0E0] mt-0.5">Modern widescreen format for high-definition 16:9 video compilations.</div>
+                </button>
+
+                <!-- Fit Container -->
+                <button
+                  type="button"
+                  class="p-2.5 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+                  :class="form.youtube_aspect_ratio === 'auto'
+                    ? 'bg-[#000066] border-[#00FF00] text-[#00FF00] shadow-[0_0_8px_rgba(0,255,0,0.5)]'
+                    : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+                  @click="form.youtube_aspect_ratio = 'auto'"
+                >
+                  <div class="font-black text-xs uppercase">[ FIT CONTAINER ]</div>
+                  <div class="text-[10px] text-[#E0E0E0] mt-0.5">Adapts dynamically to the container bounds on any form factor.</div>
+                </button>
+
+                <!-- Fill & Expand -->
+                <button
+                  type="button"
+                  class="p-2.5 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+                  :class="form.youtube_aspect_ratio === 'stretch'
+                    ? 'bg-[#000066] border-[#FF00FF] text-[#FF00FF] shadow-[0_0_8px_rgba(255,0,255,0.5)]'
+                    : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+                  @click="form.youtube_aspect_ratio = 'stretch'"
+                >
+                  <div class="font-black text-xs uppercase">[ FILL &amp; EXPAND ]</div>
+                  <div class="text-[10px] text-[#E0E0E0] mt-0.5">Expands edge-to-edge to completely fill the pane without pillarbox bars.</div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Audio Priority -->
+            <div class="space-y-1.5">
+              <label class="text-xs text-[#00FF00] font-black uppercase tracking-wider block">
+                Audio Playback Coordination &amp; Priority
+              </label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <!-- Muted YouTube (Spotify Active) -->
+                <button
+                  type="button"
+                  class="p-2.5 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+                  :class="form.youtube_audio_mode !== 'audio'
+                    ? 'bg-[#000066] border-[#00FF00] text-[#00FF00] shadow-[0_0_8px_rgba(0,255,0,0.5)]'
+                    : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+                  @click="form.youtube_audio_mode = 'mute'"
+                >
+                  <div class="font-black text-xs uppercase">[ MUTE YOUTUBE // KEEP BACKGROUND SPOTIFY ]</div>
+                  <div class="text-[10px] text-[#E0E0E0] mt-0.5">
+                    Recommended: Video plays muted while curated Spotify music and analog CRT hiss continue in the background. Complies with kiosk autoplay policies.
+                  </div>
+                </button>
+
+                <!-- Live YouTube Audio -->
+                <button
+                  type="button"
+                  class="p-2.5 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+                  :class="form.youtube_audio_mode === 'audio'
+                    ? 'bg-[#000066] border-[#FFFF00] text-[#FFFF00] shadow-[0_0_8px_rgba(255,255,0,0.5)]'
+                    : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+                  @click="form.youtube_audio_mode = 'audio'"
+                >
+                  <div class="font-black text-xs uppercase">[ ENABLE YOUTUBE BROADCAST AUDIO ]</div>
+                  <div class="text-[10px] text-[#E0E0E0] mt-0.5">
+                    Enables native audio from the YouTube video. Automatically pauses on active Emergency Alert System (EAS) sirens.
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Autoscroll Scan Speed -->
           <div class="bg-[#000033] p-3 border border-[#FFFF00] space-y-1">
@@ -1947,13 +2147,14 @@ import {
   triggerSync,
   unpairTelegramUser,
   updateSetting,
+  validateYouTubeSource,
 } from '../api/client'
 import { retroShader, type ShaderConfig } from '../services/retroShader'
 import { audioSynth, type AudioFilterConfig, type AudioFilterProfile } from '../services/audioSynth'
 import { commercialsEngine } from '../services/commercialsEngine'
 import { REGIONAL_PRESETS, type RegionalPreset } from '../services/regionalPresets'
 import { wakeLockService } from '../services/wakeLock'
-import type { HealthData, OllamaPingResponse, SystemSettings, UpdateStatusResponse } from '../types'
+import type { HealthData, OllamaPingResponse, SystemSettings, UpdateStatusResponse, YouTubeValidationResponse } from '../types'
 
 const tabs = [
   { id: 'location', label: '[ 1. LOCATION & DISCOVERY ]' },
@@ -1996,6 +2197,10 @@ const videoUploadIsError = ref(false)
 // Spotify & Audio Stream State
 const spotifyAutoplayEnabled = ref(false)
 const audioPresets = ref<Array<any>>([])
+
+// YouTube Video Stream State
+const isValidatingYouTube = ref(false)
+const youtubeValidation = ref<YouTubeValidationResponse | null>(null)
 
 // Kiosk Screen Wake Lock & Display Power State
 const wakeLockEnabled = ref(wakeLockService.isWakeLockActive.value)
@@ -2116,6 +2321,10 @@ const form = reactive<SystemSettings>({
   ha_mqtt_topic_prefix: 'homeassistant',
   ultrawide_mode: 'auto',
   ultrawide_priority: 'calendar',
+  spotlight_mode: 'featured',
+  youtube_source_url: '',
+  youtube_audio_mode: 'mute',
+  youtube_aspect_ratio: '4:3',
   eas_enabled: '1',
   eas_sound_enabled: '1',
   eas_min_severity: 'Moderate',
@@ -2231,6 +2440,26 @@ async function handleSettingsGeocode(query?: string) {
     locationResolutionMsg.value = `Geocoding lookup error: ${String(err)}`
   } finally {
     isGeocodingLocation.value = false
+  }
+}
+
+async function handleValidateYouTube() {
+  const url = form.youtube_source_url?.trim()
+  if (!url) {
+    youtubeValidation.value = null
+    return
+  }
+  isValidatingYouTube.value = true
+  try {
+    const res = await validateYouTubeSource(url)
+    youtubeValidation.value = res
+  } catch (err) {
+    youtubeValidation.value = {
+      valid: false,
+      error: `Validation probe failed: ${String(err)}`,
+    }
+  } finally {
+    isValidatingYouTube.value = false
   }
 }
 
@@ -2440,6 +2669,11 @@ async function loadAll() {
 
     // Sync server-side commercials
     await commercialsEngine.syncWithServerDropzone()
+
+    // Validate YouTube URL if configured
+    if (s.youtube_source_url) {
+      handleValidateYouTube()
+    }
 
     // Init retro shaders
     retroShader.init()

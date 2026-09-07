@@ -47,6 +47,10 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "ha_mqtt_topic_prefix": "homeassistant",
     "ultrawide_mode": "auto",
     "ultrawide_priority": "calendar",
+    "spotlight_mode": "featured",
+    "youtube_source_url": "",
+    "youtube_audio_mode": "mute",
+    "youtube_aspect_ratio": "4:3",
 }
 
 

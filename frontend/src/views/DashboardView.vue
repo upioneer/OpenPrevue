@@ -8,11 +8,20 @@
 
     <!-- 1. Ultrawide & Rack Bar Layout (21:9, 32:9, 10" Rack Displays 1920x480) -->
     <template v-if="isUltrawideActive">
-      <!-- A. FEATURE PRIORITY: Primarily featured events with ONE row scrolling below -->
+      <!-- A. FEATURE PRIORITY: Primarily featured events/video with ONE row scrolling below -->
       <template v-if="ultrawidePriority === 'feature'">
-        <!-- Top: SpotlightPane fills primary display height -->
+        <!-- Top: Video or SpotlightPane fills primary display height -->
         <div class="flex-1 w-full min-h-0 overflow-hidden">
+          <YouTubePane
+            v-if="shouldShowYouTube"
+            :source-url="settings?.youtube_source_url || ''"
+            :audio-mode="settings?.youtube_audio_mode || 'mute'"
+            :aspect-ratio="settings?.youtube_aspect_ratio || '4:3'"
+            :is-ultrawide="true"
+            @error="handleYouTubeError"
+          />
           <SpotlightPane
+            v-else
             :events="events"
             :rotation-seconds="marqueeRotationSeconds"
             :is-ultrawide="true"
@@ -51,7 +60,16 @@
         </div>
         <div class="flex-1 flex flex-row w-full min-h-0 overflow-hidden">
           <div class="w-1/2 h-full shrink-0 overflow-hidden">
+            <YouTubePane
+              v-if="shouldShowYouTube"
+              :source-url="settings?.youtube_source_url || ''"
+              :audio-mode="settings?.youtube_audio_mode || 'mute'"
+              :aspect-ratio="settings?.youtube_aspect_ratio || '4:3'"
+              :is-ultrawide="true"
+              @error="handleYouTubeError"
+            />
             <SpotlightPane
+              v-else
               :events="events"
               :rotation-seconds="marqueeRotationSeconds"
               :is-ultrawide="true"
@@ -99,9 +117,17 @@
 
     <!-- 2. Classic 16:9 / 4:3 Vertically Stacked Presentation -->
     <template v-else>
-      <!-- Top Pane: Spotlight Promo (45% Landscape / 34% Portrait) -->
+      <!-- Top Pane: Video Stream or Spotlight Promo (45% Landscape / 34% Portrait) -->
       <div class="h-[45%] portrait-spotlight-height w-full shrink-0">
+        <YouTubePane
+          v-if="shouldShowYouTube"
+          :source-url="settings?.youtube_source_url || ''"
+          :audio-mode="settings?.youtube_audio_mode || 'mute'"
+          :aspect-ratio="settings?.youtube_aspect_ratio || '4:3'"
+          @error="handleYouTubeError"
+        />
         <SpotlightPane
+          v-else
           :events="events"
           :rotation-seconds="marqueeRotationSeconds"
         />
@@ -132,8 +158,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import SpotlightPane from '../components/SpotlightPane.vue'
+import YouTubePane from '../components/YouTubePane.vue'
 import DividerRibbon from '../components/DividerRibbon.vue'
 import TimelineGrid from '../components/TimelineGrid.vue'
 import SetupModal from '../components/SetupModal.vue'
@@ -146,6 +173,7 @@ const events = ref<EventItem[]>([])
 const venues = ref<VenueItem[]>([])
 const settings = ref<SystemSettings | null>(null)
 const isUltrawideDetected = ref(false)
+const youtubeError = ref(false)
 let refreshInterval: ReturnType<typeof setInterval> | null = null
 let unsubscribeEventsWs: (() => void) | null = null
 let unsubscribeSettingsWs: (() => void) | null = null
@@ -192,6 +220,33 @@ const pageIntervalSeconds = computed(() => {
   return parseInt(settings.value.scroll_page_interval, 10) || 6
 })
 
+const shouldShowYouTube = computed(() => {
+  return (
+    settings.value?.spotlight_mode === 'youtube' &&
+    !!settings.value?.youtube_source_url?.trim() &&
+    !youtubeError.value
+  )
+})
+
+function handleYouTubeError(code: number) {
+  console.warn('YouTube player error:', code, 'Falling back to Featured Events Showcase.')
+  youtubeError.value = true
+}
+
+watch(
+  () => settings.value?.youtube_source_url,
+  () => {
+    youtubeError.value = false
+  }
+)
+
+watch(
+  () => settings.value?.spotlight_mode,
+  () => {
+    youtubeError.value = false
+  }
+)
+
 async function loadData() {
   try {
     const [fetchedEvents, fetchedVenues, fetchedSettings] = await Promise.all([
@@ -212,7 +267,7 @@ async function loadData() {
 }
 
 function handleTicketToggled(eventId: string, hasTicket: number) {
-  const target = events.value.find(e => e.id === eventId)
+  const target = events.value.find((e) => e.id === eventId)
   if (target) {
     target.has_ticket = hasTicket
   }

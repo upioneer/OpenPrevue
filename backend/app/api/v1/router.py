@@ -20,6 +20,7 @@ from backend.app.api.v1.endpoints import (
     venues,
     weather,
     ws,
+    youtube,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -39,6 +40,7 @@ api_router.include_router(updates.router, tags=["Updates"])
 api_router.include_router(commercials.router, tags=["Commercials"])
 api_router.include_router(ai.router, tags=["AI & Ollama"])
 api_router.include_router(spotify.router, tags=["Spotify"])
+api_router.include_router(youtube.router, tags=["YouTube"])
 api_router.include_router(calendar.router, tags=["Calendar"])
 api_router.include_router(integrations.router, tags=["Integrations"])
 api_router.include_router(audio.router, tags=["Audio"])

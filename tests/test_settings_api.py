@@ -12,7 +12,7 @@ async def setup_database():
     """Initialize database and default settings."""
     await init_db()
     async with get_db() as db:
-        await db.execute("DELETE FROM settings WHERE key LIKE 'test_%' OR key LIKE 'ultrawide_%'")
+        await db.execute("DELETE FROM settings WHERE key LIKE 'test_%' OR key LIKE 'ultrawide_%' OR key LIKE 'spotlight_%' OR key LIKE 'youtube_%'")
         await db.commit()
     await seed_initial_data()
 
@@ -84,3 +84,29 @@ async def test_ultrawide_settings_defaults_and_updates():
         get_res = await client.get("/api/v1/settings")
         assert get_res.json()["ultrawide_priority"] == "feature"
         assert get_res.json()["ultrawide_mode"] == "always"
+
+
+@pytest.mark.asyncio
+async def test_youtube_spotlight_settings_defaults_and_updates():
+    """Verify spotlight mode, youtube aspect ratio, and audio mode defaults and updates."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.get("/api/v1/settings")
+        assert res.status_code == 200
+        settings = res.json()
+        assert settings.get("spotlight_mode") == "featured"
+        assert settings.get("youtube_audio_mode") == "mute"
+        assert settings.get("youtube_aspect_ratio") == "4:3"
+
+        # Update spotlight mode to 'youtube'
+        await client.put("/api/v1/settings/spotlight_mode", json={"value": "youtube"})
+        await client.put("/api/v1/settings/youtube_source_url", json={"value": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"})
+        await client.put("/api/v1/settings/youtube_aspect_ratio", json={"value": "16:9"})
+        await client.put("/api/v1/settings/youtube_audio_mode", json={"value": "audio"})
+
+        get_res = await client.get("/api/v1/settings")
+        data = get_res.json()
+        assert data["spotlight_mode"] == "youtube"
+        assert data["youtube_source_url"] == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        assert data["youtube_aspect_ratio"] == "16:9"
+        assert data["youtube_audio_mode"] == "audio"
