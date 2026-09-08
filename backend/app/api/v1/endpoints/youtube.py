@@ -36,8 +36,8 @@ def parse_youtube_resource(raw_input: str) -> tuple[str, str]:
     if re.match(r"^(PL|UU|FL|RD|OLAK)[a-zA-Z0-9_-]+$", clean, re.IGNORECASE):
         return "playlist", clean
 
-    # 3. Check for single video URL formats
-    match_video = re.search(r"(?:v=|\/embed\/|\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})", clean)
+    # 3. Check for single video URL formats (including /shorts/, /live/, /embed/, youtu.be/)
+    match_video = re.search(r"(?:v=|\/embed\/|\/shorts\/|\/live\/|youtu\.be\/)([a-zA-Z0-9_-]{11})", clean)
     if match_video:
         return "video", match_video.group(1)
 

@@ -54,8 +54,18 @@
         </div>
       </div>
 
-      <!-- Right: Audio Status Badge -->
+      <!-- Right: Channel Skipper & Audio Status Badge -->
       <div class="shrink-0 flex items-center space-x-2">
+        <button
+          v-if="parsedResource.type === 'playlist'"
+          type="button"
+          class="text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 border cursor-pointer transition-colors bg-[#000044] text-[#FFFF00] border-[#FFFF00] hover:bg-[#FFFF00] hover:text-[#000033]"
+          @click="skipNextClip"
+          title="Skip to next playlist clip"
+        >
+          [ NEXT CLIP &gt;&gt; ]
+        </button>
+
         <button
           type="button"
           class="text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 border cursor-pointer transition-colors"
@@ -80,11 +90,13 @@ const props = withDefaults(
     audioMode?: 'mute' | 'audio' | string
     aspectRatio?: 'auto' | '4:3' | '16:9' | 'stretch' | string
     isUltrawide?: boolean
+    shuffleEnabled?: string | boolean
   }>(),
   {
     audioMode: 'mute',
     aspectRatio: '4:3',
     isUltrawide: false,
+    shuffleEnabled: false,
   }
 )
 
@@ -97,6 +109,10 @@ const playerId = `yt-player-${Math.random().toString(36).substring(2, 9)}`
 let playerInstance: any = null
 const currentVideoTitle = ref<string>('')
 const isPlaying = ref(false)
+
+const isShuffleOn = computed(() => {
+  return props.shuffleEnabled === true || props.shuffleEnabled === '1' || props.shuffleEnabled === 'true'
+})
 
 // Determine aspect ratio class for video container
 const frameAspectClass = computed(() => {
@@ -125,7 +141,7 @@ const parsedResource = computed(() => {
     return { type: 'playlist', id: clean }
   }
 
-  const vidMatch = clean.match(/(?:v=|\/embed\/|\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+  const vidMatch = clean.match(/(?:v=|\/embed\/|\/shorts\/|\/live\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
   if (vidMatch) return { type: 'video', id: vidMatch[1] }
 
   if (/^[a-zA-Z0-9_-]{11}$/.test(clean)) {
@@ -150,6 +166,12 @@ function toggleAudio() {
     } else {
       playerInstance.unMute()
     }
+  }
+}
+
+function skipNextClip() {
+  if (playerInstance && typeof playerInstance.nextVideo === 'function') {
+    playerInstance.nextVideo()
   }
 }
 
@@ -230,6 +252,9 @@ async function mountPlayer() {
         } else {
           e.target.unMute()
         }
+        if (isPlaylist && isShuffleOn.value && typeof e.target.setShuffle === 'function') {
+          e.target.setShuffle(true)
+        }
         e.target.playVideo()
         updateTitle()
       },
@@ -282,6 +307,13 @@ watch(() => props.audioMode, (mode) => {
     playerInstance.mute()
   } else {
     playerInstance.unMute()
+  }
+})
+
+// Sync shuffleEnabled prop changes
+watch(isShuffleOn, (val) => {
+  if (playerInstance && parsedResource.value.type === 'playlist' && typeof playerInstance.setShuffle === 'function') {
+    playerInstance.setShuffle(val)
   }
 })
 

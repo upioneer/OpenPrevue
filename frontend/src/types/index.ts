@@ -174,5 +174,6 @@ export interface SystemSettings {
   youtube_source_url?: string
   youtube_audio_mode?: 'mute' | 'audio' | string
   youtube_aspect_ratio?: 'auto' | '4:3' | '16:9' | 'stretch' | string
+  youtube_shuffle_enabled?: string
   [key: string]: string | undefined
 }

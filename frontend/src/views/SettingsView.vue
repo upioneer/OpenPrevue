@@ -520,6 +520,44 @@
                 </button>
               </div>
             </div>
+
+            <!-- Playlist Playback Order & Shuffle Mode -->
+            <div class="space-y-1.5">
+              <label class="text-xs text-[#FFFF00] font-black uppercase tracking-wider block">
+                Playlist Playback Order &amp; Shuffle Mode
+              </label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <!-- Sequential Order (Default) -->
+                <button
+                  type="button"
+                  class="p-2.5 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+                  :class="form.youtube_shuffle_enabled !== '1'
+                    ? 'bg-[#000066] border-[#00FFFF] text-[#00FFFF] shadow-[0_0_8px_rgba(0,255,255,0.5)]'
+                    : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+                  @click="form.youtube_shuffle_enabled = '0'"
+                >
+                  <div class="font-black text-xs uppercase">[ SEQUENTIAL ORDER (DEFAULT) ]</div>
+                  <div class="text-[10px] text-[#E0E0E0] mt-0.5">
+                    Plays playlist videos in their original chronological order from beginning to end.
+                  </div>
+                </button>
+
+                <!-- Shuffle / Randomize Order -->
+                <button
+                  type="button"
+                  class="p-2.5 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+                  :class="form.youtube_shuffle_enabled === '1'
+                    ? 'bg-[#000066] border-[#FFFF00] text-[#FFFF00] shadow-[0_0_8px_rgba(255,255,0,0.5)]'
+                    : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+                  @click="form.youtube_shuffle_enabled = '1'"
+                >
+                  <div class="font-black text-xs uppercase">[ SHUFFLE / RANDOMIZE ORDER ]</div>
+                  <div class="text-[10px] text-[#E0E0E0] mt-0.5">
+                    Randomizes playlist playback order on initial boot and transitions. Prevents playlists from always starting on clip #1.
+                  </div>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2325,6 +2363,7 @@ const form = reactive<SystemSettings>({
   youtube_source_url: '',
   youtube_audio_mode: 'mute',
   youtube_aspect_ratio: '4:3',
+  youtube_shuffle_enabled: '0',
   eas_enabled: '1',
   eas_sound_enabled: '1',
   eas_min_severity: 'Moderate',

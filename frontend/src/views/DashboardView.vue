@@ -17,6 +17,7 @@
             :source-url="settings?.youtube_source_url || ''"
             :audio-mode="settings?.youtube_audio_mode || 'mute'"
             :aspect-ratio="settings?.youtube_aspect_ratio || '4:3'"
+            :shuffle-enabled="settings?.youtube_shuffle_enabled || '0'"
             :is-ultrawide="true"
             @error="handleYouTubeError"
           />
@@ -65,6 +66,7 @@
               :source-url="settings?.youtube_source_url || ''"
               :audio-mode="settings?.youtube_audio_mode || 'mute'"
               :aspect-ratio="settings?.youtube_aspect_ratio || '4:3'"
+              :shuffle-enabled="settings?.youtube_shuffle_enabled || '0'"
               :is-ultrawide="true"
               @error="handleYouTubeError"
             />
@@ -124,6 +126,7 @@
           :source-url="settings?.youtube_source_url || ''"
           :audio-mode="settings?.youtube_audio_mode || 'mute'"
           :aspect-ratio="settings?.youtube_aspect_ratio || '4:3'"
+          :shuffle-enabled="settings?.youtube_shuffle_enabled || '0'"
           @error="handleYouTubeError"
         />
         <SpotlightPane

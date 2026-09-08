@@ -2,7 +2,7 @@
 
 Self-hosted local event aggregator and interactive retro display system styled after 1990s scrolling cable channel guides.
 
-![OpenPrevue 16:9 Hero Dashboard](./project_details/changelog/v0.20.0/dashboard_landscape.png)
+![OpenPrevue 16:9 Hero Dashboard](./project_details/changelog/v0.21.0/dashboard_landscape.png)
 
 ---
 
@@ -13,43 +13,43 @@ Self-hosted local event aggregator and interactive retro display system styled a
 #### 1. 10" Server / AV Rack Bar Display (1920x480 - Feature Priority)
 Engineered for 6"-12" rack consoles, smart home sensor panels, and stretch displays. Prominently showcases headline event promotions, sports matchups, and box office QR passes with a single continuous channel row scrolling beneath.
 
-![OpenPrevue 10" Rack Display Feature Priority](./project_details/changelog/v0.20.0/rack_1920x480_feature_priority.png)
+![OpenPrevue 10" Rack Display Feature Priority](./project_details/changelog/v0.21.0/rack_1920x480_feature_priority.png)
 
 #### 2. Desktop Ultrawide Monitor (3440x1440 - Calendar Priority)
 Wall-to-wall 24-channel schedule grid across 21:9 and 32:9 desktop screens with 100% full-screen listings visibility.
 
-![OpenPrevue Desktop Ultrawide Calendar Priority](./project_details/changelog/v0.20.0/desktop_3440x1440_calendar_priority.png)
+![OpenPrevue Desktop Ultrawide Calendar Priority](./project_details/changelog/v0.21.0/desktop_3440x1440_calendar_priority.png)
 
 ### Channel Schedule Presentation Scales & Density Modes
 
 #### 1. Classic TV Mode (4 Rows - True-to-Scale 1990s Broadcast)
 Authentic 1:1 reproduction of the 1990s Prevue Channel on an NTSC CRT television with large chunky typography and team badges.
 
-![OpenPrevue Classic TV Presentation Mode](./project_details/changelog/v0.20.0/density_classic_tv.png)
+![OpenPrevue Classic TV Presentation Mode](./project_details/changelog/v0.21.0/density_classic_tv.png)
 
 #### 2. Balanced Mode (7 Rows - Default Standard Layout)
 The default presentation balance between vintage broadcast scale and listing visibility, rendering 7 comfortable channel rows.
 
-![OpenPrevue Balanced Presentation Mode](./project_details/changelog/v0.20.0/density_balanced.png)
+![OpenPrevue Balanced Presentation Mode](./project_details/changelog/v0.21.0/density_balanced.png)
 
 #### 3. Dense Mode (12 Rows - High Density Information Overview)
 Information-dense mode displaying up to 12 simultaneous channels on screen for command-center monitoring.
 
-![OpenPrevue Dense Presentation Mode](./project_details/changelog/v0.20.0/density_dense.png)
+![OpenPrevue Dense Presentation Mode](./project_details/changelog/v0.21.0/density_dense.png)
 
 ### Multi-Device & Display Orientation Showcase
 
 #### Vertical 9:16 Portrait Kiosk & Wall Display
-![OpenPrevue 9:16 Vertical Portrait Kiosk](./project_details/changelog/v0.20.0/dashboard_portrait.png)
+![OpenPrevue 9:16 Vertical Portrait Kiosk](./project_details/changelog/v0.21.0/dashboard_portrait.png)
 
 #### Small Touchscreen & Raspberry Pi 7" Display
-![OpenPrevue Small Screen Display](./project_details/changelog/v0.20.0/dashboard_small_pi.png)
+![OpenPrevue Small Screen Display](./project_details/changelog/v0.21.0/dashboard_small_pi.png)
 
 #### First-Boot Regional Setup Wizard
-![OpenPrevue Setup Wizard Modal](./project_details/changelog/v0.20.0/setup_wizard_modal.png)
+![OpenPrevue Setup Wizard Modal](./project_details/changelog/v0.21.0/setup_wizard_modal.png)
 
 #### Settings Control Center & Audio Synthesizer
-![OpenPrevue Settings Control Center](./project_details/changelog/v0.20.0/settings_control_center.png)
+![OpenPrevue Settings Control Center](./project_details/changelog/v0.21.0/settings_control_center.png)
 
 ---
 
@@ -63,6 +63,8 @@ OpenPrevue aggregates local event listings across developer ticketing APIs, spor
 
 * **Authentic 1990s Prevue Experience:** CRT scanline shaders, selectable palettes (EGA 16, Commodore 64, Amber, Green phosphor), and Web Audio analog tape hiss with 60 Hz mains hum.
 * **YouTube Video & Playlist Streaming:** Swap the top featured event cards for continuous looping YouTube playlists, vintage 1990s commercials, or CRT music video reels with live oEmbed validation.
+* **Playlist Shuffle Mode & On-Screen Channel Skipper:** Randomize playlist queues on initial boot and transition seamlessly forward using the dedicated on-screen `[ NEXT CLIP >> ]` button in the broadcast telemetry ribbon.
+* **Direct 24/7 Live Stream URLs:** Support for streaming 24/7 YouTube live broadcasts and premieres directly via `youtube.com/live/...` links.
 * **Authentic 4:3 CRT Aspect Framing:** Custom multi-aspect ratio engine centers vintage 4:3 TV footage without player pillarbox bars, flanked by retro CRT phosphor side bezels.
 * **Ultrawide & 6"-12" Rack Display Architecture:** Dedicated Feature Priority mode (Spotlight + 1 row scrolling below) and Calendar Priority mode (100% full-screen schedule grid) for desktop ultrawides and 10" rack consoles (1920x480, 1280x400).
 * **Single Row Schedule Density:** Tailored `[ 1 ROW // RACK BAR ]` presentation scale for compact horizontal sensor panels and AV consoles.
@@ -243,7 +245,7 @@ npm run build
 Capture Playwright screenshots:
 
 ```bash
-python project_details/playbooks/capture_screenshots.py --version v0.20.0
+python project_details/playbooks/capture_screenshots.py --version v0.21.0
 ```
 
 ---

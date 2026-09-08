@@ -23,7 +23,7 @@ def test_parse_youtube_resource_playlists():
 
 
 def test_parse_youtube_resource_videos():
-    """Verify regex identification of single video resources."""
+    """Verify regex identification of single video and live stream resources."""
     assert parse_youtube_resource("https://www.youtube.com/watch?v=dQw4w9WgXcQ") == (
         "video",
         "dQw4w9WgXcQ",
@@ -33,6 +33,10 @@ def test_parse_youtube_resource_videos():
         "dQw4w9WgXcQ",
     )
     assert parse_youtube_resource("https://www.youtube.com/embed/dQw4w9WgXcQ") == (
+        "video",
+        "dQw4w9WgXcQ",
+    )
+    assert parse_youtube_resource("https://www.youtube.com/live/dQw4w9WgXcQ") == (
         "video",
         "dQw4w9WgXcQ",
     )

@@ -88,7 +88,7 @@ async def test_ultrawide_settings_defaults_and_updates():
 
 @pytest.mark.asyncio
 async def test_youtube_spotlight_settings_defaults_and_updates():
-    """Verify spotlight mode, youtube aspect ratio, and audio mode defaults and updates."""
+    """Verify spotlight mode, youtube aspect ratio, audio mode, and shuffle defaults and updates."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         res = await client.get("/api/v1/settings")
@@ -97,12 +97,14 @@ async def test_youtube_spotlight_settings_defaults_and_updates():
         assert settings.get("spotlight_mode") == "featured"
         assert settings.get("youtube_audio_mode") == "mute"
         assert settings.get("youtube_aspect_ratio") == "4:3"
+        assert settings.get("youtube_shuffle_enabled") == "0"
 
         # Update spotlight mode to 'youtube'
         await client.put("/api/v1/settings/spotlight_mode", json={"value": "youtube"})
         await client.put("/api/v1/settings/youtube_source_url", json={"value": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"})
         await client.put("/api/v1/settings/youtube_aspect_ratio", json={"value": "16:9"})
         await client.put("/api/v1/settings/youtube_audio_mode", json={"value": "audio"})
+        await client.put("/api/v1/settings/youtube_shuffle_enabled", json={"value": "1"})
 
         get_res = await client.get("/api/v1/settings")
         data = get_res.json()
@@ -110,3 +112,4 @@ async def test_youtube_spotlight_settings_defaults_and_updates():
         assert data["youtube_source_url"] == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         assert data["youtube_aspect_ratio"] == "16:9"
         assert data["youtube_audio_mode"] == "audio"
+        assert data["youtube_shuffle_enabled"] == "1"

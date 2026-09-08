@@ -51,6 +51,7 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "youtube_source_url": "",
     "youtube_audio_mode": "mute",
     "youtube_aspect_ratio": "4:3",
+    "youtube_shuffle_enabled": "0",
 }
 
 
