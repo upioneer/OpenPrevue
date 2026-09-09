@@ -16,6 +16,11 @@
       @open="openSpotifyModal"
       @close="closeSpotifyModal"
     />
+    <UpdateModal
+      :is-open="isUpdateModalOpen"
+      :initial-target-version="updateModalTargetVersion"
+      @close="closeUpdateModal"
+    />
   </div>
 </template>
 
@@ -24,11 +29,13 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import HeaderBar from './components/HeaderBar.vue'
 import EASBanner from './components/EASBanner.vue'
 import UpdateToast from './components/UpdateToast.vue'
+import UpdateModal from './components/UpdateModal.vue'
 import SpotifyPlayerModal from './components/SpotifyPlayerModal.vue'
 import { fetchSettings } from './api/client'
 import { wsService } from './services/websocket'
 import { audioSynth } from './services/audioSynth'
 import { isSpotifyModalOpen, openSpotifyModal, closeSpotifyModal } from './services/spotifyModalState'
+import { isUpdateModalOpen, updateModalTargetVersion, closeUpdateModal } from './services/updateModalState'
 
 const isScanlinesEnabled = ref(true)
 const isCrtCurvatureEnabled = ref(false)

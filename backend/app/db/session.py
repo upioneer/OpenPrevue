@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+import os
 from pathlib import Path
 import aiosqlite
 
@@ -13,9 +14,29 @@ from backend.app.db.schema import SCHEMA_SQL
 async def init_db(database_path: Path | None = None) -> None:
     """Initialize database tables, migrations, and indices if not present."""
     db_file = database_path or settings.database_path
-    db_file.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        db_file.parent.mkdir(parents=True, exist_ok=True)
+    except PermissionError as exc:
+        logger.error(
+            "Permission denied creating database directory at %s: %s",
+            db_file.parent,
+            exc,
+        )
+        raise
+
+    if not os.access(db_file.parent, os.W_OK):
+        current_uid = os.getuid() if hasattr(os, "getuid") else "N/A"
+        current_gid = os.getgid() if hasattr(os, "getgid") else "N/A"
+        logger.error(
+            "Database directory %s is not writable (running as UID: %s, GID: %s). "
+            "Verify storage volume permissions.",
+            db_file.parent,
+            current_uid,
+            current_gid,
+        )
 
     logger.info("Initializing database at %s", db_file)
+
     async with aiosqlite.connect(db_file) as db:
         # Check if events table exists and needs column migration before running schema script
         try:

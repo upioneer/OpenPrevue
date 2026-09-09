@@ -90,6 +90,32 @@ export interface UpdateStatusResponse {
   last_error?: string | null
 }
 
+export interface UpdateCapabilityResponse {
+  can_update: boolean
+  detected_method: 'docker_socket' | 'git' | 'trigger_file' | 'manual'
+  available_methods: string[]
+  docker_socket_available: boolean
+  git_available: boolean
+  trigger_file_available: boolean
+  trigger_file_path: string
+  description: string
+  current_version: string
+  latest_version: string
+  update_available: boolean
+}
+
+export interface UpdateApplyResponse {
+  status: 'dry_run_success' | 'triggered' | 'success' | 'manual_required' | 'error'
+  method: string
+  target_version?: string
+  target_image?: string
+  trigger_file?: string
+  new_container_id?: string
+  steps?: string[]
+  message: string
+  error?: string
+}
+
 export interface OllamaPingResponse {
   status: string
   ollama_url: string

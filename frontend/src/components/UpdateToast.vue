@@ -28,12 +28,19 @@
 
     <!-- Actions -->
     <div class="flex items-center space-x-2">
+      <button
+        type="button"
+        @click="handleUpgradeNow"
+        class="bg-[#FFFF00] text-[#000033] px-3 py-1 text-xs font-black hover:bg-[#FFFFFF] transition-all cursor-pointer shadow-[0_0_8px_rgba(255,255,0,0.8)]"
+      >
+        [ UPGRADE IN-PLACE ]
+      </button>
       <router-link
         to="/settings"
         @click="dismiss"
-        class="bg-[#FFFF00] text-[#000033] px-3 py-1 text-xs font-black hover:bg-[#FFFFFF] transition-all cursor-pointer shadow-[0_0_8px_rgba(255,255,0,0.8)]"
+        class="bg-[#000080] border border-[#FFFF00] text-[#FFFF00] px-3 py-1 text-xs font-bold hover:bg-[#0000AA] cursor-pointer transition-colors"
       >
-        [ VIEW IN SETTINGS ]
+        [ SETTINGS ]
       </router-link>
       <a
         v-if="updateData?.release_url"
@@ -42,7 +49,7 @@
         rel="noopener noreferrer"
         class="bg-[#000080] border border-[#00FFFF] text-[#00FFFF] px-3 py-1 text-xs font-bold hover:bg-[#0000AA] cursor-pointer transition-colors"
       >
-        [ GITHUB RELEASES ]
+        [ GITHUB ]
       </a>
     </div>
   </div>
@@ -52,6 +59,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { fetchUpdateStatus } from '../api/client'
 import { wsService } from '../services/websocket'
+import { openUpdateModal } from '../services/updateModalState'
 import type { UpdateStatusResponse } from '../types'
 
 const isVisible = ref(false)
@@ -78,6 +86,12 @@ function dismiss() {
     sessionStorage.setItem('openprevue_dismissed_update', updateData.value.latest_version)
   }
   isVisible.value = false
+}
+
+function handleUpgradeNow() {
+  const targetVer = updateData.value?.latest_version
+  dismiss()
+  openUpdateModal(targetVer)
 }
 
 onMounted(() => {

@@ -24,6 +24,24 @@ if (Test-Path $mainPyPath) {
     Write-Host "Updated backend/app/main.py version to $Version"
 }
 
+# Update backend config.py
+$configPyPath = Join-Path $PSScriptRoot "backend\app\core\config.py"
+if (Test-Path $configPyPath) {
+    $configContent = Get-Content $configPyPath -Raw
+    $configContent = $configContent -replace 'VERSION: str = "[^"]+"', "VERSION: str = `"$Version`""
+    Set-Content -Path $configPyPath -Value $configContent
+    Write-Host "Updated backend/app/core/config.py version to $Version"
+}
+
+# Update backend homeassistant.py
+$haPyPath = Join-Path $PSScriptRoot "backend\app\services\homeassistant.py"
+if (Test-Path $haPyPath) {
+    $haContent = Get-Content $haPyPath -Raw
+    $haContent = $haContent -replace '"version": "[^"]+"', "`"version`": `"$Version`""
+    Set-Content -Path $haPyPath -Value $haContent
+    Write-Host "Updated backend/app/services/homeassistant.py version to $Version"
+}
+
 # Automated Playwright Screenshot Capture for version changelog
 $captureScript = Join-Path $PSScriptRoot "project_details\playbooks\capture_screenshots.py"
 if ((Test-Path $captureScript) -and (Get-Command python -ErrorAction SilentlyContinue)) {

@@ -2,7 +2,7 @@
 
 Self-hosted local event aggregator and interactive retro display system styled after 1990s scrolling cable channel guides.
 
-![OpenPrevue 16:9 Hero Dashboard](./project_details/changelog/v0.21.0/dashboard_landscape.png)
+![OpenPrevue 16:9 Hero Dashboard](./project_details/changelog/v0.22.0/dashboard_landscape.png)
 
 ---
 
@@ -13,43 +13,43 @@ Self-hosted local event aggregator and interactive retro display system styled a
 #### 1. 10" Server / AV Rack Bar Display (1920x480 - Feature Priority)
 Engineered for 6"-12" rack consoles, smart home sensor panels, and stretch displays. Prominently showcases headline event promotions, sports matchups, and box office QR passes with a single continuous channel row scrolling beneath.
 
-![OpenPrevue 10" Rack Display Feature Priority](./project_details/changelog/v0.21.0/rack_1920x480_feature_priority.png)
+![OpenPrevue 10" Rack Display Feature Priority](./project_details/changelog/v0.22.0/rack_1920x480_feature_priority.png)
 
 #### 2. Desktop Ultrawide Monitor (3440x1440 - Calendar Priority)
 Wall-to-wall 24-channel schedule grid across 21:9 and 32:9 desktop screens with 100% full-screen listings visibility.
 
-![OpenPrevue Desktop Ultrawide Calendar Priority](./project_details/changelog/v0.21.0/desktop_3440x1440_calendar_priority.png)
+![OpenPrevue Desktop Ultrawide Calendar Priority](./project_details/changelog/v0.22.0/desktop_3440x1440_calendar_priority.png)
 
 ### Channel Schedule Presentation Scales & Density Modes
 
 #### 1. Classic TV Mode (4 Rows - True-to-Scale 1990s Broadcast)
 Authentic 1:1 reproduction of the 1990s Prevue Channel on an NTSC CRT television with large chunky typography and team badges.
 
-![OpenPrevue Classic TV Presentation Mode](./project_details/changelog/v0.21.0/density_classic_tv.png)
+![OpenPrevue Classic TV Presentation Mode](./project_details/changelog/v0.22.0/density_classic_tv.png)
 
 #### 2. Balanced Mode (7 Rows - Default Standard Layout)
 The default presentation balance between vintage broadcast scale and listing visibility, rendering 7 comfortable channel rows.
 
-![OpenPrevue Balanced Presentation Mode](./project_details/changelog/v0.21.0/density_balanced.png)
+![OpenPrevue Balanced Presentation Mode](./project_details/changelog/v0.22.0/density_balanced.png)
 
 #### 3. Dense Mode (12 Rows - High Density Information Overview)
 Information-dense mode displaying up to 12 simultaneous channels on screen for command-center monitoring.
 
-![OpenPrevue Dense Presentation Mode](./project_details/changelog/v0.21.0/density_dense.png)
+![OpenPrevue Dense Presentation Mode](./project_details/changelog/v0.22.0/density_dense.png)
 
 ### Multi-Device & Display Orientation Showcase
 
 #### Vertical 9:16 Portrait Kiosk & Wall Display
-![OpenPrevue 9:16 Vertical Portrait Kiosk](./project_details/changelog/v0.21.0/dashboard_portrait.png)
+![OpenPrevue 9:16 Vertical Portrait Kiosk](./project_details/changelog/v0.22.0/dashboard_portrait.png)
 
 #### Small Touchscreen & Raspberry Pi 7" Display
-![OpenPrevue Small Screen Display](./project_details/changelog/v0.21.0/dashboard_small_pi.png)
+![OpenPrevue Small Screen Display](./project_details/changelog/v0.22.0/dashboard_small_pi.png)
 
 #### First-Boot Regional Setup Wizard
-![OpenPrevue Setup Wizard Modal](./project_details/changelog/v0.21.0/setup_wizard_modal.png)
+![OpenPrevue Setup Wizard Modal](./project_details/changelog/v0.22.0/setup_wizard_modal.png)
 
 #### Settings Control Center & Audio Synthesizer
-![OpenPrevue Settings Control Center](./project_details/changelog/v0.21.0/settings_control_center.png)
+![OpenPrevue Settings Control Center](./project_details/changelog/v0.22.0/settings_control_center.png)
 
 ---
 
@@ -156,6 +156,9 @@ services:
     image: ghcr.io/upioneer/openprevue:latest
     container_name: openprevue
     restart: unless-stopped
+    # Required for Proxmox and unprivileged LXC environments to prevent sysctl permission errors
+    security_opt:
+      - apparmor:unconfined
     ports:
       - "8080:8080"
     environment:
@@ -165,6 +168,8 @@ services:
       - DEFAULT_RADIUS_MILES=25
     volumes:
       - ./data:/app/data
+      # Optional: Mount Docker socket to enable zero-touch 1-click in-place container updates directly from UI
+      # - /var/run/docker.sock:/var/run/docker.sock
 ```
 
 Launch with:
@@ -172,6 +177,116 @@ Launch with:
 ```bash
 docker compose up -d
 ```
+
+### Proxmox and Unprivileged LXC Considerations
+
+When running Docker inside an unprivileged LXC container (common in Proxmox VE, TrueNAS, and cluster hypervisors), running recent package versions of `containerd.io` (v2.x) paired with `runc` may encounter kernel sysctl permission restrictions during container namespace creation:
+
+```text
+Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: open sysctl net.ipv4.ip_unprivileged_port_start file: reopen fd 8: permission denied
+```
+
+This occurs because `containerd.io` 2.x attempts to initialize unprivileged port sysctls inside the container namespace, which unprivileged LXC guest environments disallow by default.
+
+Depending on your security and administrative preferences, you can resolve this through multiple verified paths:
+
+#### Path 1: Downgrade and Pin containerd.io to 1.7.x LTS (Recommended for Unprivileged LXC Guests)
+
+The `containerd.io` 1.7.x Long Term Support (LTS) series does not invoke the restricted sysctl probe, allowing Docker containers to launch without error in unprivileged LXC guests.
+
+1. Inspect available package versions in your repository:
+   ```bash
+   apt-cache madison containerd.io
+   apt-cache madison docker-ce | grep 28
+   ```
+
+2. Downgrade `containerd.io` alongside a compatible `docker-ce` package using `--allow-downgrades`:
+   ```bash
+   sudo apt install -y --allow-downgrades \
+     containerd.io=1.7.28-1~ubuntu.24.04~noble \
+     docker-ce=5:28.5.2-1~ubuntu.24.04~noble \
+     docker-ce-cli=5:28.5.2-1~ubuntu.24.04~noble \
+     docker-buildx-plugin \
+     docker-compose-plugin
+   ```
+   *(Note: Adjust the distribution suffix if running Debian 12 Bookworm or another release).*
+
+3. Pin the package to prevent automated `apt upgrade` cycles from re-upgrading to `containerd` 2.x:
+   ```bash
+   sudo apt-mark hold containerd.io
+   ```
+   *(To unpin in the future after upgrading the underlying Proxmox kernel: `sudo apt-mark unhold containerd.io`).*
+
+4. Restart Docker and launch OpenPrevue:
+   ```bash
+   sudo systemctl restart docker
+   sudo docker compose up -d
+   ```
+
+#### Path 2: Service Level AppArmor Bypass (docker-compose.yml)
+
+Included by default in [`docker-compose.yml`](file:///C:/Users/hgran/OneDrive/Documents/code/Projects/OpenPrevue/docker-compose.yml):
+```yaml
+security_opt:
+  - apparmor:unconfined
+```
+* *Pros:* Zero host level or system wide package changes required.
+* *Cons:* Requires the Compose definition to carry the `security_opt` directive.
+
+#### Path 3: LXC Guest Docker Daemon Global Configuration (/etc/docker/daemon.json)
+
+Disable AppArmor enforcement across all Docker workloads inside the LXC container:
+1. Create or edit `/etc/docker/daemon.json`:
+   ```json
+   {
+     "apparmor": false
+   }
+   ```
+2. Restart the Docker daemon:
+   ```bash
+   sudo systemctl restart docker
+   ```
+* *Pros:* Resolves AppArmor permission boundaries globally for all containers inside the LXC.
+* *Cons:* Disables AppArmor profile enforcement for all containers inside that specific LXC.
+
+#### Path 4: Proxmox Host Hypervisor Profile Configuration (/etc/pve/lxc/CT_ID.conf)
+
+Configure the container on the Proxmox host shell:
+1. Open the LXC configuration file on your Proxmox VE host:
+   ```bash
+   nano /etc/pve/lxc/<CT_ID>.conf
+   ```
+2. Append the following configuration entries:
+   ```ini
+   features: nesting=1,keyctl=1
+   lxc.apparmor.profile: unconfined
+   ```
+3. Reboot the container from the host:
+   ```bash
+   pct reboot <CT_ID>
+   ```
+* *Pros:* Eliminates nested AppArmor conflicts between the host kernel and LXC guest runtimes.
+* *Cons:* Requires root access to the Proxmox hypervisor shell.
+
+#### Path 5: Convert to a Privileged LXC Container or KVM Virtual Machine
+
+* **Privileged Container:** If your security policy permits, converting the LXC container to a privileged container grants the guest root identity matching the host root, bypassing unprivileged namespace sysctl limitations.
+* **KVM Virtual Machine:** Running Docker inside a standard Linux KVM virtual machine provides a dedicated virtualized kernel with complete control over sysctls and namespaces without LXC nesting restrictions.
+
+### Turnkey Storage Permissions Architecture (PUID and PGID)
+
+When mounting persistent storage via volumes (`- ./data:/app/data`), OpenPrevue automatically handles ownership and permission synchronization on startup:
+
+* **Automatic Privilege Dropping:** The container initializes a lightweight entrypoint as root, verifies and repairs write permissions on `/app/data` to match the configured user, and immediately drops privileges using `gosu` to run the application securely as non-root user `appuser` (UID 1000).
+* **Zero Host Chown Required:** You do not need to manually run `chown` or `chmod` on the host storage directory.
+* **Custom PUID and PGID Support:** If your storage volume is mounted across NFS or requires specific host user permissions, specify `PUID` and `PGID` in your `docker-compose.yml`:
+  ```yaml
+  environment:
+    - PUID=1000
+    - PGID=1000
+  ```
+* **Docker Socket Passthrough:** If `/var/run/docker.sock` is mounted into the container for the 1-click in-place update engine, the entrypoint automatically detects the host socket's group ID and grants access to `appuser` without running the container as root.
+
 
 ---
 
@@ -245,7 +360,7 @@ npm run build
 Capture Playwright screenshots:
 
 ```bash
-python project_details/playbooks/capture_screenshots.py --version v0.21.0
+python project_details/playbooks/capture_screenshots.py --version v0.22.0
 ```
 
 ---

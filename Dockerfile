@@ -21,6 +21,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    gosu \
     tzdata \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -40,13 +41,18 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 RUN mkdir -p /app/data
 
 # Non-root user setup
-RUN useradd -u 1000 -U -s /bin/sh appuser && \
+RUN useradd -u 1000 -U -s /bin/sh -d /app appuser && \
     chown -R appuser:appuser /app
-USER appuser
+
+# Copy turnkey entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/v1/health')" || exit 1
 
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["python", "-m", "uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+

@@ -2035,11 +2035,11 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
           <div class="bg-[#000022] p-2 border border-[#333366]">
             <span class="text-[#8888AA] block text-[10px]">CURRENT VERSION:</span>
-            <span class="text-[#FFFF00] font-bold">v{{ updateStatus?.current_version || '0.16.0' }}</span>
+            <span class="text-[#FFFF00] font-bold">v{{ updateStatus?.current_version || '0.21.0' }}</span>
           </div>
           <div class="bg-[#000022] p-2 border border-[#333366]">
             <span class="text-[#8888AA] block text-[10px]">LATEST RELEASE:</span>
-            <span class="text-[#00FFFF] font-bold">v{{ updateStatus?.latest_version || updateStatus?.current_version || '0.16.0' }}</span>
+            <span class="text-[#00FFFF] font-bold">v{{ updateStatus?.latest_version || updateStatus?.current_version || '0.21.0' }}</span>
           </div>
           <div class="bg-[#000022] p-2 border border-[#333366]">
             <span class="text-[#8888AA] block text-[10px]">LAST CHECKED:</span>
@@ -2054,6 +2054,50 @@
                     ? `${updateStatus.rate_limit_remaining} / 60 remaining`
                     : 'Normal')
               }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Independent In-Place Firmware Upgrade Engine Card -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#333366] pb-2">
+            <div>
+              <h3 class="text-xs font-black text-[#00FFFF] uppercase tracking-wider">
+                [ INDEPENDENT IN-PLACE FIRMWARE UPGRADE ENGINE ]
+              </h3>
+              <p class="text-[11px] text-[#8888AA] mt-0.5">
+                Zero-touch live upgrades directly from the UI with zero reliance on deprecated third-party containers.
+              </p>
+            </div>
+            <span
+              class="text-[10px] px-2 py-0.5 border font-bold uppercase shrink-0"
+              :class="updateCapability?.can_update ? 'bg-[#003300] text-[#00FF00] border-[#00FF00]' : 'bg-[#332200] text-[#FFAA00] border-[#FFAA00]'"
+            >
+              STRATEGY: {{ updateCapability?.detected_method || 'AUTODETECT' }}
+            </span>
+          </div>
+
+          <p class="text-[11px] text-[#C0C0E0] leading-relaxed">
+            {{ updateCapability?.description || 'Probing runtime environment for supported in-place update strategies...' }}
+          </p>
+
+          <div class="flex flex-wrap items-center gap-3 pt-1">
+            <button
+              type="button"
+              class="bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-4 py-1.5 text-xs font-black tracking-wider cursor-pointer shadow-[0_0_10px_rgba(255,255,0,0.8)] transition-all"
+              @click="openInPlaceUpgrader()"
+            >
+              [ LAUNCH FIRMWARE UPGRADE ENGINE ]
+            </button>
+            <button
+              type="button"
+              class="bg-[#000066] hover:bg-[#000099] border border-[#00FFFF] text-[#00FFFF] px-3 py-1.5 text-xs font-bold tracking-wider cursor-pointer transition-colors"
+              @click="openInPlaceUpgrader()"
+            >
+              [ SIMULATE UPGRADE (DRY-RUN) ]
+            </button>
+            <span v-if="updateCapability?.trigger_file_available && updateCapability?.detected_method === 'trigger_file'" class="text-[10px] text-[#8888AA]">
+              Companion watcher: <code class="text-[#00FF00]">openprevue-host-updater.sh</code>
             </span>
           </div>
         </div>
@@ -2174,6 +2218,7 @@ import {
   fetchSettings,
   fetchTelegramStatus,
   fetchTelegramUsers,
+  fetchUpdateCapability,
   fetchUpdateStatus,
   generateTelegramPairCode,
   geocodeLocationQuery,
@@ -2192,7 +2237,8 @@ import { audioSynth, type AudioFilterConfig, type AudioFilterProfile } from '../
 import { commercialsEngine } from '../services/commercialsEngine'
 import { REGIONAL_PRESETS, type RegionalPreset } from '../services/regionalPresets'
 import { wakeLockService } from '../services/wakeLock'
-import type { HealthData, OllamaPingResponse, SystemSettings, UpdateStatusResponse, YouTubeValidationResponse } from '../types'
+import { openUpdateModal } from '../services/updateModalState'
+import type { HealthData, OllamaPingResponse, SystemSettings, UpdateCapabilityResponse, UpdateStatusResponse, YouTubeValidationResponse } from '../types'
 
 const tabs = [
   { id: 'location', label: '[ 1. LOCATION & DISCOVERY ]' },
@@ -2268,8 +2314,9 @@ const haSensorsData = ref<any>(null)
 const haYamlText = ref('')
 const copiedHaYaml = ref(false)
 
-// Update Tracking State
+// Update Tracking & In-Place Upgrader State
 const updateStatus = ref<UpdateStatusResponse | null>(null)
+const updateCapability = ref<UpdateCapabilityResponse | null>(null)
 const isCheckingUpdates = ref(false)
 const updateProbeMessage = ref('')
 const copiedCommand = ref(false)
@@ -2664,15 +2711,20 @@ function copyDockerUpgradeCommand() {
   }, 3000)
 }
 
+function openInPlaceUpgrader(targetVersion?: string) {
+  openUpdateModal(targetVersion || updateStatus.value?.latest_version)
+}
+
 async function loadAll() {
   try {
-    const [s, h, tStatus, tUsers, spStatus, uStatus] = await Promise.all([
+    const [s, h, tStatus, tUsers, spStatus, uStatus, uCap] = await Promise.all([
       fetchSettings(),
       fetchHealth(),
       fetchTelegramStatus(),
       fetchTelegramUsers(),
       fetchSpeechStatus(),
       fetchUpdateStatus().catch(() => null),
+      fetchUpdateCapability().catch(() => null),
     ])
     Object.assign(form, s)
     healthData.value = h
@@ -2681,6 +2733,9 @@ async function loadAll() {
     speechStatus.value = spStatus
     if (uStatus) {
       updateStatus.value = uStatus
+    }
+    if (uCap) {
+      updateCapability.value = uCap
     }
 
     if (s.spotify_autoplay) {

@@ -5,6 +5,8 @@ import type {
   OllamaPingResponse,
   SpotifyMetadataResponse,
   SystemSettings,
+  UpdateApplyResponse,
+  UpdateCapabilityResponse,
   UpdateStatusResponse,
   VenueItem,
   WeatherData,
@@ -183,6 +185,26 @@ export async function fetchUpdateStatus(): Promise<UpdateStatusResponse> {
 export async function checkUpdatesNow(): Promise<UpdateStatusResponse> {
   const res = await fetch(`${API_BASE}/updates/check`, { method: 'POST' })
   if (!res.ok) throw new Error(`Failed to check updates: ${res.statusText}`)
+  return res.json()
+}
+
+export async function fetchUpdateCapability(): Promise<UpdateCapabilityResponse> {
+  const res = await fetch(`${API_BASE}/updates/capability`)
+  if (!res.ok) throw new Error(`Failed to fetch update capability: ${res.statusText}`)
+  return res.json()
+}
+
+export async function triggerApplyUpdate(params: {
+  target_version?: string
+  dry_run?: boolean
+  method?: string
+}): Promise<UpdateApplyResponse> {
+  const res = await fetch(`${API_BASE}/updates/apply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+  if (!res.ok) throw new Error(`Failed to dispatch update: ${res.statusText}`)
   return res.json()
 }
 

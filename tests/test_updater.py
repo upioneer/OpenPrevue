@@ -1,7 +1,11 @@
-"""Unit and integration tests for the update tracking and notification system."""
+"""Unit and integration tests for update tracking, capabilities, and in-place engine."""
 
+import json
+from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
+
+from backend.app.core.config import settings
 from backend.app.main import app
 from backend.app.services.updater import is_newer_version, parse_semver, update_service
 
@@ -37,6 +41,19 @@ async def test_update_service_status():
 
 
 @pytest.mark.asyncio
+async def test_update_service_capability():
+    """Verify runtime update engine capability detection."""
+    cap = await update_service.get_update_capability()
+    assert "can_update" in cap
+    assert "detected_method" in cap
+    assert "available_methods" in cap
+    assert "trigger_file_path" in cap
+    assert "current_version" in cap
+    assert isinstance(cap["available_methods"], list)
+    assert len(cap["available_methods"]) >= 1
+
+
+@pytest.mark.asyncio
 async def test_updates_api_endpoints():
     """Verify updates REST endpoints."""
     transport = ASGITransport(app=app)
@@ -56,6 +73,64 @@ async def test_updates_api_endpoints():
         check_data = res_check.json()
         assert "current_version" in check_data
         assert "update_available" in check_data
+
+        # GET /api/v1/updates/capability
+        res_cap = await client.get("/api/v1/updates/capability")
+        assert res_cap.status_code == 200
+        cap_data = res_cap.json()
+        assert "detected_method" in cap_data
+        assert "available_methods" in cap_data
+        assert "can_update" in cap_data
+
+        # POST /api/v1/updates/apply (Dry Run)
+        res_apply = await client.post(
+            "/api/v1/updates/apply",
+            json={"target_version": "0.22.0", "dry_run": True, "method": "trigger_file"},
+        )
+        assert res_apply.status_code == 200
+        apply_data = res_apply.json()
+        assert apply_data["status"] == "dry_run_success"
+        assert apply_data["method"] == "trigger_file"
+        assert "steps" in apply_data
+        assert len(apply_data["steps"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_apply_trigger_file_execution():
+    """Verify writing trigger file writes correct JSON payload to disk."""
+    trigger_path = Path(settings.DATA_DIR) / ".update_trigger"
+    if trigger_path.exists():
+        trigger_path.unlink()
+
+    res = await update_service.apply_update(
+        target_version="0.22.0",
+        dry_run=False,
+        method="trigger_file",
+    )
+    assert res["status"] == "triggered"
+    assert res["method"] == "trigger_file"
+    assert trigger_path.exists()
+
+    content = json.loads(trigger_path.read_text(encoding="utf-8"))
+    assert content["target_version"] == "0.22.0"
+    assert content["action"] == "upgrade"
+    assert "ghcr.io/upioneer/OpenPrevue:v0.22.0" in content["image"]
+
+    # Clean up test artifact
+    trigger_path.unlink()
+
+
+@pytest.mark.asyncio
+async def test_apply_docker_socket_dry_run():
+    """Verify Docker socket dry run step generation."""
+    res = await update_service.apply_update(
+        target_version="0.22.0",
+        dry_run=True,
+        method="docker_socket",
+    )
+    assert res["status"] == "dry_run_success"
+    assert res["method"] == "docker_socket"
+    assert any("Docker" in s for s in res["steps"])
 
 
 @pytest.mark.asyncio

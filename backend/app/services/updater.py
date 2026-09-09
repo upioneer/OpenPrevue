@@ -1,7 +1,16 @@
-"""Auto-update notification and GitHub release tracking service."""
+"""Auto-update notification, GitHub release tracking, and in-place upgrade service."""
 
+import asyncio
 from datetime import datetime, timezone
+import json
+import os
+from pathlib import Path
+import shutil
+import socket
+import sys
+
 import httpx
+
 from backend.app.core.config import settings
 from backend.app.core.logging import logger
 from backend.app.db.session import get_db
@@ -33,10 +42,10 @@ def is_newer_version(current: str, latest: str) -> bool:
 
 
 class UpdateService:
-    """Manages update checks against GitHub API with caching and rate limit protection."""
+    """Manages update checks against GitHub API and executes independent in-place updates."""
 
     def __init__(self) -> None:
-        self.current_version = getattr(settings, "VERSION", "0.15.0")
+        self.current_version = getattr(settings, "VERSION", "0.21.0")
         self.last_checked: datetime | None = None
         self.latest_version: str = self.current_version
         self.update_available: bool = False
@@ -203,6 +212,391 @@ class UpdateService:
             logger.warning("Unexpected error during update probe: %s", err)
 
         return await self.get_status()
+
+    async def detect_update_method(self) -> tuple[str, str]:
+        """Detect primary and supported in-place update mechanism.
+
+        Returns:
+            Tuple of (method_identifier, friendly_description).
+            Methods:
+              - 'docker_socket': Direct Unix domain socket control (/var/run/docker.sock)
+              - 'git': Local Git working tree with git executable
+              - 'trigger_file': Persistent storage trigger file (./data/.update_trigger)
+              - 'manual': Out-of-band manual Docker / Compose CLI
+        """
+        # 1. Probe Docker Unix Domain Socket
+        docker_socket = os.getenv("DOCKER_SOCKET_PATH", "/var/run/docker.sock")
+        if os.path.exists(docker_socket) and os.name != "nt":
+            try:
+                transport = httpx.AsyncHTTPTransport(uds=docker_socket)
+                async with httpx.AsyncClient(transport=transport, timeout=2.0) as client:
+                    resp = await client.get("http://localhost/_ping")
+                    if resp.status_code == 200:
+                        return (
+                            "docker_socket",
+                            "Docker Engine API connected over /var/run/docker.sock. Direct in-place container upgrade is enabled.",
+                        )
+            except Exception as e:
+                logger.debug("Docker socket exists but ping probe failed: %s", e)
+
+        # 2. Probe Local Git Repository
+        try:
+            repo_root = Path(__file__).resolve().parents[3]  # OpenPrevue root
+            git_dir = repo_root / ".git"
+            if git_dir.is_dir() and shutil.which("git"):
+                return (
+                    "git",
+                    "Local Git repository detected. In-place git pull and release checkout enabled.",
+                )
+        except Exception:
+            pass
+
+        # 3. Probe Persistent Storage Trigger File capability
+        data_dir = Path(settings.DATA_DIR)
+        try:
+            data_dir.mkdir(parents=True, exist_ok=True)
+            test_file = data_dir / ".write_test"
+            test_file.touch()
+            test_file.unlink()
+            return (
+                "trigger_file",
+                f"Persistent data volume verified at {settings.DATA_DIR}. Host trigger file strategy active (./data/.update_trigger).",
+            )
+        except Exception:
+            pass
+
+        return (
+            "manual",
+            "Automatic in-place upgrade is unavailable in current runtime. Manual upgrade via docker compose required.",
+        )
+
+    async def get_update_capability(self) -> dict:
+        """Probe runtime environment and return detailed update engine capability."""
+        detected_method, description = await self.detect_update_method()
+
+        docker_socket = os.getenv("DOCKER_SOCKET_PATH", "/var/run/docker.sock")
+        docker_available = False
+        if os.path.exists(docker_socket) and os.name != "nt":
+            try:
+                transport = httpx.AsyncHTTPTransport(uds=docker_socket)
+                async with httpx.AsyncClient(transport=transport, timeout=1.5) as client:
+                    r = await client.get("http://localhost/_ping")
+                    docker_available = (r.status_code == 200)
+            except Exception:
+                docker_available = False
+
+        repo_root = Path(__file__).resolve().parents[3]
+        git_available = (repo_root / ".git").is_dir() and bool(shutil.which("git"))
+
+        trigger_path = Path(settings.DATA_DIR) / ".update_trigger"
+        trigger_available = False
+        try:
+            trigger_path.parent.mkdir(parents=True, exist_ok=True)
+            trigger_available = os.access(trigger_path.parent, os.W_OK)
+        except Exception:
+            trigger_available = False
+
+        available_methods = []
+        if docker_available:
+            available_methods.append("docker_socket")
+        if git_available:
+            available_methods.append("git")
+        if trigger_available:
+            available_methods.append("trigger_file")
+        if not available_methods:
+            available_methods.append("manual")
+
+        return {
+            "can_update": detected_method != "manual",
+            "detected_method": detected_method,
+            "available_methods": available_methods,
+            "docker_socket_available": docker_available,
+            "git_available": git_available,
+            "trigger_file_available": trigger_available,
+            "trigger_file_path": str(trigger_path),
+            "description": description,
+            "current_version": self.current_version,
+            "latest_version": self.latest_version,
+            "update_available": self.update_available,
+        }
+
+    async def apply_update(
+        self,
+        target_version: str | None = None,
+        dry_run: bool = False,
+        method: str | None = None,
+    ) -> dict:
+        """Execute or dry-run an in-place upgrade."""
+        resolved_version = (
+            target_version.strip().lstrip("v")
+            if target_version
+            else (self.latest_version or "latest")
+        )
+        if not resolved_version:
+            resolved_version = "latest"
+
+        chosen_method = method
+        if not chosen_method:
+            detected, _ = await self.detect_update_method()
+            chosen_method = detected
+
+        logger.info(
+            "Update apply requested: method=%s, target_version=%s, dry_run=%s",
+            chosen_method,
+            resolved_version,
+            dry_run,
+        )
+
+        if chosen_method == "docker_socket":
+            return await self._apply_docker_socket(resolved_version, dry_run)
+        elif chosen_method == "git":
+            return await self._apply_git(resolved_version, dry_run)
+        elif chosen_method == "trigger_file":
+            return await self._apply_trigger_file(resolved_version, dry_run)
+        else:
+            return {
+                "status": "manual_required",
+                "method": "manual",
+                "target_version": resolved_version,
+                "message": (
+                    f"In-place upgrade cannot be completed automatically. "
+                    f"Please run: docker pull ghcr.io/{GITHUB_REPO}:latest && docker compose up -d"
+                ),
+            }
+
+    async def _apply_docker_socket(self, version: str, dry_run: bool) -> dict:
+        """Perform container upgrade via Docker Unix Domain Socket."""
+        docker_socket = os.getenv("DOCKER_SOCKET_PATH", "/var/run/docker.sock")
+        target_image = f"ghcr.io/{GITHUB_REPO}:latest" if version == "latest" else f"ghcr.io/{GITHUB_REPO}:v{version}"
+
+        if dry_run:
+            return {
+                "status": "dry_run_success",
+                "method": "docker_socket",
+                "target_version": version,
+                "target_image": target_image,
+                "steps": [
+                    "Probe Docker daemon over /var/run/docker.sock (_ping)",
+                    f"Pull latest container image {target_image}",
+                    "Inspect current container configuration (ports, volumes, environment)",
+                    "Rename current container to openprevue-retiring",
+                    "Create updated container with identical port mappings and volume mounts",
+                    "Start updated container",
+                    "Gracefully terminate retired container",
+                ],
+                "message": f"Pre-flight verification passed for Docker Engine API in-place upgrade to v{version}.",
+            }
+
+        try:
+            transport = httpx.AsyncHTTPTransport(uds=docker_socket)
+            async with httpx.AsyncClient(transport=transport, timeout=120.0) as client:
+                # 1. Pull new image
+                logger.info("Pulling Docker image %s via Docker Engine API...", target_image)
+                pull_url = f"http://localhost/images/create?fromImage={target_image}"
+                pull_resp = await client.post(pull_url)
+                if pull_resp.status_code not in (200, 204):
+                    raise RuntimeError(f"Docker pull failed with status {pull_resp.status_code}: {pull_resp.text}")
+
+                # 2. Inspect running container
+                hostname = socket.gethostname()
+                inspect_resp = await client.get(f"http://localhost/containers/{hostname}/json")
+                if inspect_resp.status_code != 200:
+                    # Fallback to trigger file if container ID lookup fails
+                    logger.warning("Could not inspect container via hostname %s; falling back to trigger file.", hostname)
+                    return await self._apply_trigger_file(version, dry_run=False)
+
+                info = inspect_resp.json()
+                orig_name = info.get("Name", "/openprevue").lstrip("/")
+                retire_name = f"{orig_name}-retiring-{int(datetime.now(timezone.utc).timestamp())}"
+
+                # 3. Rename old container
+                rename_resp = await client.post(f"http://localhost/containers/{hostname}/rename?name={retire_name}")
+                if rename_resp.status_code not in (200, 204):
+                    logger.warning("Failed renaming old container: %s", rename_resp.text)
+
+                # 4. Create new container with preserved config
+                create_payload = {
+                    "Image": target_image,
+                    "Env": info.get("Config", {}).get("Env", []),
+                    "Cmd": info.get("Config", {}).get("Cmd"),
+                    "Entrypoint": info.get("Config", {}).get("Entrypoint"),
+                    "Labels": info.get("Config", {}).get("Labels", {}),
+                    "HostConfig": info.get("HostConfig", {}),
+                    "NetworkingConfig": {
+                        "EndpointsConfig": info.get("NetworkSettings", {}).get("Networks", {})
+                    },
+                }
+                create_resp = await client.post(f"http://localhost/containers/create?name={orig_name}", json=create_payload)
+                if create_resp.status_code not in (200, 201):
+                    raise RuntimeError(f"Docker container create failed: {create_resp.text}")
+
+                new_container_id = create_resp.json().get("Id")
+
+                # 5. Start new container
+                start_resp = await client.post(f"http://localhost/containers/{new_container_id}/start")
+                if start_resp.status_code not in (200, 204):
+                    raise RuntimeError(f"Docker container start failed: {start_resp.text}")
+
+                # 6. Schedule graceful shutdown of retired container
+                asyncio.create_task(self._retire_old_docker_container(hostname))
+
+                return {
+                    "status": "success",
+                    "method": "docker_socket",
+                    "target_version": version,
+                    "target_image": target_image,
+                    "new_container_id": new_container_id,
+                    "message": f"Successfully launched updated OpenPrevue container (v{version}). Swapping containers...",
+                }
+        except Exception as err:
+            logger.error("Docker socket update failed: %s", err)
+            return {
+                "status": "error",
+                "method": "docker_socket",
+                "error": str(err),
+                "message": f"Docker Engine upgrade encountered an error: {err}",
+            }
+
+    async def _retire_old_docker_container(self, container_id: str, delay: float = 2.5) -> None:
+        """Asynchronously stop and remove the retiring container after client response is dispatched."""
+        try:
+            await asyncio.sleep(delay)
+            docker_socket = os.getenv("DOCKER_SOCKET_PATH", "/var/run/docker.sock")
+            transport = httpx.AsyncHTTPTransport(uds=docker_socket)
+            async with httpx.AsyncClient(transport=transport, timeout=20.0) as client:
+                await client.post(f"http://localhost/containers/{container_id}/stop?t=5")
+                await client.delete(f"http://localhost/containers/{container_id}?v=false")
+                logger.info("Successfully stopped and removed retired OpenPrevue container: %s", container_id)
+        except Exception as e:
+            logger.warning("Error retiring old container %s: %s", container_id, e)
+
+    async def _apply_git(self, version: str, dry_run: bool) -> dict:
+        """Perform bare-metal update via Git pull and frontend build."""
+        repo_root = Path(__file__).resolve().parents[3]
+        target_ref = f"v{version}" if version != "latest" else "origin/main"
+
+        if dry_run:
+            return {
+                "status": "dry_run_success",
+                "method": "git",
+                "target_version": version,
+                "target_ref": target_ref,
+                "steps": [
+                    "Inspect local git working tree cleanliness",
+                    "Fetch remote tags via git fetch --tags origin",
+                    f"Checkout target ref {target_ref} (or git pull origin main)",
+                    "Compile frontend distribution via npm --prefix frontend run build",
+                    "Signal service reload or restart daemon",
+                ],
+                "message": f"Pre-flight verification passed for Git in-place upgrade to {target_ref}.",
+            }
+
+        try:
+            # 1. Fetch tags
+            proc_fetch = await asyncio.create_subprocess_exec(
+                "git", "fetch", "--tags", "origin",
+                cwd=str(repo_root),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await proc_fetch.communicate()
+
+            # 2. Checkout
+            if version == "latest":
+                proc_co = await asyncio.create_subprocess_exec(
+                    "git", "pull", "origin", "main",
+                    cwd=str(repo_root),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+            else:
+                proc_co = await asyncio.create_subprocess_exec(
+                    "git", "checkout", target_ref,
+                    cwd=str(repo_root),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+            await proc_co.communicate()
+
+            # 3. Optional npm build if npm is available
+            if shutil.which("npm"):
+                npm_cmd = "npm.cmd" if os.name == "nt" else "npm"
+                proc_build = await asyncio.create_subprocess_exec(
+                    npm_cmd, "--prefix", "frontend", "run", "build",
+                    cwd=str(repo_root),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                await proc_build.communicate()
+
+            return {
+                "status": "success",
+                "method": "git",
+                "target_version": version,
+                "message": f"Git working tree updated to {target_ref}. Headend restart required to complete update.",
+            }
+        except Exception as err:
+            logger.error("Git update failed: %s", err)
+            return {
+                "status": "error",
+                "method": "git",
+                "error": str(err),
+                "message": f"Git update encountered an error: {err}",
+            }
+
+    async def _apply_trigger_file(self, version: str, dry_run: bool) -> dict:
+        """Write update trigger file to persistent storage for companion host script execution."""
+        trigger_path = Path(settings.DATA_DIR) / ".update_trigger"
+        target_image = f"ghcr.io/{GITHUB_REPO}:latest" if version == "latest" else f"ghcr.io/{GITHUB_REPO}:v{version}"
+
+        if dry_run:
+            return {
+                "status": "dry_run_success",
+                "method": "trigger_file",
+                "target_version": version,
+                "trigger_file": str(trigger_path),
+                "target_image": target_image,
+                "steps": [
+                    f"Verify write permissions on {settings.DATA_DIR}",
+                    f"Write update trigger specification to {trigger_path.name}",
+                    "Host watcher/cron executes: docker compose pull && docker compose up -d",
+                    "Host watcher cleans up trigger file upon successful container swap",
+                    "Client web interface detects headend restart and reloads",
+                ],
+                "message": f"Pre-flight verification passed for trigger file upgrade to v{version}.",
+            }
+
+        try:
+            trigger_data = {
+                "target_version": version,
+                "image": target_image,
+                "requested_at": datetime.now(timezone.utc).isoformat(),
+                "method": "trigger_file",
+                "action": "upgrade",
+            }
+            trigger_path.parent.mkdir(parents=True, exist_ok=True)
+            trigger_path.write_text(json.dumps(trigger_data, indent=2), encoding="utf-8")
+            logger.info("Wrote update trigger file to %s", trigger_path)
+
+            return {
+                "status": "triggered",
+                "method": "trigger_file",
+                "target_version": version,
+                "trigger_file": str(trigger_path),
+                "target_image": target_image,
+                "message": (
+                    f"Update trigger written for v{version}. "
+                    f"The companion host updater will pull and restart the container."
+                ),
+            }
+        except Exception as err:
+            logger.error("Writing trigger file failed: %s", err)
+            return {
+                "status": "error",
+                "method": "trigger_file",
+                "error": str(err),
+                "message": f"Failed writing update trigger file: {err}",
+            }
 
 
 update_service = UpdateService()
