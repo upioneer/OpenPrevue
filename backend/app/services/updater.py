@@ -17,7 +17,8 @@ from backend.app.db.session import get_db
 from backend.app.services.websocket import connection_manager
 
 GITHUB_REPO = "upioneer/OpenPrevue"
-GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+GITHUB_TAGS_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/tags?per_page=30"
+GITHUB_RELEASES_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 CACHE_TTL_SECONDS = 6 * 3600  # 6 hours minimum cache to prevent rate limit exhaustion
 
 
@@ -114,7 +115,8 @@ class UpdateService:
 
         try:
             async with httpx.AsyncClient(timeout=8.0) as client:
-                resp = await client.get(GITHUB_API_URL, headers=headers)
+                # Primary source of truth: Git Tags
+                resp = await client.get(GITHUB_TAGS_API_URL, headers=headers)
                 self.last_checked = now
 
                 # Track rate limit headers
@@ -135,35 +137,67 @@ class UpdateService:
 
                 if resp.status_code == 200:
                     data = resp.json()
-                    tag_name = data.get("tag_name", "").strip()
-                    self.latest_version = tag_name.lstrip("v")
-                    self.release_title = data.get("name", f"Release {tag_name}")
-                    self.release_notes = data.get("body", "")
-                    self.release_url = data.get("html_url", f"https://github.com/{GITHUB_REPO}/releases")
-                    self.update_available = is_newer_version(self.current_version, self.latest_version)
-                    self.is_rate_limited = False
-                    self.last_error = None
+                    valid_tags: list[str] = []
+                    if isinstance(data, list):
+                        for item in data:
+                            if isinstance(item, dict) and "name" in item:
+                                tag_str = str(item["name"]).strip()
+                                if parse_semver(tag_str) != (0, 0, 0):
+                                    valid_tags.append(tag_str)
 
-                    if self.update_available:
-                        self.user_message = f"A new version of OpenPrevue (v{self.latest_version}) is available."
-                        logger.info(
-                            "New OpenPrevue version available: v%s (Current: v%s)",
-                            self.latest_version,
-                            self.current_version,
-                        )
-                        # Broadcast update notification to connected UI clients
-                        await connection_manager.broadcast(
-                            "update_available",
-                            {
-                                "current_version": self.current_version,
-                                "latest_version": self.latest_version,
-                                "release_url": self.release_url,
-                                "release_title": self.release_title,
-                            },
-                        )
+                    if valid_tags:
+                        sorted_tags = sorted(valid_tags, key=parse_semver, reverse=True)
+                        top_tag = sorted_tags[0]
+                        self.latest_version = top_tag.lstrip("v")
+                        self.release_title = f"Release {top_tag}"
+                        self.release_url = f"https://github.com/{GITHUB_REPO}/releases/tag/{top_tag}"
+                        self.release_notes = ""
+                        self.update_available = is_newer_version(self.current_version, self.latest_version)
+                        self.is_rate_limited = False
+                        self.last_error = None
+
+                        # Optional enrichment: Probe GitHub Release metadata for release notes if available
+                        try:
+                            rel_resp = await client.get(
+                                f"https://api.github.com/repos/{GITHUB_REPO}/releases/tags/{top_tag}",
+                                headers=headers,
+                            )
+                            if rel_resp.status_code == 200:
+                                rel_data = rel_resp.json()
+                                self.release_title = rel_data.get("name") or self.release_title
+                                self.release_notes = rel_data.get("body") or ""
+                                if rel_data.get("html_url"):
+                                    self.release_url = rel_data["html_url"]
+                        except Exception as e:
+                            logger.debug("Optional release metadata enrichment skipped: %s", e)
+
+                        if self.update_available:
+                            self.user_message = f"A new version of OpenPrevue (v{self.latest_version}) is available."
+                            logger.info(
+                                "New OpenPrevue version available: v%s (Current: v%s)",
+                                self.latest_version,
+                                self.current_version,
+                            )
+                            # Broadcast update notification to connected UI clients
+                            await connection_manager.broadcast(
+                                "update_available",
+                                {
+                                    "current_version": self.current_version,
+                                    "latest_version": self.latest_version,
+                                    "release_url": self.release_url,
+                                    "release_title": self.release_title,
+                                },
+                            )
+                        else:
+                            self.user_message = f"OpenPrevue is running the newest version (v{self.current_version})."
+                            logger.info("OpenPrevue is up to date (v%s).", self.current_version)
                     else:
-                        self.user_message = f"OpenPrevue is running the newest version (v{self.current_version})."
-                        logger.info("OpenPrevue is up to date (v%s).", self.current_version)
+                        # No semver tags found
+                        self.latest_version = self.current_version
+                        self.update_available = False
+                        self.is_rate_limited = False
+                        self.last_error = None
+                        self.user_message = "OpenPrevue is up to date."
 
                 elif resp.status_code in (403, 429):
                     self.is_rate_limited = True

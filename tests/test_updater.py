@@ -149,3 +149,49 @@ async def test_rate_limit_plain_english_state():
     # Restore clean state
     update_service.is_rate_limited = False
     update_service.user_message = None
+
+
+@pytest.mark.asyncio
+async def test_check_for_updates_with_tags(monkeypatch):
+    """Verify check_for_updates parses Git tags as canonical source of truth."""
+    import httpx
+
+    simulated_tags = [
+        {"name": "v0.22.1", "commit": {"sha": "123"}},
+        {"name": "v0.22.0", "commit": {"sha": "456"}},
+        {"name": "v0.21.0", "commit": {"sha": "789"}},
+    ]
+
+    class MockResponse:
+        def __init__(self, url, status_code=200, json_data=None):
+            self.url = str(url)
+            self.status_code = status_code
+            self._json_data = json_data or []
+            self.headers = {"x-ratelimit-remaining": "59", "x-ratelimit-reset": "1800000000"}
+
+        def json(self):
+            return self._json_data
+
+    async def mock_get(client_self, url, headers=None):
+        url_str = str(url)
+        if "/tags" in url_str:
+            return MockResponse(url, status_code=200, json_data=simulated_tags)
+        if "/releases/tags/" in url_str:
+            return MockResponse(url, status_code=404, json_data={})
+        return MockResponse(url, status_code=404)
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
+
+    # When running 0.22.0, newer tag 0.22.1 must trigger update_available = True
+    update_service.current_version = "0.22.0"
+    status_update = await update_service.check_for_updates(force=True)
+    assert status_update["latest_version"] == "0.22.1"
+    assert status_update["update_available"] is True
+    assert "v0.22.1" in status_update["user_message"]
+
+    # When running 0.22.1, update_available must be False
+    update_service.current_version = "0.22.1"
+    status_current = await update_service.check_for_updates(force=True)
+    assert status_current["latest_version"] == "0.22.1"
+    assert status_current["update_available"] is False
+    assert "newest version" in status_current["user_message"]
