@@ -62,15 +62,15 @@ async def test_ultrawide_settings_defaults_and_updates():
         assert res.status_code == 200
         settings = res.json()
         assert settings.get("ultrawide_mode") == "auto"
-        assert settings.get("ultrawide_priority") == "calendar"
+        assert settings.get("ultrawide_priority") == "feature"
 
-        # Update priority to 'feature'
+        # Update priority to 'calendar'
         update_res = await client.put(
             "/api/v1/settings/ultrawide_priority",
-            json={"value": "feature"},
+            json={"value": "calendar"},
         )
         assert update_res.status_code == 200
-        assert update_res.json()["value"] == "feature"
+        assert update_res.json()["value"] == "calendar"
 
         # Update mode to 'always'
         update_mode_res = await client.put(
@@ -82,7 +82,7 @@ async def test_ultrawide_settings_defaults_and_updates():
 
         # Verify persisted values
         get_res = await client.get("/api/v1/settings")
-        assert get_res.json()["ultrawide_priority"] == "feature"
+        assert get_res.json()["ultrawide_priority"] == "calendar"
         assert get_res.json()["ultrawide_mode"] == "always"
 
 

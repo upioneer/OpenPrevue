@@ -119,8 +119,13 @@
 
     <!-- 2. Classic 16:9 / 4:3 Vertically Stacked Presentation -->
     <template v-else>
-      <!-- Top Pane: Video Stream or Spotlight Promo (45% Landscape / 34% Portrait) -->
-      <div class="h-[45%] portrait-spotlight-height w-full shrink-0">
+      <!-- Top Pane: Video Stream or Spotlight Promo (Expands to flex-1 if single_row, otherwise 45% Landscape / 34% Portrait) -->
+      <div
+        class="w-full shrink-0 overflow-hidden"
+        :class="gridDensity === 'single_row'
+          ? 'flex-1 min-h-0'
+          : 'h-[45%] portrait-spotlight-height'"
+      >
         <YouTubePane
           v-if="shouldShowYouTube"
           :source-url="settings?.youtube_source_url || ''"
@@ -136,16 +141,26 @@
         />
       </div>
 
-      <!-- Middle Ribbon: Divider Status Bar (6% Landscape / 5% Portrait) -->
-      <div class="h-[6%] portrait-ribbon-height w-full shrink-0">
+      <!-- Middle Ribbon: Divider Status Bar (h-8/h-9 for single_row, or 6% Landscape / 5% Portrait) -->
+      <div
+        class="w-full shrink-0"
+        :class="gridDensity === 'single_row'
+          ? 'h-8 sm:h-9'
+          : 'h-[6%] portrait-ribbon-height'"
+      >
         <DividerRibbon
           :metro-label="settings?.metro_label || 'NEW YORK CITY'"
           :radius-miles="settings?.radius_miles || '25'"
         />
       </div>
 
-      <!-- Bottom Pane: Scrolling Timeline Grid (49% Landscape / 61% Portrait) -->
-      <div class="h-[49%] portrait-grid-height w-full flex-1 overflow-hidden">
+      <!-- Bottom Pane: Scrolling Timeline Grid (h-[64px]/h-[74px] for single_row, or 49% Landscape / 61% Portrait) -->
+      <div
+        class="w-full overflow-hidden"
+        :class="gridDensity === 'single_row'
+          ? 'h-[64px] sm:h-[74px] shrink-0 border-t-2 border-[#333366]'
+          : 'h-[49%] portrait-grid-height flex-1'"
+      >
         <TimelineGrid
           :venues="venues"
           :events="events"
@@ -183,8 +198,22 @@ let unsubscribeSettingsWs: (() => void) | null = null
 
 function checkUltrawideRatio() {
   if (typeof window !== 'undefined') {
-    const ratio = window.innerWidth / window.innerHeight
-    isUltrawideDetected.value = ratio >= 1.95
+    const screenRatio = window.screen && window.screen.height > 0
+      ? window.screen.width / window.screen.height
+      : 0
+    const viewportRatio = window.innerHeight > 0
+      ? window.innerWidth / window.innerHeight
+      : 0
+
+    // Standard 16:9 (1.78:1), 16:10 (1.60:1), and 4:3 (1.33:1) displays.
+    // Desktop browsers on 16:9 screens have viewportRatio ~2.0 - 2.15 due to browser chrome/taskbars.
+    // That must NEVER falsely trigger ultrawide mode.
+    // True ultrawide monitors (21:9 is ~2.37:1, 32:9 is ~3.55:1) and rack consoles (1920x480 is 4.0:1).
+    if (screenRatio > 0 && screenRatio < 2.2) {
+      isUltrawideDetected.value = viewportRatio >= 2.35
+    } else {
+      isUltrawideDetected.value = screenRatio >= 2.2 || viewportRatio >= 2.35
+    }
   }
 }
 
@@ -196,7 +225,7 @@ const isUltrawideActive = computed(() => {
 })
 
 const ultrawidePriority = computed(() => {
-  return settings.value?.ultrawide_priority || 'calendar'
+  return settings.value?.ultrawide_priority || 'feature'
 })
 
 const marqueeRotationSeconds = computed(() => {

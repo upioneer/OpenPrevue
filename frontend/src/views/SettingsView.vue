@@ -242,9 +242,9 @@
             <!-- Live Aspect Ratio Detection Badge -->
             <div
               class="bg-[#000022] border px-2.5 py-1 text-xs font-black tracking-wider flex items-center space-x-1.5"
-              :class="detectedRatio >= 1.95 ? 'border-[#00FF00] text-[#00FF00]' : 'border-[#333366] text-[#A0A0C0]'"
+              :class="detectedRatio >= 2.2 ? 'border-[#00FF00] text-[#00FF00]' : 'border-[#333366] text-[#A0A0C0]'"
             >
-              <span class="w-2 h-2 rounded-full inline-block" :class="detectedRatio >= 1.95 ? 'bg-[#00FF00] animate-pulse' : 'bg-[#666688]'"></span>
+              <span class="w-2 h-2 rounded-full inline-block" :class="detectedRatio >= 2.2 ? 'bg-[#00FF00] animate-pulse' : 'bg-[#666688]'"></span>
               <span>VIEWPORT: {{ detectedRatioLabel }}</span>
             </div>
           </div>
@@ -259,7 +259,7 @@
               <button
                 type="button"
                 class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
-                :class="form.ultrawide_priority === 'feature'
+                :class="form.ultrawide_priority === 'feature' || !form.ultrawide_priority
                   ? 'bg-[#000066] border-[#FFFF00] text-[#FFFF00] shadow-[0_0_10px_rgba(255,255,0,0.6)]'
                   : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
                 @click="form.ultrawide_priority = 'feature'"
@@ -274,7 +274,7 @@
               <button
                 type="button"
                 class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
-                :class="form.ultrawide_priority === 'calendar' || !form.ultrawide_priority
+                :class="form.ultrawide_priority === 'calendar'
                   ? 'bg-[#000066] border-[#00FFFF] text-[#00FFFF] shadow-[0_0_10px_rgba(0,255,255,0.6)]'
                   : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
                 @click="form.ultrawide_priority = 'calendar'"
@@ -2295,14 +2295,25 @@ const detectedRatio = ref(1.78)
 
 function updateViewportRatio() {
   if (typeof window !== 'undefined') {
-    detectedRatio.value = Number((window.innerWidth / window.innerHeight).toFixed(2))
+    const screenRatio = window.screen && window.screen.height > 0
+      ? Number((window.screen.width / window.screen.height).toFixed(2))
+      : 0
+    const viewportRatio = window.innerHeight > 0
+      ? Number((window.innerWidth / window.innerHeight).toFixed(2))
+      : 1.78
+
+    // If on a standard 16:9, 16:10, or 4:3 monitor, show standard screen ratio unless window is specifically stretched (>= 2.35)
+    if (screenRatio > 0 && screenRatio < 2.2 && viewportRatio < 2.35) {
+      detectedRatio.value = screenRatio
+    } else {
+      detectedRatio.value = viewportRatio
+    }
   }
 }
 
 const detectedRatioLabel = computed(() => {
-  if (detectedRatio.value >= 3.0) return `32:9 ULTRA-WIDE (${detectedRatio.value}:1)`
-  if (detectedRatio.value >= 2.1) return `21:9 ULTRAWIDE (${detectedRatio.value}:1)`
-  if (detectedRatio.value >= 1.95) return `2:1 PANORAMIC (${detectedRatio.value}:1)`
+  if (detectedRatio.value >= 3.0) return `32:9 ULTRA-WIDE / RACK (${detectedRatio.value}:1)`
+  if (detectedRatio.value >= 2.2) return `21:9 ULTRAWIDE (${detectedRatio.value}:1)`
   if (detectedRatio.value >= 1.7) return `16:9 STANDARD (${detectedRatio.value}:1)`
   if (detectedRatio.value >= 1.5) return `16:10 WIDE (${detectedRatio.value}:1)`
   if (detectedRatio.value >= 1.2) return `4:3 CLASSIC TV (${detectedRatio.value}:1)`
@@ -2405,7 +2416,7 @@ const form = reactive<SystemSettings>({
   ha_mqtt_password: '',
   ha_mqtt_topic_prefix: 'homeassistant',
   ultrawide_mode: 'auto',
-  ultrawide_priority: 'calendar',
+  ultrawide_priority: 'feature',
   spotlight_mode: 'featured',
   youtube_source_url: '',
   youtube_audio_mode: 'mute',
