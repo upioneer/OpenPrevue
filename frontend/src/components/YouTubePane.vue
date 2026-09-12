@@ -21,7 +21,7 @@
         class="absolute inset-y-0 right-0 w-10 sm:w-16 bg-gradient-to-l from-black via-[#000022] to-transparent pointer-events-none flex flex-col justify-between py-2 px-2 z-10 opacity-70 items-end"
       >
         <span class="text-[9px] sm:text-[10px] text-[#00FF00] font-black uppercase tracking-widest -rotate-90 origin-bottom-right whitespace-nowrap">
-          {{ audioMode === 'audio' ? 'LIVE AUDIO' : 'MUTED RF' }}
+          {{ isAudioAudible ? 'LIVE AUDIO' : 'MUTED RF' }}
         </span>
         <span class="text-[8px] sm:text-[9px] text-[#00FFFF] font-mono">PREVUE</span>
       </div>
@@ -69,11 +69,11 @@
         <button
           type="button"
           class="text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 border cursor-pointer transition-colors"
-          :class="audioMode === 'audio' ? 'bg-[#00FF00] text-[#000033] border-[#FFFF00]' : 'bg-[#000044] text-[#00FFFF] border-[#00FFFF]'"
+          :class="isAudioAudible ? 'bg-[#00FF00] text-[#000033] border-[#FFFF00]' : 'bg-[#000044] text-[#00FFFF] border-[#00FFFF]'"
           @click="toggleAudio"
-          :title="audioMode === 'audio' ? 'Mute YouTube Audio' : 'Enable YouTube Audio'"
+          :title="isAudioAudible ? 'Mute YouTube Audio' : 'Enable YouTube Audio'"
         >
-          [ {{ audioMode === 'audio' ? 'AUDIO ON' : 'AUDIO MUTED' }} ]
+          [ {{ isAudioAudible ? 'AUDIO ON' : 'AUDIO MUTED' }} ]
         </button>
       </div>
     </div>
@@ -151,21 +151,39 @@ const parsedResource = computed(() => {
   return { type: 'unknown', id: clean }
 })
 
+const isAudioAudible = computed(() => {
+  return !audioSynth.isMuted.value && audioSynth.masterVolume.value > 0
+})
+
 const streamTelemetryText = computed(() => {
   const title = currentVideoTitle.value ? `"${currentVideoTitle.value.toUpperCase()}"` : 'ACTIVE TRANSMISSION'
-  const modeText = props.audioMode === 'audio' ? 'LIVE STEREO AUDIO' : 'MUTED (BACKGROUND RETRO MUSIC ENGAGED)'
+  const modeText = isAudioAudible.value
+    ? `LIVE STEREO AUDIO (${audioSynth.masterVolume.value}%)`
+    : 'MUTED'
   return `ON AIR // VINTAGE RETRO REEL // ${title} // ${modeText} // OPENPREVUE RETRO CABLE`
 })
 
 function toggleAudio() {
-  const nextMode = props.audioMode === 'audio' ? 'mute' : 'audio'
-  emit('update:audioMode', nextMode)
-  if (playerInstance) {
-    if (nextMode === 'mute') {
+  if (isAudioAudible.value) {
+    audioSynth.isMuted.value = true
+    if (playerInstance && typeof playerInstance.mute === 'function') {
       playerInstance.mute()
-    } else {
-      playerInstance.unMute()
     }
+    emit('update:audioMode', 'mute')
+  } else {
+    audioSynth.isMuted.value = false
+    if (audioSynth.masterVolume.value === 0) {
+      audioSynth.setMasterVolume(80)
+    }
+    if (playerInstance) {
+      if (typeof playerInstance.unMute === 'function') {
+        playerInstance.unMute()
+      }
+      if (typeof playerInstance.setVolume === 'function') {
+        playerInstance.setVolume(audioSynth.masterVolume.value)
+      }
+    }
+    emit('update:audioMode', 'audio')
   }
 }
 
@@ -215,7 +233,7 @@ async function mountPlayer() {
   }
 
   const isPlaylist = parsedResource.value.type === 'playlist'
-  const isMuted = props.audioMode === 'mute'
+  const isMuted = !isAudioAudible.value && props.audioMode === 'mute'
 
   const playerVars: any = {
     autoplay: 1,
@@ -247,10 +265,13 @@ async function mountPlayer() {
     playerVars,
     events: {
       onReady: (e: any) => {
-        if (isMuted) {
+        if (!isAudioAudible.value) {
           e.target.mute()
         } else {
           e.target.unMute()
+          if (typeof e.target.setVolume === 'function') {
+            e.target.setVolume(audioSynth.masterVolume.value)
+          }
         }
         if (isPlaylist && isShuffleOn.value && typeof e.target.setShuffle === 'function') {
           e.target.setShuffle(true)
@@ -300,6 +321,31 @@ watch(() => audioSynth.isEASSirenPlaying.value, (isSiren) => {
   }
 })
 
+// Synchronize YouTube player volume and mute state with master audio volume
+watch(
+  [() => audioSynth.masterVolume.value, () => audioSynth.isMuted.value],
+  ([vol, muted]) => {
+    if (!playerInstance) return
+    try {
+      if (muted || vol === 0) {
+        if (typeof playerInstance.mute === 'function') {
+          playerInstance.mute()
+        }
+      } else {
+        if (typeof playerInstance.unMute === 'function') {
+          playerInstance.unMute()
+        }
+        if (typeof playerInstance.setVolume === 'function') {
+          playerInstance.setVolume(vol)
+        }
+      }
+    } catch (err) {
+      console.debug('Error adjusting YouTube player volume:', err)
+    }
+  },
+  { immediate: true }
+)
+
 // Sync audioMode prop changes
 watch(() => props.audioMode, (mode) => {
   if (!playerInstance) return
@@ -307,6 +353,9 @@ watch(() => props.audioMode, (mode) => {
     playerInstance.mute()
   } else {
     playerInstance.unMute()
+    if (typeof playerInstance.setVolume === 'function') {
+      playerInstance.setVolume(audioSynth.masterVolume.value)
+    }
   }
 })
 

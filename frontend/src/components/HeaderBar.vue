@@ -25,7 +25,7 @@
           type="button"
           class="px-1.5 py-0.2 text-[10px] sm:text-xs font-black uppercase transition cursor-pointer border"
           :class="audioSynth.isMuted.value ? 'bg-[#333366] text-[#FF6666] border-[#FF4444]' : 'bg-[#003300] text-[#00FF00] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.6)]'"
-          :title="audioSynth.isMuted.value ? 'Click to unmute background audio' : 'Click to mute background audio'"
+          :title="audioSynth.isMuted.value ? 'Click to unmute media audio' : 'Click to mute media audio'"
           @click="toggleMute"
         >
           {{ audioSynth.isMuted.value ? '[ MUTE ]' : '[ VOL ]' }}
@@ -39,14 +39,14 @@
           :value="audioSynth.isMuted.value ? 0 : audioSynth.masterVolume.value"
           @input="onVolumeChange"
           class="w-12 sm:w-16 accent-[#00FF00] bg-[#000033] h-1.5 cursor-pointer"
-          title="Master Volume Slider"
+          title="Master Video & Music Volume Slider"
         />
 
         <span class="text-[10px] sm:text-xs font-mono font-bold w-7 text-right" :class="audioSynth.isMuted.value ? 'text-[#FF6666]' : 'text-[#00FF00]'">
           {{ audioSynth.isMuted.value ? '0%' : audioSynth.masterVolume.value + '%' }}
         </span>
 
-        <div v-if="!audioSynth.isMuted.value && audioSynth.isAudioActive.value" class="hidden md:flex items-end space-x-0.5 h-3 text-[#00FF00]">
+        <div v-if="!audioSynth.isMuted.value && audioSynth.masterVolume.value > 0" class="hidden md:flex items-end space-x-0.5 h-3 text-[#00FF00]">
           <span class="w-0.5 bg-[#00FF00] animate-pulse h-1.5"></span>
           <span class="w-0.5 bg-[#00FF00] animate-pulse h-3"></span>
           <span class="w-0.5 bg-[#00FF00] animate-pulse h-2"></span>

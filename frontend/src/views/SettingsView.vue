@@ -2200,6 +2200,291 @@
           {{ saveMessage }}
         </div>
       </div>
+
+      <!-- Tab 11: Deployment & Kiosk Guide -->
+      <div v-if="activeTab === 'guide'" class="bg-[#000044] p-5 border border-[#333366] space-y-6">
+        <div class="flex items-center justify-between border-b border-[#333366] pb-2">
+          <div>
+            <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
+              OpenPrevue Architecture, Deployment & Kiosk Operator's Manual
+            </h2>
+            <p class="text-xs text-[#A0A0C0] mt-0.5">
+              Comprehensive guide for multi-display setups, custom aspect ratios, Raspberry Pi kiosks, and headend administration.
+            </p>
+          </div>
+          <span class="text-[10px] bg-[#003300] border border-[#00FF00] text-[#00FF00] px-2 py-0.5 font-bold uppercase">
+            OPERATIONAL GUIDE
+          </span>
+        </div>
+
+        <!-- 1. Multi-Screen Architecture -->
+        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+          <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
+            // 1. MULTI-SCREEN & NON-STANDARD DISPLAY ARCHITECTURE
+          </h3>
+          <p class="text-xs text-[#E0E0E0] leading-relaxed">
+            A single OpenPrevue headend instance effortlessly powers unlimited displays across your home, studio, or venue simultaneously. You <strong class="text-[#00FFFF]">never need to run separate Docker instances</strong> for different displays. The client web application features automatic CSS and viewport intelligence that dynamically reframes content based on the physical screen geometry.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+            <!-- 16:9 Landscape -->
+            <div class="bg-[#000022] p-3 border border-[#333366] space-y-1.5">
+              <span class="text-xs font-bold text-[#00FF00] block uppercase">16:9 Landscape TV</span>
+              <span class="text-[10px] text-[#A0A0C0] block">Living Room TVs, Monitors, Projectors</span>
+              <p class="text-[11px] text-[#C0C0E0] leading-normal">
+                Classic 1990s TV broadcast layout. Top 45% video or featured events spotlight, middle status ribbon with live weather, bottom 49% scrolling channel timeline.
+              </p>
+            </div>
+
+            <!-- 9:16 Portrait Kiosk -->
+            <div class="bg-[#000022] p-3 border border-[#333366] space-y-1.5">
+              <span class="text-xs font-bold text-[#FFFF00] block uppercase">9:16 Portrait Kiosk</span>
+              <span class="text-[10px] text-[#A0A0C0] block">Wall Mounts, Digital Posters, Hallways</span>
+              <p class="text-[11px] text-[#C0C0E0] leading-normal">
+                Automatically detected via portrait media queries. Reframes to 34% top showcase and expands the scrolling timeline to 61% of screen height, displaying 12-14 simultaneous channels.
+              </p>
+            </div>
+
+            <!-- Ultrawide & Rack Displays -->
+            <div class="bg-[#000022] p-3 border border-[#333366] space-y-1.5">
+              <span class="text-xs font-bold text-[#00FFFF] block uppercase">21:9 & 32:9 Ultrawide</span>
+              <span class="text-[10px] text-[#A0A0C0] block">Panoramic Monitors & 1920x480 Rack Bars</span>
+              <p class="text-[11px] text-[#C0C0E0] leading-normal">
+                Auto-detected aspect ratio (>= 2.35:1). Supports Feature Priority (prominent video with single-row scroll) and Side-by-Side (split-screen showcase and grid).
+              </p>
+            </div>
+
+            <!-- Small Touchscreens -->
+            <div class="bg-[#000022] p-3 border border-[#333366] space-y-1.5">
+              <span class="text-xs font-bold text-[#FF88FF] block uppercase">Small Screen / Pi</span>
+              <span class="text-[10px] text-[#A0A0C0] block">7" Touchscreens (800x480, 1024x600)</span>
+              <p class="text-[11px] text-[#C0C0E0] leading-normal">
+                Responsive CSS dynamically adjusts typography scale and touch targets, ensuring high legibility even on compact Raspberry Pi companion screens.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Kiosk URL Query Overrides Cheat Sheet -->
+        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
+              // 2. KIOSK URL QUERY PARAMETER OVERRIDES
+            </h3>
+            <span class="text-[10px] text-[#00FFFF] font-mono">PER-DISPLAY INDEPENDENT CONTROL</span>
+          </div>
+          <p class="text-xs text-[#E0E0E0] leading-relaxed">
+            While your OpenPrevue headend maintains global database settings, you can override any display property on a specific screen simply by adding URL query parameters. This allows your living room TV, vertical hallway kiosk, and office monitor to have completely unique behaviors while connecting to the same server.
+          </p>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs font-mono border-collapse border border-[#333366]">
+              <thead>
+                <tr class="bg-[#000022] text-[#00FFFF] border-b border-[#333366]">
+                  <th class="p-2 border-r border-[#333366]">Parameter</th>
+                  <th class="p-2 border-r border-[#333366]">Supported Values</th>
+                  <th class="p-2 border-r border-[#333366]">Default Fallback</th>
+                  <th class="p-2">Description & Real-World Effect</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[#222255] text-[11px] text-[#C0C0E0]">
+                <tr>
+                  <td class="p-2 font-bold text-[#FFFF00] border-r border-[#333366]">?density=</td>
+                  <td class="p-2 text-[#00FF00] border-r border-[#333366]">classic_tv | balanced | dense | single_row</td>
+                  <td class="p-2 text-[#8888AA] border-r border-[#333366]">Settings Tab 2</td>
+                  <td class="p-2">Overrides visible channel row density. Use classic_tv (4 large rows) for 10-foot viewing, dense (12-14 rows) for vertical kiosks.</td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-bold text-[#FFFF00] border-r border-[#333366]">?kiosk=</td>
+                  <td class="p-2 text-[#00FF00] border-r border-[#333366]">1 | true</td>
+                  <td class="p-2 text-[#8888AA] border-r border-[#333366]">0 (Header visible)</td>
+                  <td class="p-2">Hides the top navigation header bar, delivering a 100% full-bleed broadcast presentation for dedicated signage displays.</td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-bold text-[#FFFF00] border-r border-[#333366]">?audio=</td>
+                  <td class="p-2 text-[#00FF00] border-r border-[#333366]">on | 1 | mute | 0</td>
+                  <td class="p-2 text-[#8888AA] border-r border-[#333366]">Settings Tab 3</td>
+                  <td class="p-2">Controls whether this display boots with media audio audible or muted. Perfect for unmuting living room TV while keeping hallway silent.</td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-bold text-[#FFFF00] border-r border-[#333366]">?volume=</td>
+                  <td class="p-2 text-[#00FF00] border-r border-[#333366]">0 to 100</td>
+                  <td class="p-2 text-[#8888AA] border-r border-[#333366]">80%</td>
+                  <td class="p-2">Sets initial media volume percentage for the video and music stream on this specific display.</td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-bold text-[#FFFF00] border-r border-[#333366]">?priority=</td>
+                  <td class="p-2 text-[#00FF00] border-r border-[#333366]">feature | side_by_side</td>
+                  <td class="p-2 text-[#8888AA] border-r border-[#333366]">Settings Tab 2</td>
+                  <td class="p-2">For ultrawide displays. feature gives prominent stage with 1 scrolling row below; side_by_side splits screen 50/50 horizontally.</td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-bold text-[#FFFF00] border-r border-[#333366]">?aspect=</td>
+                  <td class="p-2 text-[#00FF00] border-r border-[#333366]">4:3 | 16:9 | stretch | auto</td>
+                  <td class="p-2 text-[#8888AA] border-r border-[#333366]">Settings Tab 2</td>
+                  <td class="p-2">Overrides video stage framing. 4:3 gives authentic retro NTSC side bezels; 16:9 fills widescreen displays.</td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-bold text-[#FFFF00] border-r border-[#333366]">?video=</td>
+                  <td class="p-2 text-[#00FF00] border-r border-[#333366]">off | spotlight | 0</td>
+                  <td class="p-2 text-[#8888AA] border-r border-[#333366]">Settings Tab 2</td>
+                  <td class="p-2">Disables video streaming on this display and forces the local Featured Events Spotlight showcase (useful for low-power Pi units).</td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-bold text-[#FFFF00] border-r border-[#333366]">?speed=</td>
+                  <td class="p-2 text-[#00FF00] border-r border-[#333366]">10 to 120</td>
+                  <td class="p-2 text-[#8888AA] border-r border-[#333366]">30 px/sec</td>
+                  <td class="p-2">Fine-tunes the channel timeline autoscroll velocity (pixels per second) for faster or slower scrolling.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. One-Click Copy Deployment Profiles -->
+        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+          <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
+            // 3. READY-TO-USE KIOSK BOOKMARK PROFILES
+          </h3>
+          <p class="text-xs text-[#E0E0E0] leading-relaxed">
+            Click any button below to copy the fully qualified URL for your environment. Bookmark these URLs on each target device or use them in your browser autostart commands.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+            <!-- Living Room -->
+            <div class="bg-[#000022] p-3 border border-[#333366] flex flex-col justify-between space-y-2">
+              <div>
+                <span class="text-xs font-bold text-[#00FF00] block uppercase">Living Room 16:9 Big Screen</span>
+                <span class="text-[10px] text-[#A0A0C0] block font-mono">/?density=classic_tv&audio=on&volume=75</span>
+                <p class="text-[11px] text-[#8888AA] mt-1">
+                  4 large retro rows, audio unmuted, 75% volume, classic broadcast aesthetic.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="w-full bg-[#000066] hover:bg-[#000099] border border-[#00FFFF] text-[#00FFFF] text-xs font-bold py-1 px-2 cursor-pointer transition-colors"
+                @click="copyKioskUrl('/?density=classic_tv&audio=on&volume=75', 'living_room')"
+              >
+                {{ copiedUrlKey === 'living_room' ? '[ COPIED TO CLIPBOARD! ]' : '[ COPY KIOSK URL ]' }}
+              </button>
+            </div>
+
+            <!-- Hallway Vertical -->
+            <div class="bg-[#000022] p-3 border border-[#333366] flex flex-col justify-between space-y-2">
+              <div>
+                <span class="text-xs font-bold text-[#FFFF00] block uppercase">Hallway 9:16 Vertical Kiosk</span>
+                <span class="text-[10px] text-[#A0A0C0] block font-mono">/?density=dense&kiosk=1&audio=mute</span>
+                <p class="text-[11px] text-[#8888AA] mt-1">
+                  14 high-density rows, full-bleed signage (header hidden), permanently muted.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="w-full bg-[#000066] hover:bg-[#000099] border border-[#00FFFF] text-[#00FFFF] text-xs font-bold py-1 px-2 cursor-pointer transition-colors"
+                @click="copyKioskUrl('/?density=dense&kiosk=1&audio=mute', 'hallway')"
+              >
+                {{ copiedUrlKey === 'hallway' ? '[ COPIED TO CLIPBOARD! ]' : '[ COPY KIOSK URL ]' }}
+              </button>
+            </div>
+
+            <!-- Server Rack 1920x480 -->
+            <div class="bg-[#000022] p-3 border border-[#333366] flex flex-col justify-between space-y-2">
+              <div>
+                <span class="text-xs font-bold text-[#00FFFF] block uppercase">10" Server Rack Bar (1920x480)</span>
+                <span class="text-[10px] text-[#A0A0C0] block font-mono">/?density=single_row&kiosk=1</span>
+                <p class="text-[11px] text-[#8888AA] mt-1">
+                  Feature priority showcase with single-row continuous scrolling below.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="w-full bg-[#000066] hover:bg-[#000099] border border-[#00FFFF] text-[#00FFFF] text-xs font-bold py-1 px-2 cursor-pointer transition-colors"
+                @click="copyKioskUrl('/?density=single_row&kiosk=1', 'rack')"
+              >
+                {{ copiedUrlKey === 'rack' ? '[ COPIED TO CLIPBOARD! ]' : '[ COPY KIOSK URL ]' }}
+              </button>
+            </div>
+
+            <!-- Desktop Split Screen -->
+            <div class="bg-[#000022] p-3 border border-[#333366] flex flex-col justify-between space-y-2">
+              <div>
+                <span class="text-xs font-bold text-[#FF88FF] block uppercase">Ultrawide Split-Screen (21:9)</span>
+                <span class="text-[10px] text-[#A0A0C0] block font-mono">/?priority=side_by_side&aspect=16:9</span>
+                <p class="text-[11px] text-[#8888AA] mt-1">
+                  Side-by-side split screen with panoramic calendar timeline and 16:9 video.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="w-full bg-[#000066] hover:bg-[#000099] border border-[#00FFFF] text-[#00FFFF] text-xs font-bold py-1 px-2 cursor-pointer transition-colors"
+                @click="copyKioskUrl('/?priority=side_by_side&aspect=16:9', 'desktop')"
+              >
+                {{ copiedUrlKey === 'desktop' ? '[ COPIED TO CLIPBOARD! ]' : '[ COPY KIOSK URL ]' }}
+              </button>
+            </div>
+
+            <!-- Low-Power Ambient -->
+            <div class="bg-[#000022] p-3 border border-[#333366] flex flex-col justify-between space-y-2">
+              <div>
+                <span class="text-xs font-bold text-[#FFCC00] block uppercase">Silent Ambient Signage Board</span>
+                <span class="text-[10px] text-[#A0A0C0] block font-mono">/?video=off&kiosk=1&audio=mute</span>
+                <p class="text-[11px] text-[#8888AA] mt-1">
+                  Local event promos and weather only, no external video streaming, silent.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="w-full bg-[#000066] hover:bg-[#000099] border border-[#00FFFF] text-[#00FFFF] text-xs font-bold py-1 px-2 cursor-pointer transition-colors"
+                @click="copyKioskUrl('/?video=off&kiosk=1&audio=mute', 'silent')"
+              >
+                {{ copiedUrlKey === 'silent' ? '[ COPIED TO CLIPBOARD! ]' : '[ COPY KIOSK URL ]' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Turnkey Raspberry Pi & Linux Autostart -->
+        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+          <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
+            // 4. RASPBERRY PI & LINUX KIOSK AUTOSTART RECIPE
+          </h3>
+          <p class="text-xs text-[#E0E0E0] leading-relaxed">
+            To set up a Raspberry Pi or low-power Linux box as a dedicated appliance that boots directly into full-screen OpenPrevue:
+          </p>
+
+          <div class="bg-[#000018] p-3 border border-[#333366] font-mono text-[11px] text-[#00FF00] space-y-1 overflow-x-auto">
+            <div class="text-[#8888AA]"># 1. Create autostart desktop entry on Raspberry Pi OS / Debian Desktop:</div>
+            <div>mkdir -p ~/.config/autostart</div>
+            <div>cat &lt;&lt; 'EOF' &gt; ~/.config/autostart/openprevue.desktop</div>
+            <div class="text-[#FFFF00]">[Desktop Entry]</div>
+            <div class="text-[#FFFF00]">Type=Application</div>
+            <div class="text-[#FFFF00]">Name=OpenPrevue Kiosk</div>
+            <div class="text-[#FFFF00]">Exec=chromium-browser --noerrdialogs --disable-infobars --kiosk --check-for-update-interval=31536000 "http://YOUR_SERVER_IP:8080/?kiosk=1"</div>
+            <div class="text-[#FFFF00]">X-GNOME-Autostart-enabled=true</div>
+            <div>EOF</div>
+          </div>
+
+          <p class="text-[11px] text-[#A0A0C0]">
+            <strong class="text-[#00FFFF]">Screen Sleep Prevention:</strong> OpenPrevue includes a built-in Screen WakeLock engine (configurable in Tab 2: Display & Kiosk Power). When enabled, your browser will naturally prevent display sleep without needing to install <code>xset</code> or mess with Linux display power management.
+          </p>
+        </div>
+
+        <!-- 5. Live Updates & Docker Socket -->
+        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+          <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
+            // 5. 1-CLICK IN-PLACE CONTAINER UPGRADES
+          </h3>
+          <p class="text-xs text-[#E0E0E0] leading-relaxed">
+            OpenPrevue includes an automated firmware upgrade engine directly in the browser (Tab 10: System & Updates). When the Docker socket (<code class="text-[#00FF00]">/var/run/docker.sock</code>) is mounted in your compose file, the headend pulls the new container image from GitHub Packages, creates the replacement container with identical volume and port configuration, gracefully terminates the old instance, and reloads your browser automatically with zero host CLI commands.
+          </p>
+          <div class="bg-[#000018] p-2.5 border border-[#333366] font-mono text-[11px] text-[#C0C0E0]">
+            <span class="text-[#8888AA]"># Verified Docker Compose volume mapping:</span><br />
+            volumes:<br />
+            &nbsp;&nbsp;- ./data:/app/data<br />
+            &nbsp;&nbsp;- /var/run/docker.sock:/var/run/docker.sock
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -2252,6 +2537,7 @@ const tabs = [
   { id: 'eas', label: '[ 8. EMERGENCY ALERTS (EAS) ]' },
   { id: 'providers', label: '[ 9. PROVIDER CREDENTIALS ]' },
   { id: 'updates', label: '[ 10. SYSTEM & UPDATES ]' },
+  { id: 'guide', label: '[ 11. DEPLOYMENT & KIOSK GUIDE ]' },
 ]
 
 const route = useRoute()
@@ -2377,7 +2663,7 @@ const shaderForm = reactive<ShaderConfig>({
 
 // Web Audio State & DSP RF Filter Config
 const isAudioPreviewPlaying = ref(false)
-const tapeHissVol = ref(35)
+const tapeHissVol = ref(audioSynth.tapeHissLevel.value)
 const audioFilterForm = reactive<AudioFilterConfig>(audioSynth.getFilterConfig())
 
 // Ticket Ingestion State
@@ -2935,6 +3221,21 @@ async function handleManualSync() {
   } finally {
     isSyncing.value = false
   }
+}
+
+const copiedUrlKey = ref<string | null>(null)
+
+function copyKioskUrl(path: string, key: string) {
+  if (typeof window === 'undefined') return
+  const fullUrl = `${window.location.origin}${path}`
+  navigator.clipboard.writeText(fullUrl).then(() => {
+    copiedUrlKey.value = key
+    setTimeout(() => {
+      if (copiedUrlKey.value === key) {
+        copiedUrlKey.value = null
+      }
+    }, 2500)
+  }).catch(() => {})
 }
 
 onMounted(() => {

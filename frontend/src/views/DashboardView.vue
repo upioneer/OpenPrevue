@@ -15,8 +15,8 @@
           <YouTubePane
             v-if="shouldShowYouTube"
             :source-url="settings?.youtube_source_url || ''"
-            :audio-mode="settings?.youtube_audio_mode || 'mute'"
-            :aspect-ratio="settings?.youtube_aspect_ratio || '4:3'"
+            :audio-mode="youtubeAudioMode"
+            :aspect-ratio="youtubeAspectRatio"
             :shuffle-enabled="settings?.youtube_shuffle_enabled || '0'"
             :is-ultrawide="true"
             @error="handleYouTubeError"
@@ -64,8 +64,8 @@
             <YouTubePane
               v-if="shouldShowYouTube"
               :source-url="settings?.youtube_source_url || ''"
-              :audio-mode="settings?.youtube_audio_mode || 'mute'"
-              :aspect-ratio="settings?.youtube_aspect_ratio || '4:3'"
+              :audio-mode="youtubeAudioMode"
+              :aspect-ratio="youtubeAspectRatio"
               :shuffle-enabled="settings?.youtube_shuffle_enabled || '0'"
               :is-ultrawide="true"
               @error="handleYouTubeError"
@@ -129,8 +129,8 @@
         <YouTubePane
           v-if="shouldShowYouTube"
           :source-url="settings?.youtube_source_url || ''"
-          :audio-mode="settings?.youtube_audio_mode || 'mute'"
-          :aspect-ratio="settings?.youtube_aspect_ratio || '4:3'"
+          :audio-mode="youtubeAudioMode"
+          :aspect-ratio="youtubeAspectRatio"
           :shuffle-enabled="settings?.youtube_shuffle_enabled || '0'"
           @error="handleYouTubeError"
         />
@@ -177,6 +177,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { audioSynth } from '../services/audioSynth'
 import SpotlightPane from '../components/SpotlightPane.vue'
 import YouTubePane from '../components/YouTubePane.vue'
 import DividerRibbon from '../components/DividerRibbon.vue'
@@ -187,6 +189,7 @@ import { wsService } from '../services/websocket'
 import { wakeLockService } from '../services/wakeLock'
 import type { EventItem, SystemSettings, VenueItem } from '../types'
 
+const route = useRoute()
 const events = ref<EventItem[]>([])
 const venues = ref<VenueItem[]>([])
 const settings = ref<SystemSettings | null>(null)
@@ -218,6 +221,10 @@ function checkUltrawideRatio() {
 }
 
 const isUltrawideActive = computed(() => {
+  const queryUltrawide = route.query.ultrawide
+  if (queryUltrawide === '1' || queryUltrawide === 'true' || queryUltrawide === 'always') return true
+  if (queryUltrawide === '0' || queryUltrawide === 'false' || queryUltrawide === 'disabled') return false
+
   const mode = settings.value?.ultrawide_mode || 'auto'
   if (mode === 'always') return true
   if (mode === 'disabled') return false
@@ -225,24 +232,51 @@ const isUltrawideActive = computed(() => {
 })
 
 const ultrawidePriority = computed(() => {
+  const queryPriority = route.query.priority
+  if (typeof queryPriority === 'string') {
+    const p = queryPriority.toLowerCase()
+    if (['feature', 'side_by_side'].includes(p)) return p
+  }
   return settings.value?.ultrawide_priority || 'feature'
 })
 
 const marqueeRotationSeconds = computed(() => {
+  const queryRotation = route.query.rotation
+  if (typeof queryRotation === 'string') {
+    const r = parseInt(queryRotation, 10)
+    if (!isNaN(r) && r >= 5 && r <= 120) return r
+  }
   if (!settings.value?.marquee_rotation_seconds) return 20
   return parseInt(settings.value.marquee_rotation_seconds, 10) || 20
 })
 
 const scrollSpeed = computed(() => {
+  const querySpeed = route.query.speed
+  if (typeof querySpeed === 'string') {
+    const s = parseInt(querySpeed, 10)
+    if (!isNaN(s) && s >= 10 && s <= 120) return s
+  }
   if (!settings.value?.autoscroll_speed) return 30
   return parseInt(settings.value.autoscroll_speed, 10) || 30
 })
 
 const gridDensity = computed(() => {
+  const queryDensity = route.query.density
+  if (typeof queryDensity === 'string') {
+    const d = queryDensity.toLowerCase()
+    if (['classic_tv', 'balanced', 'dense', 'single_row'].includes(d)) {
+      return d
+    }
+  }
   return settings.value?.grid_density || 'balanced'
 })
 
 const pauseDurationSeconds = computed(() => {
+  const queryPause = route.query.pause
+  if (typeof queryPause === 'string') {
+    const p = parseInt(queryPause, 10)
+    if (!isNaN(p) && p >= 0 && p <= 60) return p
+  }
   if (!settings.value?.scroll_pause_duration) return 4
   return parseInt(settings.value.scroll_pause_duration, 10) || 4
 })
@@ -253,11 +287,33 @@ const pageIntervalSeconds = computed(() => {
 })
 
 const shouldShowYouTube = computed(() => {
+  const queryVideo = route.query.video
+  if (queryVideo === '0' || queryVideo === 'off' || queryVideo === 'spotlight') return false
+  if (queryVideo === '1' || queryVideo === 'youtube') {
+    return !!settings.value?.youtube_source_url?.trim() && !youtubeError.value
+  }
+
   return (
     settings.value?.spotlight_mode === 'youtube' &&
     !!settings.value?.youtube_source_url?.trim() &&
     !youtubeError.value
   )
+})
+
+const youtubeAudioMode = computed(() => {
+  const queryAudio = route.query.audio
+  if (queryAudio === '1' || queryAudio === 'on' || queryAudio === 'audio') return 'audio'
+  if (queryAudio === '0' || queryAudio === 'off' || queryAudio === 'mute') return 'mute'
+  return settings.value?.youtube_audio_mode || 'mute'
+})
+
+const youtubeAspectRatio = computed(() => {
+  const queryAspect = route.query.aspect || route.query.ratio
+  if (typeof queryAspect === 'string') {
+    const a = queryAspect.toLowerCase()
+    if (['4:3', '16:9', 'stretch', 'auto'].includes(a)) return a
+  }
+  return settings.value?.youtube_aspect_ratio || '4:3'
 })
 
 function handleYouTubeError(code: number) {
@@ -309,6 +365,21 @@ onMounted(() => {
   checkUltrawideRatio()
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', checkUltrawideRatio)
+  }
+
+  // Process URL query overrides for client-specific volume and mute
+  const queryVol = route.query.volume
+  if (typeof queryVol === 'string') {
+    const parsedVol = parseInt(queryVol, 10)
+    if (!isNaN(parsedVol) && parsedVol >= 0 && parsedVol <= 100) {
+      audioSynth.setMasterVolume(parsedVol)
+    }
+  }
+  const queryAudio = route.query.audio
+  if (queryAudio === '0' || queryAudio === 'mute' || queryAudio === 'off') {
+    audioSynth.isMuted.value = true
+  } else if (queryAudio === '1' || queryAudio === 'on' || queryAudio === 'audio') {
+    audioSynth.isMuted.value = false
   }
 
   loadData()

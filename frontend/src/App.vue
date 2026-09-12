@@ -7,7 +7,7 @@
     }"
   >
     <EASBanner />
-    <HeaderBar />
+    <HeaderBar v-if="!isKioskMode" />
     <router-view />
     <UpdateToast />
     <SpotifyPlayerModal
@@ -25,7 +25,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import HeaderBar from './components/HeaderBar.vue'
 import EASBanner from './components/EASBanner.vue'
 import UpdateToast from './components/UpdateToast.vue'
@@ -36,6 +37,11 @@ import { wsService } from './services/websocket'
 import { audioSynth } from './services/audioSynth'
 import { isSpotifyModalOpen, openSpotifyModal, closeSpotifyModal } from './services/spotifyModalState'
 import { isUpdateModalOpen, updateModalTargetVersion, closeUpdateModal } from './services/updateModalState'
+
+const route = useRoute()
+const isKioskMode = computed(() => {
+  return route.query.kiosk === '1' || route.query.kiosk === 'true' || route.query.header === '0'
+})
 
 const isScanlinesEnabled = ref(true)
 const isCrtCurvatureEnabled = ref(false)

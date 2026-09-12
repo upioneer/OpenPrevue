@@ -21,6 +21,7 @@ class AnalogAudioService {
   public isEASSirenPlaying = ref<boolean>(false);
   public masterVolume = ref<number>(80); // 0 - 100
   public isMuted = ref<boolean>(false);
+  public tapeHissLevel = ref<number>(0); // 0 - 100 (Analog tape hiss atmosphere)
 
   // Backward-compatible aliases
   public get isMuzakPlaying() {
@@ -87,8 +88,8 @@ class AnalogAudioService {
   }
 
   public playAudioStream(): void {
-    if (this.isAudioActive.value && !this.isMuted.value) {
-      this.startTapeHiss(this.masterVolume.value);
+    if (this.isAudioActive.value && !this.isMuted.value && this.tapeHissLevel.value > 0) {
+      this.startTapeHiss(this.tapeHissLevel.value);
     }
   }
 
@@ -129,6 +130,14 @@ class AnalogAudioService {
       const savedMute = localStorage.getItem("openprevue_is_muted");
       if (savedMute !== null) {
         this.isMuted.value = savedMute === "1";
+      }
+
+      const savedTapeHiss = localStorage.getItem("openprevue_tape_hiss_volume");
+      if (savedTapeHiss !== null) {
+        const parsed = parseInt(savedTapeHiss, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+          this.tapeHissLevel.value = parsed;
+        }
       }
     } catch {
       // Use default true
@@ -180,7 +189,24 @@ class AnalogAudioService {
     this.masterGain.gain.linearRampToValueAtTime(targetGain, t + 0.05);
 
     if (this.isTapeHissPlaying.value) {
-      this.setTapeHissVolume(this.masterVolume.value);
+      this.updateTapeHissGain();
+    }
+  }
+
+  private updateTapeHissGain(): void {
+    if (!this.audioCtx) return;
+    const t = this.audioCtx.currentTime;
+    const effectiveHiss = (this.isMuted.value || this.masterVolume.value === 0 || this.tapeHissLevel.value === 0)
+      ? 0
+      : (this.tapeHissLevel.value / 100) * (this.masterVolume.value / 100);
+
+    if (this.hissGain) {
+      const gainVal = effectiveHiss <= 0 ? 0.0001 : Math.max(0, Math.min(1, effectiveHiss * 0.08));
+      this.hissGain.gain.linearRampToValueAtTime(gainVal, t + 0.1);
+    }
+    if (this.humGain) {
+      const humVal = effectiveHiss <= 0 ? 0.0001 : Math.max(0, Math.min(1, effectiveHiss * 0.012));
+      this.humGain.gain.linearRampToValueAtTime(humVal, t + 0.1);
     }
   }
 
@@ -213,8 +239,8 @@ class AnalogAudioService {
 
   public startTurnkeyAudio(): void {
     this.isAudioActive.value = true;
-    if (!this.isMuted.value) {
-      this.startTapeHiss(this.masterVolume.value);
+    if (!this.isMuted.value && this.tapeHissLevel.value > 0) {
+      this.startTapeHiss(this.tapeHissLevel.value);
     }
   }
 
@@ -319,13 +345,16 @@ class AnalogAudioService {
     this.lowPassFilter.Q.setValueAtTime(0.8, t);
   }
 
-  public startTapeHiss(volumePercent: number = 35): void {
+  public startTapeHiss(volumePercent?: number): void {
     if (typeof window === "undefined") return;
+    const targetVol = volumePercent !== undefined ? volumePercent : this.tapeHissLevel.value;
+    if (targetVol <= 0) return;
+
     this.initAudioContext();
     if (!this.audioCtx || !this.highPassFilter) return;
 
     if (this.isTapeHissPlaying.value) {
-      this.setTapeHissVolume(volumePercent);
+      this.setTapeHissVolume(targetVol);
       return;
     }
 
@@ -352,8 +381,12 @@ class AnalogAudioService {
       whiteNoise.buffer = noiseBuffer;
       whiteNoise.loop = true;
 
+      const effectiveHiss = (this.isMuted.value || this.masterVolume.value === 0)
+        ? 0
+        : (targetVol / 100) * (this.masterVolume.value / 100);
+
       this.hissGain = this.audioCtx.createGain();
-      const gainVal = Math.max(0, Math.min(1, (volumePercent / 100) * 0.08));
+      const gainVal = effectiveHiss <= 0 ? 0.0001 : Math.max(0, Math.min(1, effectiveHiss * 0.08));
       this.hissGain.gain.setValueAtTime(gainVal, this.audioCtx.currentTime);
 
       // 60 Hz NTSC Mains Ground Hum
@@ -362,7 +395,7 @@ class AnalogAudioService {
       this.humOsc.frequency.setValueAtTime(60, this.audioCtx.currentTime);
 
       this.humGain = this.audioCtx.createGain();
-      const humVal = Math.max(0, Math.min(1, (volumePercent / 100) * 0.012));
+      const humVal = effectiveHiss <= 0 ? 0.0001 : Math.max(0, Math.min(1, effectiveHiss * 0.012));
       this.humGain.gain.setValueAtTime(humVal, this.audioCtx.currentTime);
 
       // Route through DSP filter chain
@@ -383,14 +416,38 @@ class AnalogAudioService {
   }
 
   public setTapeHissVolume(volumePercent: number): void {
+    const clamped = Math.max(0, Math.min(100, Math.round(volumePercent)));
+    this.tapeHissLevel.value = clamped;
+    try {
+      localStorage.setItem("openprevue_tape_hiss_volume", clamped.toString());
+    } catch {
+      // Ignore
+    }
+
+    if (clamped <= 0) {
+      if (this.isTapeHissPlaying.value) {
+        this.stopTapeHiss();
+      }
+      return;
+    }
+
+    if (!this.isTapeHissPlaying.value && !this.isMuted.value && this.masterVolume.value > 0) {
+      this.startTapeHiss(clamped);
+      return;
+    }
+
     if (!this.audioCtx) return;
     const t = this.audioCtx.currentTime;
+    const effectiveHiss = (this.isMuted.value || this.masterVolume.value === 0)
+      ? 0
+      : (clamped / 100) * (this.masterVolume.value / 100);
+
     if (this.hissGain) {
-      const gainVal = this.isMuted.value ? 0.0001 : Math.max(0, Math.min(1, (volumePercent / 100) * 0.08));
+      const gainVal = effectiveHiss <= 0 ? 0.0001 : Math.max(0, Math.min(1, effectiveHiss * 0.08));
       this.hissGain.gain.linearRampToValueAtTime(gainVal, t + 0.1);
     }
     if (this.humGain) {
-      const humVal = this.isMuted.value ? 0.0001 : Math.max(0, Math.min(1, (volumePercent / 100) * 0.012));
+      const humVal = effectiveHiss <= 0 ? 0.0001 : Math.max(0, Math.min(1, effectiveHiss * 0.012));
       this.humGain.gain.linearRampToValueAtTime(humVal, t + 0.1);
     }
   }
