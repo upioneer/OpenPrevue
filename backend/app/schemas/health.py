@@ -16,6 +16,7 @@ class ProviderHealth(BaseModel):
 class HealthResponse(BaseModel):
     """System-wide composite health check response."""
     status: str
+    version: str = ""
     uptime_seconds: float
     database: str
     scheduler: str

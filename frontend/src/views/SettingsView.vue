@@ -29,7 +29,7 @@
           :class="activeTab === tab.id
             ? 'bg-[#FFFF00] text-[#000033] border-[#FFFF00] shadow-[0_0_8px_rgba(255,255,0,0.8)]'
             : 'bg-[#000055] text-[#8888AA] border-[#333366] hover:text-[#00FFFF] hover:border-[#00FFFF]'"
-          @click="activeTab = tab.id"
+          @click="selectTab(tab.id)"
         >
           {{ tab.label }}
         </button>
@@ -2205,7 +2205,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   checkUpdatesNow,
   commandDisplayPower,
@@ -2253,7 +2254,33 @@ const tabs = [
   { id: 'updates', label: '[ 10. SYSTEM & UPDATES ]' },
 ]
 
-const activeTab = ref('location')
+const route = useRoute()
+const router = useRouter()
+
+const validTabIds = tabs.map((t) => t.id)
+const getInitialTab = (): string => {
+  const queryTab = route.query.tab
+  if (typeof queryTab === 'string' && validTabIds.includes(queryTab)) {
+    return queryTab
+  }
+  return 'location'
+}
+
+const activeTab = ref(getInitialTab())
+
+function selectTab(tabId: string) {
+  activeTab.value = tabId
+  router.replace({ query: { ...route.query, tab: tabId } }).catch(() => {})
+}
+
+watch(
+  () => route.query.tab,
+  (newTab) => {
+    if (newTab && typeof newTab === 'string' && validTabIds.includes(newTab)) {
+      activeTab.value = newTab
+    }
+  }
+)
 const isSyncing = ref(false)
 const saveMessage = ref('')
 const healthData = ref<HealthData | null>(null)

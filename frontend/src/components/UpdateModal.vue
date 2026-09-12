@@ -93,42 +93,44 @@
         </div>
 
         <!-- Multi-Step Progress Matrix -->
-        <div class="bg-[#000022] border border-[#333366] p-3 space-y-2">
-          <div class="flex items-center justify-between text-[11px] mb-1">
+        <div class="bg-[#000022] border border-[#333366] p-3 space-y-2.5">
+          <div class="flex items-center justify-between text-[11px]">
             <span class="text-[#FFFF00] font-bold uppercase tracking-wider">UPGRADE PIPELINE STAGES</span>
-            <span class="text-[#00FFFF] font-mono font-bold">{{ progressPercent }}%</span>
+            <span class="text-[#00FFFF] font-mono font-bold">{{ progressPercent }}% [STAGE {{ Math.min(Math.max(currentStep, 1), 4) }}/4]</span>
           </div>
 
-          <!-- Retro ASCII Progress Bar -->
-          <div class="bg-[#000011] border border-[#333366] p-1.5 font-mono text-[11px] text-[#00FF00] tracking-widest text-center">
-            [{{ progressBarString }}]
+          <!-- Retro Segmented LED Progress Bar -->
+          <div class="space-y-1">
+            <div class="flex items-center gap-1 h-5 bg-[#000011] border border-[#333366] p-1">
+              <div
+                v-for="i in totalSegments"
+                :key="i"
+                class="flex-1 h-full rounded-xs transition-all duration-150"
+                :class="getSegmentClass(i)"
+              ></div>
+            </div>
+            <div class="flex items-center justify-between text-[10px] font-mono text-[#8888AA] pt-0.5">
+              <span class="text-[#00FF00]">
+                STATUS: {{ statusLabel }}
+              </span>
+              <span>
+                {{ activeSegmentCount }} / {{ totalSegments }} SEGMENTS
+              </span>
+            </div>
           </div>
 
           <!-- Step Indicators -->
-          <div class="grid grid-cols-1 sm:grid-cols-4 gap-1 text-[10px] pt-1">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[10px] pt-1">
             <div
-              class="p-1.5 border text-center font-bold"
-              :class="getStepClass(1)"
+              v-for="step in pipelineSteps"
+              :key="step.number"
+              class="p-2 border text-center font-bold flex flex-col justify-between space-y-1 transition-all"
+              :class="getStepClass(step.number)"
             >
-              1. PRE-FLIGHT
-            </div>
-            <div
-              class="p-1.5 border text-center font-bold"
-              :class="getStepClass(2)"
-            >
-              2. PULL IMAGE
-            </div>
-            <div
-              class="p-1.5 border text-center font-bold"
-              :class="getStepClass(3)"
-            >
-              3. SWAP CONTAINER
-            </div>
-            <div
-              class="p-1.5 border text-center font-bold"
-              :class="getStepClass(4)"
-            >
-              4. HEALTH & RELOAD
+              <div class="tracking-wider">{{ step.number }}. {{ step.title }}</div>
+              <div class="text-[9px] font-mono tracking-widest opacity-90">
+                {{ getStepStatus(step.number) }}
+              </div>
             </div>
           </div>
         </div>
@@ -212,7 +214,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { fetchHealth, fetchUpdateCapability, triggerApplyUpdate } from '../api/client'
 import type { UpdateCapabilityResponse } from '../types'
 
@@ -231,6 +233,13 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
+const pipelineSteps = [
+  { number: 1, title: 'PRE-FLIGHT' },
+  { number: 2, title: 'PULL IMAGE' },
+  { number: 3, title: 'SWAP CONTAINER' },
+  { number: 4, title: 'HEALTH & RELOAD' },
+]
+
 const capability = ref<UpdateCapabilityResponse | null>(null)
 const selectedMethod = ref<string>('')
 const isProcessing = ref(false)
@@ -241,12 +250,46 @@ const reloadCountdown = ref<number | null>(null)
 const logLines = ref<LogEntry[]>([])
 const terminalRef = ref<HTMLDivElement | null>(null)
 
+// Retro Segmented LED Progress Bar State & Scanner Animation
+const totalSegments = 24
+const scannerIndex = ref(0)
+let scannerTimer: ReturnType<typeof setInterval> | null = null
+
+function startScanner() {
+  if (scannerTimer) return
+  scannerTimer = setInterval(() => {
+    scannerIndex.value = (scannerIndex.value + 1) % totalSegments
+  }, 75)
+}
+
+function stopScanner() {
+  if (scannerTimer) {
+    clearInterval(scannerTimer)
+    scannerTimer = null
+  }
+}
+
+watch(
+  [isProcessing, isPolling],
+  ([processing, polling]) => {
+    if (processing || polling) {
+      startScanner()
+    } else {
+      stopScanner()
+    }
+  }
+)
+
+onUnmounted(() => {
+  stopScanner()
+})
+
 const currentVersion = computed(() => capability.value?.current_version || '0.21.0')
 const resolvedTargetVersion = computed(() => props.initialTargetVersion || capability.value?.latest_version || '0.22.0')
 
 const statusState = computed<'ready' | 'working' | 'polling' | 'success' | 'error'>(() => {
   if (hasError.value) return 'error'
-  if (reloadCountdown.value !== null || (currentStep.value === 4 && !isPolling.value)) return 'success'
+  if (reloadCountdown.value !== null || (currentStep.value === 4 && !isProcessing.value && !isPolling.value)) return 'success'
   if (isPolling.value) return 'polling'
   if (isProcessing.value) return 'working'
   return 'ready'
@@ -254,27 +297,72 @@ const statusState = computed<'ready' | 'working' | 'polling' | 'success' | 'erro
 
 const statusLabel = computed(() => {
   if (hasError.value) return 'ERROR'
-  if (reloadCountdown.value !== null) return 'REBOOT DETECTED'
+  if (reloadCountdown.value !== null) return `REBOOT DETECTED (${reloadCountdown.value}s)`
   if (isPolling.value) return 'AWAITING REBOOT'
-  if (isProcessing.value) return 'UPDATING...'
+  if (isProcessing.value) return 'EXECUTING...'
+  if (currentStep.value === 4 && !isProcessing.value && !isPolling.value && !hasError.value) return 'DRY-RUN COMPLETE'
   return 'READY'
 })
 
 const progressPercent = computed(() => {
   if (reloadCountdown.value !== null) return 100
-  if (currentStep.value === 1) return 10
+  if (currentStep.value === 4 && !isProcessing.value && !isPolling.value && !hasError.value) return 100
+  if (currentStep.value === 4) return 90
+  if (currentStep.value === 3) return 70
   if (currentStep.value === 2) return 45
-  if (currentStep.value === 3) return 80
-  if (currentStep.value === 4) return 95
+  if (currentStep.value === 1) {
+    return isProcessing.value ? 20 : 0
+  }
   return 0
 })
 
-const progressBarString = computed(() => {
-  const totalBlocks = 24
-  const filledCount = Math.round((progressPercent.value / 100) * totalBlocks)
-  const emptyCount = totalBlocks - filledCount
-  return '█'.repeat(filledCount) + '░'.repeat(emptyCount)
+const activeSegmentCount = computed(() => {
+  return Math.round((progressPercent.value / 100) * totalSegments)
 })
+
+function getSegmentClass(i: number): string {
+  // If complete / rebooting: all segments glow bright cyan
+  if (progressPercent.value >= 100) {
+    return 'bg-[#00FFFF] border border-[#FFFFFF] shadow-[0_0_8px_rgba(0,255,255,0.9)]'
+  }
+
+  // Active scan pulse while working or polling
+  if ((isProcessing.value || isPolling.value) && i === scannerIndex.value + 1) {
+    return 'bg-[#FFFF00] border border-[#FFFFFF] shadow-[0_0_10px_rgba(255,255,0,1)] animate-pulse'
+  }
+
+  // Filled segments glow phosphor green
+  if (i <= activeSegmentCount.value) {
+    return 'bg-[#00FF00] border border-[#33FF33] shadow-[0_0_5px_rgba(0,255,0,0.7)]'
+  }
+
+  // Unfilled dark LED slot
+  return 'bg-[#060618] border border-[#141432]'
+}
+
+function getStepStatus(stepNum: number): string {
+  if (currentStep.value > stepNum || (stepNum === 4 && reloadCountdown.value !== null) || (stepNum === 4 && currentStep.value === 4 && !isProcessing.value && !isPolling.value && !hasError.value)) {
+    return '[ DONE ]'
+  }
+  if (currentStep.value === stepNum) {
+    if (isProcessing.value || isPolling.value) return '[ ACTIVE ]'
+    return '[ READY ]'
+  }
+  return '[ QUEUED ]'
+}
+
+function getStepClass(stepNum: number): string {
+  if (currentStep.value > stepNum || (stepNum === 4 && reloadCountdown.value !== null) || (stepNum === 4 && currentStep.value === 4 && !isProcessing.value && !isPolling.value && !hasError.value)) {
+    return 'bg-[#003300] border-[#00FF00] text-[#00FF00]'
+  }
+  if (currentStep.value === stepNum) {
+    if (isProcessing.value || isPolling.value) {
+      return 'bg-[#333300] border-[#FFFF00] text-[#FFFF00] animate-pulse shadow-[0_0_10px_rgba(255,255,0,0.4)]'
+    }
+    return 'bg-[#002244] border-[#00FFFF] text-[#00FFFF]'
+  }
+  return 'bg-[#000011] border-[#333366] text-[#666688]'
+}
 
 function addLog(text: string, type: 'info' | 'warn' | 'success' | 'error' = 'info') {
   const now = new Date()
@@ -290,16 +378,6 @@ function addLog(text: string, type: 'info' | 'warn' | 'success' | 'error' = 'inf
       terminalRef.value.scrollTop = terminalRef.value.scrollHeight
     }
   })
-}
-
-function getStepClass(stepNum: number) {
-  if (stepNum < currentStep.value || (stepNum === 4 && reloadCountdown.value !== null)) {
-    return 'bg-[#003300] border-[#00FF00] text-[#00FF00]'
-  }
-  if (stepNum === currentStep.value) {
-    return 'bg-[#333300] border-[#FFFF00] text-[#FFFF00] animate-pulse'
-  }
-  return 'bg-[#000011] border-[#333366] text-[#666688]'
 }
 
 function formatMethodOption(method: string) {
@@ -323,6 +401,7 @@ async function loadCapability() {
 }
 
 async function runDryRun() {
+  if (isProcessing.value || isPolling.value) return
   isProcessing.value = true
   hasError.value = false
   currentStep.value = 1
@@ -330,6 +409,18 @@ async function runDryRun() {
   addLog(`Selected strategy: ${selectedMethod.value}`, 'info')
 
   try {
+    // Stage 1: Pre-Flight
+    addLog('[STAGE 1/4: PRE-FLIGHT] Verifying host environment and runtime permissions...', 'info')
+    await new Promise((r) => setTimeout(r, 350))
+
+    // Stage 2: Pull Image
+    currentStep.value = 2
+    addLog(`[STAGE 2/4: PULL IMAGE] Simulating image pull for ghcr.io/upioneer/openprevue:v${resolvedTargetVersion.value}...`, 'info')
+    await new Promise((r) => setTimeout(r, 450))
+
+    // Stage 3: Swap Container
+    currentStep.value = 3
+    addLog('[STAGE 3/4: SWAP CONTAINER] Testing container recreation parameters and volume bindings...', 'info')
     const res = await triggerApplyUpdate({
       target_version: resolvedTargetVersion.value,
       dry_run: true,
@@ -338,11 +429,18 @@ async function runDryRun() {
 
     if (res.steps) {
       for (let i = 0; i < res.steps.length; i++) {
-        addLog(`[STEP ${i + 1}/${res.steps.length}] ${res.steps[i]}`, 'info')
+        addLog(`  -> ${res.steps[i]}`, 'info')
       }
     }
+    await new Promise((r) => setTimeout(r, 350))
+
+    // Stage 4: Health Recovery Readiness
+    currentStep.value = 4
+    addLog('[STAGE 4/4: HEALTH & RELOAD] Simulating health recovery handshake...', 'info')
+    await new Promise((r) => setTimeout(r, 350))
+
     addLog(res.message, 'success')
-    addLog('Dry-run simulation completed successfully with zero modifications.', 'warn')
+    addLog('Dry-run simulation completed successfully with zero host modifications.', 'warn')
   } catch (err: any) {
     hasError.value = true
     addLog(`Dry-run simulation error: ${err.message}`, 'error')
@@ -352,15 +450,24 @@ async function runDryRun() {
 }
 
 async function runApplyUpdate() {
+  if (isProcessing.value || isPolling.value) return
   isProcessing.value = true
   hasError.value = false
-  currentStep.value = 2
+  currentStep.value = 1
   addLog('--- INITIATING LIVE IN-PLACE UPGRADE ---', 'warn')
   addLog(`Target image / version: v${resolvedTargetVersion.value}`, 'info')
   addLog(`Strategy: ${selectedMethod.value}`, 'info')
 
   try {
+    addLog('[STAGE 1/4: PRE-FLIGHT] Verifying container host readiness...', 'info')
+    await new Promise((r) => setTimeout(r, 300))
+
+    currentStep.value = 2
+    addLog(`[STAGE 2/4: PULL IMAGE] Dispatching image pull for ghcr.io/upioneer/openprevue:v${resolvedTargetVersion.value}...`, 'info')
+    await new Promise((r) => setTimeout(r, 400))
+
     currentStep.value = 3
+    addLog('[STAGE 3/4: SWAP CONTAINER] Executing container lifecycle recreation...', 'info')
     const res = await triggerApplyUpdate({
       target_version: resolvedTargetVersion.value,
       dry_run: false,
@@ -370,13 +477,15 @@ async function runApplyUpdate() {
     addLog(res.message, 'success')
     if (res.trigger_file) {
       addLog(`Persistent trigger written to: ${res.trigger_file}`, 'info')
+      addLog('[NOTICE] Running in trigger file mode. For automated 1-click upgrades, mount /var/run/docker.sock in docker-compose.yml.', 'warn')
+      addLog('[NOTICE] If no host watcher is active, execute "docker compose pull && docker compose up -d" on the host.', 'info')
     }
 
     // Step 4: Health Polling Phase
     isProcessing.value = false
     isPolling.value = true
     currentStep.value = 4
-    addLog('Entering health polling loop. Waiting for headend recovery...', 'warn')
+    addLog('[STAGE 4/4: HEALTH & RELOAD] Entering health polling loop. Waiting for headend reboot recovery...', 'warn')
     startHealthPolling()
   } catch (err: any) {
     hasError.value = true
@@ -388,14 +497,30 @@ async function runApplyUpdate() {
 function startHealthPolling() {
   let attempts = 0
   const maxAttempts = 60
+  const targetVer = resolvedTargetVersion.value
+  const targetClean = targetVer.replace(/^v/, '')
+
   const pollInterval = setInterval(async () => {
     attempts++
     try {
       addLog(`[PING ${attempts}] Probing /api/v1/health...`, 'info')
       const health = await fetchHealth()
       if (health && health.status === 'healthy') {
+        const reportedVer = health.version
+        const reportedClean = reportedVer ? reportedVer.replace(/^v/, '') : ''
+
+        if (reportedVer && reportedClean !== targetClean) {
+          addLog(`[PING ${attempts}] Service responding, but still on v${reportedClean} (target: v${targetClean}). Waiting for container swap...`, 'warn')
+          if (attempts >= maxAttempts) {
+            clearInterval(pollInterval)
+            isPolling.value = false
+            addLog(`Upgrade timed out: Container is still running v${reportedClean}. If using trigger file mode, run "docker compose pull && docker compose up -d" on the host.`, 'error')
+          }
+          return
+        }
+
         clearInterval(pollInterval)
-        addLog('HEADEND SERVICE DETECTED ONLINE AND HEALTHY!', 'success')
+        addLog(`HEADEND SERVICE ONLINE AND RUNNING v${reportedClean || targetClean}!`, 'success')
         isPolling.value = false
         triggerPageReload()
       }

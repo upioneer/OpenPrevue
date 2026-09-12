@@ -56,7 +56,7 @@
       <!-- Update Alert Badge -->
       <router-link
         v-if="updateAvailable"
-        to="/settings"
+        to="/settings?tab=updates"
         class="bg-[#FFFF00] text-[#000033] px-2 py-0.5 font-black text-xs animate-pulse tracking-wider hover:bg-white shadow-[0_0_8px_rgba(255,255,0,0.8)] cursor-pointer shrink-0"
         title="New OpenPrevue Version Available"
       >

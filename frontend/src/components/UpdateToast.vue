@@ -36,7 +36,7 @@
         [ UPGRADE IN-PLACE ]
       </button>
       <router-link
-        to="/settings"
+        to="/settings?tab=updates"
         @click="dismiss"
         class="bg-[#000080] border border-[#FFFF00] text-[#FFFF00] px-3 py-1 text-xs font-bold hover:bg-[#0000AA] cursor-pointer transition-colors"
       >

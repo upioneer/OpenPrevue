@@ -62,6 +62,7 @@ export interface WeatherData {
 
 export interface HealthData {
   status: string
+  version?: string
   uptime_seconds: number
   database: string
   scheduler: string

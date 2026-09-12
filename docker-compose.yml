@@ -28,8 +28,9 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
     volumes:
       - ./data:/app/data
-      # Optional: Mount Docker socket to enable zero-touch 1-click in-place container updates directly from UI
-      # - /var/run/docker.sock:/var/run/docker.sock
+      # Docker socket enables zero-touch 1-click in-place container updates directly from the UI.
+      # If you prefer strict isolation without socket access, comment this line out.
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/v1/health')"]
       interval: 30s

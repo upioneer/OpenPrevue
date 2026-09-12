@@ -168,8 +168,9 @@ services:
       - DEFAULT_RADIUS_MILES=25
     volumes:
       - ./data:/app/data
-      # Optional: Mount Docker socket to enable zero-touch 1-click in-place container updates directly from UI
-      # - /var/run/docker.sock:/var/run/docker.sock
+      # Docker socket enables zero-touch 1-click in-place container updates directly from the UI.
+      # If you prefer strict isolation without socket access, comment this line out.
+      - /var/run/docker.sock:/var/run/docker.sock
 ```
 
 Launch with:

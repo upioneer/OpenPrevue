@@ -83,6 +83,7 @@ async def get_system_health() -> HealthResponse:
 
     return HealthResponse(
         status=overall_status,
+        version=getattr(settings, "VERSION", "0.22.2"),
         uptime_seconds=round(uptime, 2),
         database=db_status,
         scheduler="ok",
