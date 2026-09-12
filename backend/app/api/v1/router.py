@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 from backend.app.api.v1.endpoints import (
+    activity,
     ai,
     audio,
     calendar,
@@ -44,3 +45,4 @@ api_router.include_router(youtube.router, tags=["YouTube"])
 api_router.include_router(calendar.router, tags=["Calendar"])
 api_router.include_router(integrations.router, tags=["Integrations"])
 api_router.include_router(audio.router, tags=["Audio"])
+api_router.include_router(activity.router, tags=["System Activity"])

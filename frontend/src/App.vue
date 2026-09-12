@@ -19,6 +19,7 @@
     <UpdateModal
       :is-open="isUpdateModalOpen"
       :initial-target-version="updateModalTargetVersion"
+      :diagnostic-mode="updateModalDiagnosticMode"
       @close="closeUpdateModal"
     />
   </div>
@@ -36,7 +37,7 @@ import { fetchSettings } from './api/client'
 import { wsService } from './services/websocket'
 import { audioSynth } from './services/audioSynth'
 import { isSpotifyModalOpen, openSpotifyModal, closeSpotifyModal } from './services/spotifyModalState'
-import { isUpdateModalOpen, updateModalTargetVersion, closeUpdateModal } from './services/updateModalState'
+import { isUpdateModalOpen, updateModalTargetVersion, updateModalDiagnosticMode, closeUpdateModal } from './services/updateModalState'
 
 const route = useRoute()
 const isKioskMode = computed(() => {

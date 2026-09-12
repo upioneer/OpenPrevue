@@ -10,6 +10,31 @@
           </h1>
         </div>
         <div class="flex items-center space-x-3">
+          <!-- Retro Auto-Save Indicator -->
+          <div
+            class="flex items-center gap-2 px-2.5 py-1 bg-[#000022] border text-xs"
+            :class="{
+              'border-[#00FF00]/60 text-[#00FF00]': autoSaveState === 'saved',
+              'border-[#FFFF00]/60 text-[#FFFF00]': autoSaveState === 'saving' || autoSaveState === 'pending',
+              'border-[#FF4444]/60 text-[#FF4444]': autoSaveState === 'error',
+              'border-[#333366] text-[#8888AA]': autoSaveState === 'idle'
+            }"
+            title="Changes are automatically saved as they are made"
+          >
+            <span
+              class="w-2 h-2 rounded-full inline-block"
+              :class="{
+                'bg-[#00FF00] shadow-[0_0_6px_#00FF00]': autoSaveState === 'saved',
+                'bg-[#FFFF00] animate-pulse shadow-[0_0_6px_#FFFF00]': autoSaveState === 'saving' || autoSaveState === 'pending',
+                'bg-[#FF4444] shadow-[0_0_6px_#FF4444]': autoSaveState === 'error',
+                'bg-[#666688]': autoSaveState === 'idle'
+              }"
+            ></span>
+            <span class="font-bold tracking-wider uppercase text-[11px]">
+              {{ autoSaveStatusText }}
+            </span>
+          </div>
+
           <RouterLink
             to="/"
             class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-3 py-1 text-xs font-bold tracking-wider transition-colors cursor-pointer"
@@ -224,6 +249,52 @@
             >
               <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ 12 ROWS // DENSE ]</div>
               <div class="text-[11px] text-[#E0E0E0] mt-1">High-density information mode displaying maximum simultaneous channels on screen.</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Channel Schedule Listing Filter: Active Events vs All Channels -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FF00] space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FF00] uppercase">
+              Channel Schedule Listing Filter
+            </h3>
+            <span class="text-xs text-[#FFFF00] font-bold">
+              ACTIVE: {{ form.grid_filter_mode === 'all' ? 'ALL VENUES & SUBSCRIPTIONS' : 'ACTIVE EVENTS ONLY (NEXT 24-48 HRS)' }}
+            </span>
+          </div>
+          <p class="text-xs text-[#8888AA]">
+            Controls whether the guide timeline scrolls through all configured venues and subscriptions even when dark/empty, or filters out blank channels to show only venues with live events, sports matchups, and team logos scheduled in the next 24-48 hours.
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <!-- Active Events Only -->
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.grid_filter_mode !== 'all'
+                ? 'bg-[#000066] border-[#00FF00] text-[#00FF00] shadow-[0_0_10px_rgba(0,255,0,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.grid_filter_mode = 'active_only'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ ACTIVE EVENTS ONLY // 24-48 HRS ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">
+                Curated Broadcast Mode: Suppresses blank rows. Only venues with active events, concerts, or sports matchups scheduled in Today, Tonight, or Tomorrow roll past.
+              </div>
+            </button>
+
+            <!-- All Channels & Venues -->
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.grid_filter_mode === 'all'
+                ? 'bg-[#000066] border-[#FFFF00] text-[#FFFF00] shadow-[0_0_10px_rgba(255,255,0,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.grid_filter_mode = 'all'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ ALL VENUES & SUBSCRIPTIONS ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">
+                Complete Channel Lineup: Rolls through every configured venue and subscription feed in numeric order, displaying [ Box Office Open ] for empty slots.
+              </div>
             </button>
           </div>
         </div>
@@ -1232,31 +1303,67 @@
             </span>
           </div>
 
-          <div class="space-y-3">
-            <div class="space-y-1">
+          <div class="space-y-4">
+            <div class="space-y-1.5">
               <label class="text-xs text-[#A0A0C0] block font-bold">Public TripAdvisor Trip / Saves URL:</label>
-              <input
-                v-model="form.tripadvisor_wishlist_url"
-                type="url"
-                placeholder="https://www.tripadvisor.com/Trips/..."
-                class="w-full bg-[#000022] border border-[#333366] px-2 py-1.5 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none font-mono"
-              />
+              <div class="flex flex-col sm:flex-row items-center gap-2">
+                <input
+                  v-model="form.tripadvisor_wishlist_url"
+                  type="url"
+                  placeholder="https://www.tripadvisor.com/Trips/..."
+                  class="flex-1 w-full bg-[#000022] border border-[#333366] px-2 py-1.5 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none font-mono"
+                  @keydown.enter.prevent="handleSyncTripAdvisor"
+                />
+                <button
+                  type="button"
+                  :disabled="isSyncingTripAdvisor || !form.tripadvisor_wishlist_url"
+                  class="w-full sm:w-auto bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-4 py-1.5 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-50 transition-colors shrink-0"
+                  @click="handleSyncTripAdvisor"
+                >
+                  {{ isSyncingTripAdvisor ? '[ SYNCING... ]' : '[ SYNC TRIPADVISOR NOW ]' }}
+                </button>
+              </div>
               <span class="text-[10px] text-[#8888AA] block">
-                In TripAdvisor, go to <strong>Trips / Saves</strong> &gt; <strong>Share</strong> &gt; copy the public link.
+                In TripAdvisor, go to <strong>Trips / Saves</strong> &gt; <strong>Share</strong> &gt; copy the public link. Press Enter or click Sync to ingest immediately.
               </span>
+              <div
+                v-if="tripadvisorSyncMessage"
+                class="p-2 text-xs border font-mono"
+                :class="tripadvisorSyncIsError ? 'bg-[#330000] border-[#FF4444] text-[#FF8888]' : 'bg-[#003300] border-[#00FF00] text-[#00FF00]'"
+              >
+                {{ tripadvisorSyncMessage }}
+              </div>
             </div>
 
-            <div class="space-y-1">
+            <div class="space-y-1.5">
               <label class="text-xs text-[#A0A0C0] block font-bold">Public Viator Wishlist / Experience URL:</label>
-              <input
-                v-model="form.viator_wishlist_url"
-                type="url"
-                placeholder="https://www.viator.com/..."
-                class="w-full bg-[#000022] border border-[#333366] px-2 py-1.5 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none font-mono"
-              />
+              <div class="flex flex-col sm:flex-row items-center gap-2">
+                <input
+                  v-model="form.viator_wishlist_url"
+                  type="url"
+                  placeholder="https://www.viator.com/..."
+                  class="flex-1 w-full bg-[#000022] border border-[#333366] px-2 py-1.5 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none font-mono"
+                  @keydown.enter.prevent="handleSyncViator"
+                />
+                <button
+                  type="button"
+                  :disabled="isSyncingViator || !form.viator_wishlist_url"
+                  class="w-full sm:w-auto bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-4 py-1.5 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-50 transition-colors shrink-0"
+                  @click="handleSyncViator"
+                >
+                  {{ isSyncingViator ? '[ SYNCING... ]' : '[ SYNC VIATOR NOW ]' }}
+                </button>
+              </div>
               <span class="text-[10px] text-[#8888AA] block">
-                Paste any shared Viator Wishlist or experience page.
+                Paste any shared Viator Wishlist or experience page. Press Enter or click Sync to ingest immediately.
               </span>
+              <div
+                v-if="viatorSyncMessage"
+                class="p-2 text-xs border font-mono"
+                :class="viatorSyncIsError ? 'bg-[#330000] border-[#FF4444] text-[#FF8888]' : 'bg-[#003300] border-[#00FF00] text-[#00FF00]'"
+              >
+                {{ viatorSyncMessage }}
+              </div>
             </div>
           </div>
         </div>
@@ -1710,9 +1817,9 @@
             </div>
 
             <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
-              <span class="text-[#FFFF00] font-black block">STEP 4: PASTE & SAVE</span>
+              <span class="text-[#FFFF00] font-black block">STEP 4: PASTE TOKEN</span>
               <p class="text-[#A0A0C0] text-[10px]">
-                Paste the token into the input below and click <strong class="text-[#FFFF00]">Save Settings</strong>.
+                Paste the token into the input below (automatically saved to system datastore).
               </p>
             </div>
 
@@ -2011,11 +2118,11 @@
         </div>
       </div>
 
-      <!-- Tab 9: System Updates & Version Management -->
+      <!-- Tab 10: System Health & Advanced Diagnostics -->
       <div v-if="activeTab === 'updates'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
         <div class="flex items-center justify-between border-b border-[#333366] pb-2">
           <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
-            System Updates & Release Management
+            System Health, Diagnostics & Release Management
           </h2>
           <span
             class="text-[11px] px-2 py-0.5 border"
@@ -2023,6 +2130,208 @@
           >
             {{ updateStatus?.update_available ? `[ UPDATE AVAILABLE: v${updateStatus.latest_version} ]` : '[ SYSTEM UP TO DATE ]' }}
           </span>
+        </div>
+
+        <!-- Real-Time System Health Checklist & Connectivity Ledger -->
+        <div class="bg-[#000033] p-4 border border-[#00FFFF] space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
+            <div>
+              <span class="text-xs font-black text-[#00FFFF] block uppercase tracking-wider">
+                [ REAL-TIME SYSTEM HEALTH & CONNECTIVITY LEDGER ]
+              </span>
+              <span class="text-[11px] text-[#8888AA]">
+                Composite operational observability across database, ingestion engine, circuit breakers, and peripheral bridges.
+              </span>
+            </div>
+            <span
+              class="text-[10px] px-2 py-0.5 border font-bold uppercase shrink-0"
+              :class="healthData?.status === 'healthy' ? 'bg-[#003300] text-[#00FF00] border-[#00FF00]' : 'bg-[#330000] text-[#FF4444] border-[#FF4444]'"
+            >
+              {{ healthData?.status === 'healthy' ? '[ OVERALL HEALTH: NOMINAL ]' : '[ OVERALL HEALTH: DEGRADED ]' }}
+            </span>
+          </div>
+
+          <!-- Dynamic Health Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+            <!-- Database -->
+            <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
+              <span class="text-[#8888AA] block text-[10px] font-bold">DATABASE ENGINE:</span>
+              <span class="font-bold flex items-center space-x-1" :class="healthData?.database === 'ok' ? 'text-[#00FF00]' : 'text-[#FF4444]'">
+                <span>{{ healthData?.database === 'ok' ? '✓ [ ONLINE ]' : '✗ [ UNHEALTHY ]' }}</span>
+              </span>
+              <span class="text-[9px] text-[#A0A0C0] block font-mono">SQLite WAL Mode</span>
+            </div>
+
+            <!-- Ingestion Scheduler -->
+            <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
+              <span class="text-[#8888AA] block text-[10px] font-bold">INGESTION SCHEDULER:</span>
+              <span class="text-[#00FF00] font-bold">
+                ✓ [ ACTIVE ]
+              </span>
+              <span class="text-[9px] text-[#A0A0C0] block font-mono">Every {{ form.sync_interval_hours || 6 }}h</span>
+            </div>
+
+            <!-- Active Displays -->
+            <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
+              <span class="text-[#8888AA] block text-[10px] font-bold">WEBSOCKET CLIENTS:</span>
+              <span class="text-[#00FFFF] font-bold">
+                ✓ [ {{ healthData?.websocket_clients !== undefined ? healthData.websocket_clients : 1 }} ACTIVE ]
+              </span>
+              <span class="text-[9px] text-[#A0A0C0] block font-mono">Live Display Bus</span>
+            </div>
+
+            <!-- Docker Upgrade Socket -->
+            <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
+              <span class="text-[#8888AA] block text-[10px] font-bold">UPGRADE ACCESS:</span>
+              <span class="font-bold" :class="(healthData?.docker_socket_mounted || updateCapability?.docker_socket_available) ? 'text-[#00FF00]' : 'text-[#FFAA00]'">
+                {{ (healthData?.docker_socket_mounted || updateCapability?.docker_socket_available) ? '✓ [ DOCKER SOCKET ]' : '• [ HOST TRIGGER ]' }}
+              </span>
+              <span class="text-[9px] text-[#A0A0C0] block font-mono">1-Click Updates</span>
+            </div>
+
+            <!-- Speech Synthesis -->
+            <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
+              <span class="text-[#8888AA] block text-[10px] font-bold">SPEECH ENGINE:</span>
+              <span class="font-bold" :class="speechStatus?.speech_enabled ? 'text-[#00FF00]' : 'text-[#8888AA]'">
+                {{ speechStatus?.speech_enabled ? '✓ [ READY ]' : '• [ DISABLED ]' }}
+              </span>
+              <span class="text-[9px] text-[#A0A0C0] block font-mono truncate">{{ speechStatus?.tts_engine || 'WebSpeech API' }}</span>
+            </div>
+
+            <!-- Telegram Companion -->
+            <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
+              <span class="text-[#8888AA] block text-[10px] font-bold">TELEGRAM COMPANION:</span>
+              <span class="font-bold" :class="telegramStatus?.is_configured ? 'text-[#00FF00]' : 'text-[#8888AA]'">
+                {{ telegramStatus?.is_configured ? `✓ [ ${telegramStatus.paired_users_count} PAIRED ]` : '• [ NOT CONFIGURED ]' }}
+              </span>
+              <span class="text-[9px] text-[#A0A0C0] block font-mono">Push Bot & Alerts</span>
+            </div>
+
+            <!-- Local AI (Ollama) -->
+            <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
+              <span class="text-[#8888AA] block text-[10px] font-bold">LOCAL AI (OLLAMA):</span>
+              <span class="font-bold" :class="ollamaTestResult?.status === 'online' ? 'text-[#00FF00]' : 'text-[#FFAA00]'">
+                {{ ollamaTestResult?.status === 'online' ? `✓ [ ${ollamaTestResult.latency_ms}ms ]` : '• [ STANDBY ]' }}
+              </span>
+              <span class="text-[9px] text-[#A0A0C0] block font-mono truncate">{{ form.ollama_model || 'Flyer Parser' }}</span>
+            </div>
+
+            <!-- Provider Circuit Breakers -->
+            <div class="bg-[#000022] p-2.5 border border-[#333366] space-y-1">
+              <span class="text-[#8888AA] block text-[10px] font-bold">CIRCUIT BREAKERS:</span>
+              <div class="flex flex-wrap gap-1 pt-0.5">
+                <span
+                  v-for="(state, prov) in (healthData?.circuit_breakers || { mock: 'closed', travel_wishlist: 'closed' })"
+                  :key="prov"
+                  class="text-[9px] font-mono px-1 py-0.2 border uppercase font-bold"
+                  :class="state === 'closed' ? 'bg-[#003300] text-[#00FF00] border-[#00FF00]' : 'bg-[#330000] text-[#FF4444] border-[#FF4444]'"
+                >
+                  {{ prov }}: {{ state }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Active Issues Ledger -->
+          <div v-if="healthData?.issues && healthData.issues.length > 0" class="p-3 bg-[#331100] border border-[#FFAA00] space-y-1">
+            <span class="text-xs font-bold text-[#FFAA00] block uppercase">
+              ACTIVE DIAGNOSTIC ISSUES & WARNINGS ({{ healthData.issues.length }}):
+            </span>
+            <div v-for="issue in healthData.issues" :key="issue" class="text-xs font-mono text-[#FFCC00]">
+              * {{ issue }}
+            </div>
+          </div>
+          <div v-else class="p-2.5 bg-[#002200] border border-[#00FF00] text-xs font-mono text-[#00FF00] flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <span>* ALL SYSTEMS NOMINAL: Zero active service degradations or circuit trip alerts detected.</span>
+            <span class="text-[10px] text-[#88FF88] shrink-0 font-bold">UPTIME: {{ Math.round(healthData?.uptime_seconds || 0) }} SECONDS</span>
+          </div>
+        </div>
+
+        <!-- Activity Log & Event Viewer Terminal -->
+        <div class="bg-[#000033] p-4 border border-[#00FFFF] space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
+            <div>
+              <span class="text-xs font-black text-[#00FFFF] block uppercase tracking-wider">
+                [ SYSTEM ACTIVITY & AUDIT EVENT VIEWER ]
+              </span>
+              <span class="text-[11px] text-[#8888AA]">
+                Real-time operational journal recording ingestion runs, AI queries, custom listings, and system updates.
+              </span>
+            </div>
+
+            <div class="flex items-center space-x-2 shrink-0">
+              <select
+                v-model="selectedActivityComponent"
+                class="bg-[#000022] border border-[#333366] text-[#FFFF00] text-xs px-2 py-1 outline-none font-mono"
+                @change="refreshActivityLogs"
+              >
+                <option value="ALL">ALL COMPONENTS</option>
+                <option value="INGESTION">INGESTION</option>
+                <option value="WEB_INGEST">WEB INGEST</option>
+                <option value="OLLAMA">OLLAMA AI</option>
+                <option value="CUSTOM_LISTING">CUSTOM LISTINGS</option>
+                <option value="SETTINGS">SETTINGS</option>
+                <option value="UPDATER">UPDATER</option>
+              </select>
+              <button
+                type="button"
+                :disabled="isLoadingActivity"
+                class="bg-[#000066] hover:bg-[#000099] border border-[#00FFFF] text-[#00FFFF] px-2.5 py-1 text-xs font-bold font-mono cursor-pointer transition-colors"
+                @click="refreshActivityLogs"
+              >
+                {{ isLoadingActivity ? '[...]' : '[ REFRESH ]' }}
+              </button>
+              <button
+                type="button"
+                class="bg-[#330000] hover:bg-[#550000] border border-[#FF4444] text-[#FF8888] px-2.5 py-1 text-xs font-bold font-mono cursor-pointer transition-colors"
+                @click="handleClearActivityLogs"
+              >
+                [ CLEAR ]
+              </button>
+            </div>
+          </div>
+
+          <!-- Retro Event Log Table -->
+          <div class="h-60 overflow-y-auto bg-[#000018] border border-[#333366] p-2 font-mono text-[11px] space-y-1">
+            <div v-if="isLoadingActivity" class="text-center text-[#FFFF00] py-8 animate-pulse">
+              [ READING EVENT VIEWER LEDGER... ]
+            </div>
+            <div v-else-if="activityLogs.length === 0" class="text-center text-[#8888AA] py-8 italic">
+              No recent operational events logged in this component category.
+            </div>
+            <div
+              v-else
+              v-for="log in activityLogs"
+              :key="log.id"
+              class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 p-1.5 border-b border-[#222244] hover:bg-[#000033] transition-colors"
+            >
+              <div class="flex items-center space-x-2 truncate">
+                <span class="text-[#8888AA] text-[10px] shrink-0">
+                  {{ new Date(log.timestamp).toLocaleTimeString() }}
+                </span>
+                <span class="bg-[#000066] text-[#FFFF00] border border-[#333388] px-1 py-0.2 text-[9px] font-bold shrink-0">
+                  [{{ log.component }}]
+                </span>
+                <span class="text-[#00FFFF] font-bold text-[10px] shrink-0">
+                  {{ log.action }}
+                </span>
+                <span class="text-[#E0E0E0] truncate text-[11px]">
+                  {{ log.details || '-' }}
+                </span>
+              </div>
+              <span
+                class="text-[9px] px-1.5 py-0.2 border uppercase font-bold shrink-0 self-start sm:self-auto"
+                :class="{
+                  'bg-[#003300] text-[#00FF00] border-[#00FF00]': log.status === 'success',
+                  'bg-[#002233] text-[#00FFFF] border-[#00FFFF]': log.status === 'info',
+                  'bg-[#332200] text-[#FFAA00] border-[#FFAA00]': log.status === 'warning' || log.status === 'warn',
+                  'bg-[#330000] text-[#FF4444] border-[#FF4444]': log.status === 'error',
+                }"
+              >
+                {{ log.status }}
+              </span>
+            </div>
+          </div>
         </div>
 
         <!-- Rate Limit Friendly Banner if active -->
@@ -2084,21 +2393,55 @@
           <div class="flex flex-wrap items-center gap-3 pt-1">
             <button
               type="button"
-              class="bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-4 py-1.5 text-xs font-black tracking-wider cursor-pointer shadow-[0_0_10px_rgba(255,255,0,0.8)] transition-all"
+              class="bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-5 py-2 text-xs font-black tracking-wider cursor-pointer shadow-[0_0_12px_rgba(255,255,0,0.8)] transition-all"
               @click="openInPlaceUpgrader()"
             >
               [ LAUNCH FIRMWARE UPGRADE ENGINE ]
             </button>
-            <button
-              type="button"
-              class="bg-[#000066] hover:bg-[#000099] border border-[#00FFFF] text-[#00FFFF] px-3 py-1.5 text-xs font-bold tracking-wider cursor-pointer transition-colors"
-              @click="openInPlaceUpgrader()"
-            >
-              [ SIMULATE UPGRADE (DRY-RUN) ]
-            </button>
             <span v-if="updateCapability?.trigger_file_available && updateCapability?.detected_method === 'trigger_file'" class="text-[10px] text-[#8888AA]">
               Companion watcher: <code class="text-[#00FF00]">openprevue-host-updater.sh</code>
             </span>
+          </div>
+        </div>
+
+        <!-- Advanced Diagnostics & Dry-Run Accordion -->
+        <div class="bg-[#000022] border border-[#333366] p-3 space-y-3">
+          <button
+            type="button"
+            class="w-full flex items-center justify-between text-left cursor-pointer text-xs font-bold text-[#A0A0C0] hover:text-[#00FFFF] transition-colors"
+            @click="isAdvancedDiagOpen = !isAdvancedDiagOpen"
+          >
+            <span>[ ADVANCED UPGRADE DIAGNOSTICS & DRY-RUN SIMULATION ]</span>
+            <span class="text-[#00FFFF]">{{ isAdvancedDiagOpen ? '▲ [ HIDE ]' : '▼ [ EXPAND ]' }}</span>
+          </button>
+
+          <div v-if="isAdvancedDiagOpen" class="space-y-3 pt-2 border-t border-[#333366]/60">
+            <p class="text-[11px] text-[#8888AA] leading-relaxed">
+              Engineering diagnostic tool: Simulates the entire upgrade pipeline (permissions check, socket handshake, container inspection, registry tag resolution) with zero destructive changes and zero reboots.
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
+              <div class="bg-[#000033] p-2 border border-[#333366]">
+                <span class="text-[#8888AA] block">DOCKER SOCKET (/var/run/docker.sock):</span>
+                <span :class="updateCapability?.docker_socket_available ? 'text-[#00FF00] font-bold' : 'text-[#FFAA00]'">
+                  {{ updateCapability?.docker_socket_available ? 'MOUNTED & ACTIVE (1-Click Upgrades Enabled)' : 'NOT MOUNTED (Trigger File Mode)' }}
+                </span>
+              </div>
+              <div class="bg-[#000033] p-2 border border-[#333366]">
+                <span class="text-[#8888AA] block">HOST TRIGGER FILE PATH:</span>
+                <span class="text-[#FFFF00] font-mono">{{ updateCapability?.trigger_file_path || './data/.update_trigger' }}</span>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-3 pt-1">
+              <button
+                type="button"
+                class="bg-[#000066] hover:bg-[#000099] border border-[#00FFFF] text-[#00FFFF] px-3 py-1.5 text-xs font-bold tracking-wider cursor-pointer transition-colors"
+                @click="openInPlaceUpgrader(undefined, true)"
+              >
+                [ RUN DIAGNOSTIC DRY-RUN ]
+              </button>
+            </div>
           </div>
         </div>
 
@@ -2177,39 +2520,15 @@
         </div>
       </div>
 
-      <!-- Action Bar -->
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t-2 border-[#FFFF00]">
-        <div class="flex flex-wrap items-center gap-3">
-          <button
-            class="bg-[#FFFF00] text-[#000033] hover:bg-[#FFFFFF] px-5 py-2 text-xs font-black tracking-wider cursor-pointer shadow-[0_0_10px_rgba(255,255,0,0.8)] transition-all"
-            @click="saveAllSettings"
-          >
-            [ SAVE & APPLY CONFIGURATION ]
-          </button>
-          <button
-            :disabled="isSyncing"
-            class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-4 py-2 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-50 transition-colors"
-            @click="handleManualSync"
-            title="Manually query all event providers (Ticketmaster, SeatGeek, Sports leagues, local calendars) to fetch new upcoming events right now"
-          >
-            {{ isSyncing ? '[ FETCHING LATEST EVENTS... ]' : '[ REFRESH LOCAL LISTINGS NOW ]' }}
-          </button>
-        </div>
-
-        <div v-if="saveMessage" class="text-xs font-bold" :class="saveMessage.startsWith('ERROR') ? 'text-[#FF4444]' : 'text-[#00FF00]'">
-          {{ saveMessage }}
-        </div>
-      </div>
-
-      <!-- Tab 11: Deployment & Kiosk Guide -->
+      <!-- Tab 11: User Onboarding & Deployment Guide -->
       <div v-if="activeTab === 'guide'" class="bg-[#000044] p-5 border border-[#333366] space-y-6">
         <div class="flex items-center justify-between border-b border-[#333366] pb-2">
           <div>
             <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
-              OpenPrevue Architecture, Deployment & Kiosk Operator's Manual
+              OpenPrevue Architecture, User Onboarding & Operator's Manual
             </h2>
             <p class="text-xs text-[#A0A0C0] mt-0.5">
-              Comprehensive guide for multi-display setups, custom aspect ratios, Raspberry Pi kiosks, and headend administration.
+              Comprehensive reference guide covering core features, multi-display kiosks, URL overrides, and headend administration.
             </p>
           </div>
           <span class="text-[10px] bg-[#003300] border border-[#00FF00] text-[#00FF00] px-2 py-0.5 font-bold uppercase">
@@ -2217,10 +2536,107 @@
           </span>
         </div>
 
-        <!-- 1. Multi-Screen Architecture -->
+        <!-- 1. Welcome & Bells and Whistles Feature Tour -->
+        <div class="bg-[#000033] p-4 border border-[#00FFFF] space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
+            <div>
+              <h3 class="text-xs font-black text-[#00FFFF] uppercase tracking-wider">
+                // 1. WELCOME & USER ONBOARDING: BELLS & WHISTLES TOUR
+              </h3>
+              <p class="text-[11px] text-[#8888AA]">
+                Essential architectural guide to getting the absolute most out of your OpenPrevue broadcast guide.
+              </p>
+            </div>
+            <span class="text-[10px] bg-[#000066] border border-[#00FFFF] text-[#00FFFF] px-2 py-0.5 font-bold uppercase shrink-0">
+              UPDATED FOR CURRENT RELEASE
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- Ticket Commitment -->
+            <div class="bg-[#000022] p-3 border border-[#333366] space-y-1.5">
+              <div class="flex items-center space-x-2">
+                <span class="bg-[#00FF00] text-[#000033] text-[10px] font-black px-1.5 py-0.2 border border-[#00FF00]">
+                  [TICKET]
+                </span>
+                <span class="text-xs font-bold text-[#00FF00] uppercase">Committed Ticket Marking</span>
+              </div>
+              <p class="text-[11px] text-[#C0C0E0] leading-normal">
+                Every event in your timeline features a dedicated ticket stub button. Click <strong>[+TKT]</strong> to mark an event you hold tickets for. It illuminates in bright phosphor neon green, receives elevated scheduling prominence, and automatically synchronizes to your personal calendar feeds.
+              </p>
+            </div>
+
+            <!-- Zero-Click Auto-Save -->
+            <div class="bg-[#000022] p-3 border border-[#333366] space-y-1.5">
+              <div class="flex items-center space-x-2">
+                <span class="bg-[#000066] text-[#00FFFF] text-[10px] font-black px-1.5 py-0.2 border border-[#00FFFF]">
+                  AUTO-SAVE
+                </span>
+                <span class="text-xs font-bold text-[#00FFFF] uppercase">Zero-Click Real-Time Auto-Save</span>
+              </div>
+              <p class="text-[11px] text-[#C0C0E0] leading-normal">
+                No manual save buttons. Any setting you toggle, slider you adjust, or URL you paste is saved to SQLite immediately. Check the retro LED indicator in the top header bar (<strong>ALL CHANGES SAVED</strong>) for instant confirmation.
+              </p>
+            </div>
+
+            <!-- Multi-Screen Kiosks -->
+            <div class="bg-[#000022] p-3 border border-[#333366] space-y-1.5">
+              <div class="flex items-center space-x-2">
+                <span class="bg-[#332200] text-[#FFFF00] text-[10px] font-black px-1.5 py-0.2 border border-[#FFFF00]">
+                  MULTI-SCREEN
+                </span>
+                <span class="text-xs font-bold text-[#FFFF00] uppercase">1 Instance, Unlimited Screen Ratios</span>
+              </div>
+              <p class="text-[11px] text-[#C0C0E0] leading-normal">
+                One server powers all your screens! Append URL query parameters like <strong>?density=dense</strong> for 9:16 vertical hallway posters, <strong>?density=single_row</strong> for 1920x480 server rack screens, or <strong>?filter=active</strong> to hide empty venues without events in the next 24-48 hours.
+              </p>
+            </div>
+
+            <!-- Travel Wishlists -->
+            <div class="bg-[#000022] p-3 border border-[#333366] space-y-1.5">
+              <div class="flex items-center space-x-2">
+                <span class="bg-[#00382B] text-[#00FFB2] text-[10px] font-black px-1.5 py-0.2 border border-[#00AF87]">
+                  WISHLIST
+                </span>
+                <span class="text-xs font-bold text-[#00FFB2] uppercase">TripAdvisor & Viator Wishlist Ingest</span>
+              </div>
+              <p class="text-[11px] text-[#C0C0E0] leading-normal">
+                Planning a vacation or night out? Paste your public TripAdvisor Saves or Viator Wishlist URL in Tab 4 and hit Enter or click Sync Now. OpenPrevue scrapes your experiences with uncompressed high-resolution hero graphics and puts them into your broadcast rotation.
+              </p>
+            </div>
+
+            <!-- AI Flyer Parser -->
+            <div class="bg-[#000022] p-3 border border-[#333366] space-y-1.5">
+              <div class="flex items-center space-x-2">
+                <span class="bg-[#2E0854] text-[#FF88FF] text-[10px] font-black px-1.5 py-0.2 border border-[#CC44FF]">
+                  OLLAMA AI
+                </span>
+                <span class="text-xs font-bold text-[#FF88FF] uppercase">Local AI Extraction & Ingestion</span>
+              </div>
+              <p class="text-[11px] text-[#C0C0E0] leading-normal">
+                Connect your self-hosted Ollama instance in Tab 5. OpenPrevue extracts structured showtimes, ticket links, and artist lineups from messy local concert flyers, emails, or unstructured text with zero third-party cloud leaks.
+              </p>
+            </div>
+
+            <!-- Telegram & EAS -->
+            <div class="bg-[#000022] p-3 border border-[#333366] space-y-1.5">
+              <div class="flex items-center space-x-2">
+                <span class="bg-[#330000] text-[#FF8888] text-[10px] font-black px-1.5 py-0.2 border border-[#FF4444]">
+                  BOT & EAS
+                </span>
+                <span class="text-xs font-bold text-[#FF8888] uppercase">Telegram Bot & Emergency Alerts</span>
+              </div>
+              <p class="text-[11px] text-[#C0C0E0] leading-normal">
+                Pair your Telegram account in Tab 7 for automated morning voice briefs and show notifications. In severe weather, the Emergency Alert System (EAS) halts video and crawls official National Weather Service bulletins with authentic dual-tone retro sirens.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Multi-Screen Architecture -->
         <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
           <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
-            // 1. MULTI-SCREEN & NON-STANDARD DISPLAY ARCHITECTURE
+            // 2. MULTI-SCREEN & NON-STANDARD DISPLAY ARCHITECTURE
           </h3>
           <p class="text-xs text-[#E0E0E0] leading-relaxed">
             A single OpenPrevue headend instance effortlessly powers unlimited displays across your home, studio, or venue simultaneously. You <strong class="text-[#00FFFF]">never need to run separate Docker instances</strong> for different displays. The client web application features automatic CSS and viewport intelligence that dynamically reframes content based on the physical screen geometry.
@@ -2265,11 +2681,11 @@
           </div>
         </div>
 
-        <!-- 2. Kiosk URL Query Overrides Cheat Sheet -->
+        <!-- 3. Kiosk URL Query Overrides Cheat Sheet -->
         <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
-              // 2. KIOSK URL QUERY PARAMETER OVERRIDES
+              // 3. KIOSK URL QUERY PARAMETER OVERRIDES
             </h3>
             <span class="text-[10px] text-[#00FFFF] font-mono">PER-DISPLAY INDEPENDENT CONTROL</span>
           </div>
@@ -2331,6 +2747,12 @@
                   <td class="p-2">Disables video streaming on this display and forces the local Featured Events Spotlight showcase (useful for low-power Pi units).</td>
                 </tr>
                 <tr>
+                  <td class="p-2 font-bold text-[#FFFF00] border-r border-[#333366]">?filter=</td>
+                  <td class="p-2 text-[#00FF00] border-r border-[#333366]">active | all</td>
+                  <td class="p-2 text-[#8888AA] border-r border-[#333366]">active</td>
+                  <td class="p-2">Controls channel lineup filtering. active shows only venues with events in next 24-48 hrs (suppresses blank rows); all scrolls every configured venue.</td>
+                </tr>
+                <tr>
                   <td class="p-2 font-bold text-[#FFFF00] border-r border-[#333366]">?speed=</td>
                   <td class="p-2 text-[#00FF00] border-r border-[#333366]">10 to 120</td>
                   <td class="p-2 text-[#8888AA] border-r border-[#333366]">30 px/sec</td>
@@ -2341,10 +2763,10 @@
           </div>
         </div>
 
-        <!-- 3. One-Click Copy Deployment Profiles -->
+        <!-- 4. One-Click Copy Deployment Profiles -->
         <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
           <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
-            // 3. READY-TO-USE KIOSK BOOKMARK PROFILES
+            // 4. READY-TO-USE KIOSK BOOKMARK PROFILES
           </h3>
           <p class="text-xs text-[#E0E0E0] leading-relaxed">
             Click any button below to copy the fully qualified URL for your environment. Bookmark these URLs on each target device or use them in your browser autostart commands.
@@ -2443,10 +2865,10 @@
           </div>
         </div>
 
-        <!-- 4. Turnkey Raspberry Pi & Linux Autostart -->
+        <!-- 5. Turnkey Raspberry Pi & Linux Autostart -->
         <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
           <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
-            // 4. RASPBERRY PI & LINUX KIOSK AUTOSTART RECIPE
+            // 5. RASPBERRY PI & LINUX KIOSK AUTOSTART RECIPE
           </h3>
           <p class="text-xs text-[#E0E0E0] leading-relaxed">
             To set up a Raspberry Pi or low-power Linux box as a dedicated appliance that boots directly into full-screen OpenPrevue:
@@ -2485,13 +2907,63 @@
           </div>
         </div>
       </div>
+
+      <!-- Action Bar -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t-2 border-[#FFFF00]">
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Retro Auto-Save Status Badge -->
+          <div
+            class="flex items-center gap-2 px-3 py-2 bg-[#000022] border text-xs"
+            :class="{
+              'border-[#00FF00]/60 text-[#00FF00]': autoSaveState === 'saved',
+              'border-[#FFFF00]/60 text-[#FFFF00]': autoSaveState === 'saving' || autoSaveState === 'pending',
+              'border-[#FF4444]/60 text-[#FF4444]': autoSaveState === 'error',
+              'border-[#333366] text-[#8888AA]': autoSaveState === 'idle'
+            }"
+          >
+            <span
+              class="w-2.5 h-2.5 rounded-full inline-block"
+              :class="{
+                'bg-[#00FF00] shadow-[0_0_8px_#00FF00]': autoSaveState === 'saved',
+                'bg-[#FFFF00] animate-pulse shadow-[0_0_8px_#FFFF00]': autoSaveState === 'saving' || autoSaveState === 'pending',
+                'bg-[#FF4444] shadow-[0_0_8px_#FF4444]': autoSaveState === 'error',
+                'bg-[#666688]': autoSaveState === 'idle'
+              }"
+            ></span>
+            <span class="font-bold tracking-wider uppercase text-xs">
+              {{ autoSaveDetailedStatusText }}
+            </span>
+            <button
+              v-if="autoSaveState === 'error'"
+              type="button"
+              class="ml-2 underline text-[#FFFF00] hover:text-[#FFFFFF] cursor-pointer"
+              @click="handleRetrySave"
+            >
+              [ RETRY ]
+            </button>
+          </div>
+
+          <button
+            :disabled="isSyncing"
+            class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-4 py-2 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-50 transition-colors"
+            @click="handleManualSync"
+            title="Manually query all event providers (Ticketmaster, SeatGeek, Sports leagues, local calendars) to fetch new upcoming events right now"
+          >
+            {{ isSyncing ? '[ FETCHING LATEST EVENTS... ]' : '[ REFRESH LOCAL LISTINGS NOW ]' }}
+          </button>
+        </div>
+
+        <div v-if="saveMessage" class="text-xs font-bold" :class="saveMessage.startsWith('ERROR') ? 'text-[#FF4444]' : 'text-[#00FF00]'">
+          {{ saveMessage }}
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
   checkUpdatesNow,
   commandDisplayPower,
@@ -2506,6 +2978,8 @@ import {
   fetchTelegramUsers,
   fetchUpdateCapability,
   fetchUpdateStatus,
+  fetchActivityLogs,
+  clearActivityLogs,
   generateTelegramPairCode,
   geocodeLocationQuery,
   ingestUrl,
@@ -2524,7 +2998,7 @@ import { commercialsEngine } from '../services/commercialsEngine'
 import { REGIONAL_PRESETS, type RegionalPreset } from '../services/regionalPresets'
 import { wakeLockService } from '../services/wakeLock'
 import { openUpdateModal } from '../services/updateModalState'
-import type { HealthData, OllamaPingResponse, SystemSettings, UpdateCapabilityResponse, UpdateStatusResponse, YouTubeValidationResponse } from '../types'
+import type { ActivityLogEntry, HealthData, OllamaPingResponse, SystemSettings, UpdateCapabilityResponse, UpdateStatusResponse, YouTubeValidationResponse } from '../types'
 
 const tabs = [
   { id: 'location', label: '[ 1. LOCATION & DISCOVERY ]' },
@@ -2536,8 +3010,8 @@ const tabs = [
   { id: 'telegram', label: '[ 7. TELEGRAM & SPEECH ]' },
   { id: 'eas', label: '[ 8. EMERGENCY ALERTS (EAS) ]' },
   { id: 'providers', label: '[ 9. PROVIDER CREDENTIALS ]' },
-  { id: 'updates', label: '[ 10. SYSTEM & UPDATES ]' },
-  { id: 'guide', label: '[ 11. DEPLOYMENT & KIOSK GUIDE ]' },
+  { id: 'updates', label: '[ 10. SYSTEM HEALTH & DIAGNOSTICS ]' },
+  { id: 'guide', label: '[ 11. USER ONBOARDING & DEPLOYMENT GUIDE ]' },
 ]
 
 const route = useRoute()
@@ -2555,6 +3029,9 @@ const getInitialTab = (): string => {
 const activeTab = ref(getInitialTab())
 
 function selectTab(tabId: string) {
+  if (autoSaveTimeout) {
+    savePendingChanges().catch(() => {})
+  }
   activeTab.value = tabId
   router.replace({ query: { ...route.query, tab: tabId } }).catch(() => {})
 }
@@ -2567,6 +3044,35 @@ watch(
     }
   }
 )
+
+// Real-time Auto-Save Engine State
+const autoSaveState = ref<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('saved')
+const autoSaveError = ref('')
+const lastSavedTimestamp = ref<string>('')
+const lastSavedForm = reactive<Record<string, string>>({})
+const isLoaded = ref(false)
+let autoSaveTimeout: ReturnType<typeof setTimeout> | null = null
+
+const autoSaveStatusText = computed(() => {
+  if (autoSaveState.value === 'saving') return 'Saving...'
+  if (autoSaveState.value === 'pending') return 'Saving...'
+  if (autoSaveState.value === 'error') return 'Save failed'
+  if (autoSaveState.value === 'saved') {
+    return lastSavedTimestamp.value ? `Saved at ${lastSavedTimestamp.value}` : 'All changes saved'
+  }
+  return 'Auto-save active'
+})
+
+const autoSaveDetailedStatusText = computed(() => {
+  if (autoSaveState.value === 'saving') return 'AUTO-SAVING CHANGES TO SYSTEM DATASTORE...'
+  if (autoSaveState.value === 'pending') return 'AUTO-SAVING CHANGES TO SYSTEM DATASTORE...'
+  if (autoSaveState.value === 'error') return `AUTO-SAVE ERROR: ${autoSaveError.value || 'Failed saving'}`
+  if (autoSaveState.value === 'saved') {
+    return lastSavedTimestamp.value ? `ALL CHANGES SAVED (${lastSavedTimestamp.value})` : 'ALL CHANGES SAVED'
+  }
+  return 'AUTO-SAVE ACTIVE'
+})
+
 const isSyncing = ref(false)
 const saveMessage = ref('')
 const healthData = ref<HealthData | null>(null)
@@ -2696,6 +3202,99 @@ async function handleQuickIngestUrl() {
   }
 }
 
+// TripAdvisor Sync State
+const isSyncingTripAdvisor = ref(false)
+const tripadvisorSyncMessage = ref('')
+const tripadvisorSyncIsError = ref(false)
+
+async function handleSyncTripAdvisor() {
+  const url = (form.tripadvisor_wishlist_url || '').trim()
+  if (!url) {
+    tripadvisorSyncMessage.value = '[ERROR] Please enter a valid TripAdvisor Trip / Saves URL'
+    tripadvisorSyncIsError.value = true
+    return
+  }
+  isSyncingTripAdvisor.value = true
+  tripadvisorSyncMessage.value = ''
+  tripadvisorSyncIsError.value = false
+
+  try {
+    await updateSetting('tripadvisor_wishlist_url', url)
+    lastSavedForm['tripadvisor_wishlist_url'] = url
+
+    const res = await ingestUrl(url, 1, 0)
+    const count = res.count || (res.items ? res.items.length : 1)
+    tripadvisorSyncMessage.value = `[SYNC COMPLETE] Ingested ${count} experience(s) from TripAdvisor!`
+    tripadvisorSyncIsError.value = false
+    await refreshActivityLogs()
+  } catch (err: any) {
+    tripadvisorSyncMessage.value = `[SYNC ERROR] ${err.message || 'Failed to sync TripAdvisor wishlist'}`
+    tripadvisorSyncIsError.value = true
+  } finally {
+    isSyncingTripAdvisor.value = false
+  }
+}
+
+// Viator Sync State
+const isSyncingViator = ref(false)
+const viatorSyncMessage = ref('')
+const viatorSyncIsError = ref(false)
+
+async function handleSyncViator() {
+  const url = (form.viator_wishlist_url || '').trim()
+  if (!url) {
+    viatorSyncMessage.value = '[ERROR] Please enter a valid Viator Wishlist or Experience URL'
+    viatorSyncIsError.value = true
+    return
+  }
+  isSyncingViator.value = true
+  viatorSyncMessage.value = ''
+  viatorSyncIsError.value = false
+
+  try {
+    await updateSetting('viator_wishlist_url', url)
+    lastSavedForm['viator_wishlist_url'] = url
+
+    const res = await ingestUrl(url, 1, 0)
+    const count = res.count || (res.items ? res.items.length : 1)
+    viatorSyncMessage.value = `[SYNC COMPLETE] Ingested ${count} experience(s) from Viator!`
+    viatorSyncIsError.value = false
+    await refreshActivityLogs()
+  } catch (err: any) {
+    viatorSyncMessage.value = `[SYNC ERROR] ${err.message || 'Failed to sync Viator wishlist'}`
+    viatorSyncIsError.value = true
+  } finally {
+    isSyncingViator.value = false
+  }
+}
+
+// System Activity & Event Viewer State
+const activityLogs = ref<ActivityLogEntry[]>([])
+const selectedActivityComponent = ref('ALL')
+const isLoadingActivity = ref(false)
+const activityError = ref('')
+
+async function refreshActivityLogs() {
+  isLoadingActivity.value = true
+  activityError.value = ''
+  try {
+    activityLogs.value = await fetchActivityLogs(50, selectedActivityComponent.value)
+  } catch (err: any) {
+    activityError.value = err.message || 'Failed to fetch activity logs'
+  } finally {
+    isLoadingActivity.value = false
+  }
+}
+
+async function handleClearActivityLogs() {
+  try {
+    await clearActivityLogs()
+    activityLogs.value = []
+  } catch (err: any) {
+    activityError.value = err.message || 'Failed to clear activity logs'
+  }
+}
+
 const form = reactive<SystemSettings>({
   postal_code: '10001',
   metro_label: 'NEW YORK CITY',
@@ -2704,6 +3303,7 @@ const form = reactive<SystemSettings>({
   radius_miles: '25',
   autoscroll_speed: '30',
   grid_density: 'balanced',
+  grid_filter_mode: 'active_only',
   scroll_pause_duration: '4',
   scroll_page_interval: '6',
   marquee_rotation_seconds: '20',
@@ -2760,6 +3360,69 @@ const form = reactive<SystemSettings>({
   viator_api_key: '',
 })
 
+async function savePendingChanges(forceAll = false) {
+  if (autoSaveTimeout) {
+    clearTimeout(autoSaveTimeout)
+    autoSaveTimeout = null
+  }
+
+  const keysToSave = forceAll
+    ? Object.keys(form)
+    : Object.keys(form).filter((k) => form[k as keyof SystemSettings] !== lastSavedForm[k])
+
+  if (keysToSave.length === 0) {
+    if (autoSaveState.value !== 'error') {
+      autoSaveState.value = 'saved'
+    }
+    return
+  }
+
+  autoSaveState.value = 'saving'
+  autoSaveError.value = ''
+
+  try {
+    for (const key of keysToSave) {
+      const val = form[key as keyof SystemSettings]
+      if (val !== undefined) {
+        await updateSetting(key, String(val))
+        lastSavedForm[key] = String(val)
+      }
+    }
+
+    autoSaveState.value = 'saved'
+    const now = new Date()
+    lastSavedTimestamp.value = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  } catch (err: any) {
+    console.error('Auto-save failed:', err)
+    autoSaveState.value = 'error'
+    autoSaveError.value = err?.message || String(err)
+  }
+}
+
+watch(
+  form,
+  () => {
+    if (!isLoaded.value) return
+
+    const changedKeys = Object.keys(form).filter(
+      (k) => form[k as keyof SystemSettings] !== lastSavedForm[k]
+    )
+
+    if (changedKeys.length === 0) return
+
+    autoSaveState.value = 'pending'
+
+    if (autoSaveTimeout) {
+      clearTimeout(autoSaveTimeout)
+    }
+
+    autoSaveTimeout = setTimeout(() => {
+      savePendingChanges()
+    }, 400)
+  },
+  { deep: true }
+)
+
 const computedSpotifyEmbedUrl = computed(() => {
   const url = form.spotify_playlist_url || 'https://open.spotify.com/playlist/3jiPmIT4RugR8TPhli5Obk?si=22d007e309134d4f'
   const match = url.match(/playlist\/([a-zA-Z0-9]+)/)
@@ -2779,6 +3442,7 @@ const computedRadioStreamUrl = computed(() => {
 async function handleWakeLockToggle() {
   wakeLockService.toggleWakeLock(wakeLockEnabled.value)
   form.screen_wake_lock_enabled = wakeLockEnabled.value ? '1' : '0'
+  savePendingChanges().catch(() => {})
 }
 
 async function triggerDisplayPower(state: 'on' | 'off' | 'toggle') {
@@ -2822,6 +3486,8 @@ function applyRegionalPreset(preset: RegionalPreset) {
   form.radius_miles = preset.radius.toString()
   locationResolutionMsg.value = `[PRESET APPLIED] ${preset.metro} (${preset.lat}, ${preset.lon})`
   locationResolutionIsError.value = false
+  savePendingChanges().catch(() => {})
+  refreshWeather().catch(() => {})
 }
 
 async function handleSettingsGeocode(query?: string) {
@@ -2841,6 +3507,8 @@ async function handleSettingsGeocode(query?: string) {
       form.latitude = match.latitude.toString()
       form.longitude = match.longitude.toString()
       locationResolutionMsg.value = `LOCATION RESOLVED: ${match.display_label} (${match.latitude.toFixed(4)}, ${match.longitude.toFixed(4)})`
+      savePendingChanges().catch(() => {})
+      refreshWeather().catch(() => {})
     } else {
       locationResolutionIsError.value = true
       locationResolutionMsg.value = `Could not resolve "${query}". You may enter coordinates manually.`
@@ -2875,6 +3543,9 @@ async function handleValidateYouTube() {
 
 function handleShaderChange() {
   retroShader.updateConfig(shaderForm)
+  form.scanline_intensity = String(shaderForm.scanlineIntensity)
+  form.phosphor_glow = shaderForm.phosphorGlow ? '1' : '0'
+  form.crt_curvature = shaderForm.crtCurvature ? '1' : '0'
 }
 
 function handleFilterChange() {
@@ -2902,12 +3573,14 @@ function toggleAudioPreview() {
 
 function handleSpotifyAutoplayToggle() {
   form.spotify_autoplay = spotifyAutoplayEnabled.value ? '1' : '0'
+  savePendingChanges().catch(() => {})
 }
 
 function handleCommercialsConfigChange() {
   commercialsEngine.updateConfig(commercialsEnabled.value, commercialsFrequency.value)
   form.commercials_enabled = commercialsEnabled.value ? '1' : '0'
   form.commercials_frequency_per_hour = commercialsFrequency.value.toString()
+  savePendingChanges().catch(() => {})
 }
 
 function triggerCommercialTest() {
@@ -2978,6 +3651,7 @@ function processUploadedFile(file: File) {
 }
 
 async function handlePingOllama() {
+  await savePendingChanges()
   isTestingOllama.value = true
   ollamaTestResult.value = null
   try {
@@ -3035,8 +3709,10 @@ function copyDockerUpgradeCommand() {
   }, 3000)
 }
 
-function openInPlaceUpgrader(targetVersion?: string) {
-  openUpdateModal(targetVersion || updateStatus.value?.latest_version)
+const isAdvancedDiagOpen = ref(false)
+
+function openInPlaceUpgrader(targetVersion?: string, diagnosticMode = false) {
+  openUpdateModal(targetVersion || updateStatus.value?.latest_version, diagnosticMode)
 }
 
 async function loadAll() {
@@ -3071,7 +3747,8 @@ async function loadAll() {
       wakeLockService.toggleWakeLock(wakeLockEnabled.value)
     }
 
-    // Load Integrations Telemetry
+    // Load Integrations Telemetry & Activity Logs
+    fetchActivityLogs(50, selectedActivityComponent.value).then(logs => { activityLogs.value = logs }).catch(() => null)
     fetchHomeAssistantSensors().then(data => { haSensorsData.value = data }).catch(() => null)
     fetchHomeAssistantYaml().then(res => { haYamlText.value = res.yaml }).catch(() => null)
     fetchAudioPresets().then(p => { audioPresets.value = p }).catch(() => null)
@@ -3096,6 +3773,16 @@ async function loadAll() {
     // Init retro shaders
     retroShader.init()
     Object.assign(shaderForm, retroShader.getConfig())
+
+    // Initialize auto-save baseline
+    for (const [k, v] of Object.entries(form)) {
+      if (v !== undefined) {
+        lastSavedForm[k] = String(v)
+      }
+    }
+    await nextTick()
+    isLoaded.value = true
+    autoSaveState.value = 'saved'
   } catch (err) {
     console.error('Failed loading settings data:', err)
   }
@@ -3103,13 +3790,16 @@ async function loadAll() {
 
 function toggleEAS(e: Event) {
   form.eas_enabled = (e.target as HTMLInputElement).checked ? '1' : '0'
+  savePendingChanges().catch(() => {})
 }
 
 function toggleEASSound(e: Event) {
   form.eas_sound_enabled = (e.target as HTMLInputElement).checked ? '1' : '0'
+  savePendingChanges().catch(() => {})
 }
 
 async function handleGeneratePairCode() {
+  await savePendingChanges()
   try {
     const res = await generateTelegramPairCode()
     activePairCode.value = res.pair_code
@@ -3140,6 +3830,7 @@ async function handleTestMessage(chatId: number) {
 }
 
 async function handleTestSpeech() {
+  await savePendingChanges()
   isTestingSpeech.value = true
   speechTestResult.value = ''
   try {
@@ -3154,6 +3845,7 @@ async function handleTestSpeech() {
 }
 
 async function handleDispatchEASTest() {
+  await savePendingChanges()
   isTestingEAS.value = true
   easTestMessage.value = ''
   try {
@@ -3174,41 +3866,12 @@ async function handleDispatchEASTest() {
   }
 }
 
-async function saveAllSettings() {
-  try {
-    // If coordinates were not updated for custom text, attempt geocode
-    if (form.metro_label && form.latitude === '40.7128' && form.longitude === '-74.0060' && form.metro_label !== 'NEW YORK CITY') {
-      try {
-        const results = await geocodeLocationQuery(form.metro_label)
-        if (results && results.length > 0) {
-          form.latitude = results[0].latitude.toString()
-          form.longitude = results[0].longitude.toString()
-          if (results[0].postal_code) form.postal_code = results[0].postal_code
-        }
-      } catch {
-        // Continue
-      }
-    }
-
-    for (const [k, v] of Object.entries(form)) {
-      if (v !== undefined) {
-        await updateSetting(k, String(v))
-      }
-    }
-
-    // Refresh weather immediately for new coordinates
-    refreshWeather().catch(() => {})
-
-    saveMessage.value = 'SUCCESS: Settings saved and applied across system datastore.'
-    setTimeout(() => {
-      saveMessage.value = ''
-    }, 4000)
-  } catch (err) {
-    saveMessage.value = `ERROR: Failed saving settings: ${String(err)}`
-  }
+function handleRetrySave() {
+  savePendingChanges(true)
 }
 
 async function handleManualSync() {
+  await savePendingChanges()
   isSyncing.value = true
   try {
     const res = await triggerSync()
@@ -3238,10 +3901,28 @@ function copyKioskUrl(path: string, key: string) {
   }).catch(() => {})
 }
 
+onBeforeRouteLeave(async () => {
+  await savePendingChanges()
+})
+
+onBeforeUnmount(() => {
+  if (autoSaveTimeout) {
+    clearTimeout(autoSaveTimeout)
+    savePendingChanges().catch(() => {})
+  }
+})
+
+function handleBeforeUnload() {
+  if (autoSaveTimeout || Object.keys(form).some((k) => form[k as keyof SystemSettings] !== lastSavedForm[k])) {
+    savePendingChanges().catch(() => {})
+  }
+}
+
 onMounted(() => {
   updateViewportRatio()
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', updateViewportRatio)
+    window.addEventListener('beforeunload', handleBeforeUnload)
   }
   loadAll()
 })
@@ -3249,6 +3930,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('resize', updateViewportRatio)
+    window.removeEventListener('beforeunload', handleBeforeUnload)
   }
 })
 </script>

@@ -62,6 +62,8 @@ async def update_setting(key: str, payload: SettingUpdate) -> SettingItem:
     # Broadcast settings update to all active dashboard displays
     await connection_manager.broadcast("settings_updated", {"key": key, "value": payload.value})
 
+    from backend.app.services.activity import log_activity
+
     # If location coordinate changed, refresh weather & re-sync events immediately
     if key in ("latitude", "longitude", "metro_label", "postal_code", "radius_miles"):
         try:
@@ -75,5 +77,24 @@ async def update_setting(key: str, payload: SettingUpdate) -> SettingItem:
             await connection_manager.broadcast("events_updated", {"trigger": "location_changed"})
         except Exception:
             pass
+
+    # If travel wishlist URLs were updated, trigger immediate provider sync
+    if key in ("tripadvisor_wishlist_url", "viator_wishlist_url") and payload.value.strip():
+        try:
+            await ingestion_service.sync_all_registered_providers()
+            await connection_manager.broadcast("events_updated", {"trigger": f"{key}_updated"})
+            await log_activity(
+                component="SETTINGS",
+                action="update_travel_url",
+                status="success",
+                details=f"Updated {key} and triggered immediate provider sync",
+            )
+        except Exception as exc:
+            await log_activity(
+                component="SETTINGS",
+                action="update_travel_url",
+                status="error",
+                details=f"Failed sync after {key} update: {exc}",
+            )
 
     return SettingItem(key=key, value=payload.value, updated_at=now_iso)

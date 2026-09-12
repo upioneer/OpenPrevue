@@ -44,6 +44,7 @@
             :events="events"
             :scroll-speed="scrollSpeed"
             grid-density="single_row"
+            :grid-filter-mode="gridFilterMode"
             :pause-duration-seconds="pauseDurationSeconds"
             :page-interval-seconds="pageIntervalSeconds"
             @ticket-toggled="handleTicketToggled"
@@ -84,6 +85,7 @@
               :events="events"
               :scroll-speed="scrollSpeed"
               :grid-density="gridDensity"
+              :grid-filter-mode="gridFilterMode"
               :pause-duration-seconds="pauseDurationSeconds"
               :page-interval-seconds="pageIntervalSeconds"
               @ticket-toggled="handleTicketToggled"
@@ -109,6 +111,7 @@
             :events="events"
             :scroll-speed="scrollSpeed"
             :grid-density="gridDensity"
+            :grid-filter-mode="gridFilterMode"
             :pause-duration-seconds="pauseDurationSeconds"
             :page-interval-seconds="pageIntervalSeconds"
             @ticket-toggled="handleTicketToggled"
@@ -166,6 +169,7 @@
           :events="events"
           :scroll-speed="scrollSpeed"
           :grid-density="gridDensity"
+          :grid-filter-mode="gridFilterMode"
           :pause-duration-seconds="pauseDurationSeconds"
           :page-interval-seconds="pageIntervalSeconds"
           @ticket-toggled="handleTicketToggled"
@@ -269,6 +273,16 @@ const gridDensity = computed(() => {
     }
   }
   return settings.value?.grid_density || 'balanced'
+})
+
+const gridFilterMode = computed(() => {
+  const queryFilter = route.query.filter || route.query.listings || route.query.active_only
+  if (typeof queryFilter === 'string') {
+    const f = queryFilter.toLowerCase()
+    if (['all', '0', 'false'].includes(f)) return 'all'
+    if (['active', 'active_only', '1', 'true'].includes(f)) return 'active_only'
+  }
+  return settings.value?.grid_filter_mode || 'active_only'
 })
 
 const pauseDurationSeconds = computed(() => {

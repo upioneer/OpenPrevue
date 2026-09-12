@@ -188,22 +188,23 @@
         </div>
 
         <div class="flex items-center space-x-2">
-          <!-- Dry Run Button -->
+          <!-- Diagnostic Dry Run Button (Shown only when launched in Diagnostic Mode) -->
           <button
+            v-if="diagnosticMode"
             type="button"
             :disabled="isProcessing || isPolling"
             @click="runDryRun"
             class="bg-[#000066] hover:bg-[#000099] border border-[#00FFFF] text-[#00FFFF] px-3 py-1.5 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            [ TEST DRY-RUN ]
+            {{ isProcessing ? '[ SIMULATING... ]' : '[ RUN DIAGNOSTIC DRY-RUN ]' }}
           </button>
 
-          <!-- Live Apply Button -->
+          <!-- Primary Live Apply Button -->
           <button
             type="button"
             :disabled="isProcessing || isPolling || reloadCountdown !== null"
             @click="runApplyUpdate"
-            class="bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-4 py-1.5 text-xs font-black tracking-wider cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(255,255,0,0.8)] transition-all"
+            class="bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-5 py-2 text-xs font-black tracking-wider cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(255,255,0,0.8)] transition-all"
           >
             {{ isProcessing ? '[ EXECUTING... ]' : (isPolling ? '[ AWAITING REBOOT... ]' : '[ APPLY LIVE UPGRADE ]') }}
           </button>
@@ -227,6 +228,7 @@ interface LogEntry {
 const props = defineProps<{
   isOpen: boolean
   initialTargetVersion?: string | null
+  diagnosticMode?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -474,19 +476,35 @@ async function runApplyUpdate() {
       method: selectedMethod.value,
     })
 
-    addLog(res.message, 'success')
-    if (res.trigger_file) {
-      addLog(`Persistent trigger written to: ${res.trigger_file}`, 'info')
-      addLog('[NOTICE] Running in trigger file mode. For automated 1-click upgrades, mount /var/run/docker.sock in docker-compose.yml.', 'warn')
-      addLog('[NOTICE] If no host watcher is active, execute "docker compose pull && docker compose up -d" on the host.', 'info')
+    if (res.status === 'error') {
+      hasError.value = true
+      isProcessing.value = false
+      addLog(`Upgrade failed: ${res.message || res.error}`, 'error')
+      if (res.error) {
+        addLog(`Diagnostic detail: ${res.error}`, 'error')
+      }
+      return
     }
 
-    // Step 4: Health Polling Phase
+    if (res.status === 'triggered' || res.trigger_file) {
+      isProcessing.value = false
+      addLog(`Persistent trigger written to: ${res.trigger_file || './data/.update_trigger'}`, 'info')
+      addLog('[ACTION REQUIRED] Running in host trigger file mode.', 'warn')
+      addLog('To complete upgrade on your host, execute: docker compose pull && docker compose up -d', 'warn')
+      addLog('To enable zero-touch 1-click upgrades from the UI, mount /var/run/docker.sock in docker-compose.yml.', 'info')
+      isPolling.value = true
+      currentStep.value = 4
+      startHealthPolling(true)
+      return
+    }
+
+    // Step 4: Health Polling Phase (Docker Socket Swapper Active)
+    addLog(res.message || 'Container swap initiated successfully.', 'success')
+    addLog('[STAGE 4/4: HEALTH & RELOAD] Container swap initiated. Waiting for new container to boot on port 8080...', 'warn')
     isProcessing.value = false
     isPolling.value = true
     currentStep.value = 4
-    addLog('[STAGE 4/4: HEALTH & RELOAD] Entering health polling loop. Waiting for headend reboot recovery...', 'warn')
-    startHealthPolling()
+    startHealthPolling(false)
   } catch (err: any) {
     hasError.value = true
     addLog(`Upgrade dispatch failed: ${err.message}`, 'error')
@@ -494,7 +512,7 @@ async function runApplyUpdate() {
   }
 }
 
-function startHealthPolling() {
+function startHealthPolling(isTriggerMode = false) {
   let attempts = 0
   const maxAttempts = 60
   const targetVer = resolvedTargetVersion.value
@@ -510,7 +528,11 @@ function startHealthPolling() {
         const reportedClean = reportedVer ? reportedVer.replace(/^v/, '') : ''
 
         if (reportedVer && reportedClean !== targetClean) {
-          addLog(`[PING ${attempts}] Service responding, but still on v${reportedClean} (target: v${targetClean}). Waiting for container swap...`, 'warn')
+          if (isTriggerMode) {
+            addLog(`[PING ${attempts}] Container responding on v${reportedClean}. Awaiting host restart (docker compose pull && docker compose up -d)...`, 'warn')
+          } else {
+            addLog(`[PING ${attempts}] Container responding on v${reportedClean}. Swapper transitioning containers...`, 'warn')
+          }
           if (attempts >= maxAttempts) {
             clearInterval(pollInterval)
             isPolling.value = false
@@ -525,7 +547,8 @@ function startHealthPolling() {
         triggerPageReload()
       }
     } catch {
-      // Still restarting/offline
+      // Headend is restarting/offline during container recreation
+      addLog(`[PING ${attempts}] Headend offline (container restarting). Probing port 8080...`, 'info')
       if (attempts >= maxAttempts) {
         clearInterval(pollInterval)
         isPolling.value = false

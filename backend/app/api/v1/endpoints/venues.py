@@ -52,6 +52,9 @@ async def create_venue(payload: VenueCreate) -> VenueResponse:
         )
         await db.commit()
 
+    from backend.app.services.activity import log_activity
+    await log_activity("CUSTOM_LISTING", "create_venue", "success", f"Registered venue '{payload.name}' ({payload.id})")
+
     return await get_venue(payload.id)
 
 
@@ -90,5 +93,8 @@ async def update_venue(venue_id: str, payload: VenueUpdate) -> VenueResponse:
             sql = f"UPDATE venues SET {', '.join(update_fields)} WHERE id = ?"
             await db.execute(sql, params)
             await db.commit()
+
+            from backend.app.services.activity import log_activity
+            await log_activity("CUSTOM_LISTING", "update_venue", "success", f"Updated attributes for venue '{venue_id}'")
 
     return await get_venue(venue_id)

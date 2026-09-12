@@ -34,7 +34,7 @@
           <!-- Venue Name & Channel Number -->
           <div class="col-span-4 font-black text-[#E0E0E0] truncate border-r-2 border-[#333366] pr-2 flex items-center space-x-1.5 sm:space-x-2.5">
             <span class="text-[#8888AA] shrink-0 font-bold" :class="channelNumClasses">
-              {{ String((idx % venues.length) + 1).padStart(2, '0') }}
+              {{ String((idx % (filteredVenues.length || 1)) + 1).padStart(2, '0') }}
             </span>
             <span class="truncate uppercase text-[#FFFFFF] font-black" :class="venueTitleClasses">
               {{ venue.name }}
@@ -91,6 +91,25 @@
                   </div>
                 </template>
 
+                <!-- Non-Sports Genre Badge / Image Thumbnail -->
+                <template v-else>
+                  <img
+                    v-if="evt.image_url"
+                    :src="evt.image_url"
+                    :alt="evt.title"
+                    class="w-4 h-4 sm:w-4.5 sm:h-4.5 object-cover rounded-xs border border-[#333366] shrink-0 inline-block group-hover:border-[#00FFFF]"
+                    loading="lazy"
+                    @error="(e: any) => e.target.style.display='none'"
+                  />
+                  <span
+                    v-if="getEventBadge(evt)"
+                    class="font-black rounded-xs border shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 uppercase tracking-wide"
+                    :class="[getEventBadge(evt)!.bg, getEventBadge(evt)!.textCol, getEventBadge(evt)!.border]"
+                  >
+                    {{ getEventBadge(evt)!.text }}
+                  </span>
+                </template>
+
                 <!-- Ticket Commitment Badge / Toggle Button -->
                 <button
                   type="button"
@@ -99,7 +118,7 @@
                     ticketButtonClasses,
                     evt.has_ticket === 1
                       ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
-                      : 'bg-transparent text-[#555577] border-[#333355] opacity-0 group-hover:opacity-100 hover:text-[#00FFFF] hover:border-[#00FFFF]'
+                      : 'bg-[#000022]/90 text-[#8888AA] border-[#444466] hover:text-[#00FFFF] hover:border-[#00FFFF] hover:bg-[#000055]'
                   ]"
                   :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
                   @click.stop="toggleTicketStatus(evt)"
@@ -177,6 +196,25 @@
                   </div>
                 </template>
 
+                <!-- Non-Sports Genre Badge / Image Thumbnail -->
+                <template v-else>
+                  <img
+                    v-if="evt.image_url"
+                    :src="evt.image_url"
+                    :alt="evt.title"
+                    class="w-4 h-4 sm:w-4.5 sm:h-4.5 object-cover rounded-xs border border-[#333366] shrink-0 inline-block group-hover:border-[#00FFFF]"
+                    loading="lazy"
+                    @error="(e: any) => e.target.style.display='none'"
+                  />
+                  <span
+                    v-if="getEventBadge(evt)"
+                    class="font-black rounded-xs border shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 uppercase tracking-wide"
+                    :class="[getEventBadge(evt)!.bg, getEventBadge(evt)!.textCol, getEventBadge(evt)!.border]"
+                  >
+                    {{ getEventBadge(evt)!.text }}
+                  </span>
+                </template>
+
                 <button
                   type="button"
                   class="shrink-0 rounded-xs font-black cursor-pointer transition-all border"
@@ -184,7 +222,7 @@
                     ticketButtonClasses,
                     evt.has_ticket === 1
                       ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
-                      : 'bg-transparent text-[#555577] border-[#333355] opacity-0 group-hover:opacity-100 hover:text-[#00FFFF] hover:border-[#00FFFF]'
+                      : 'bg-[#000022]/90 text-[#8888AA] border-[#444466] hover:text-[#00FFFF] hover:border-[#00FFFF] hover:bg-[#000055]'
                   ]"
                   :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
                   @click.stop="toggleTicketStatus(evt)"
@@ -260,6 +298,25 @@
                   </div>
                 </template>
 
+                <!-- Non-Sports Genre Badge / Image Thumbnail -->
+                <template v-else>
+                  <img
+                    v-if="evt.image_url"
+                    :src="evt.image_url"
+                    :alt="evt.title"
+                    class="w-4 h-4 sm:w-4.5 sm:h-4.5 object-cover rounded-xs border border-[#333366] shrink-0 inline-block group-hover:border-[#00FFFF]"
+                    loading="lazy"
+                    @error="(e: any) => e.target.style.display='none'"
+                  />
+                  <span
+                    v-if="getEventBadge(evt)"
+                    class="font-black rounded-xs border shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 uppercase tracking-wide"
+                    :class="[getEventBadge(evt)!.bg, getEventBadge(evt)!.textCol, getEventBadge(evt)!.border]"
+                  >
+                    {{ getEventBadge(evt)!.text }}
+                  </span>
+                </template>
+
                 <button
                   type="button"
                   class="shrink-0 rounded-xs font-black cursor-pointer transition-all border"
@@ -267,7 +324,7 @@
                     ticketButtonClasses,
                     evt.has_ticket === 1
                       ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
-                      : 'bg-transparent text-[#555577] border-[#333355] opacity-0 group-hover:opacity-100 hover:text-[#00FFFF] hover:border-[#00FFFF]'
+                      : 'bg-[#000022]/90 text-[#8888AA] border-[#444466] hover:text-[#00FFFF] hover:border-[#00FFFF] hover:bg-[#000055]'
                   ]"
                   :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
                   @click.stop="toggleTicketStatus(evt)"
@@ -311,12 +368,14 @@ const props = withDefaults(
     events: EventItem[]
     scrollSpeed?: number
     gridDensity?: 'classic_tv' | 'balanced' | 'dense' | string
+    gridFilterMode?: 'active_only' | 'all' | string
     pauseDurationSeconds?: number
     pageIntervalSeconds?: number
   }>(),
   {
     scrollSpeed: 30,
     gridDensity: 'balanced',
+    gridFilterMode: 'active_only',
     pauseDurationSeconds: 4,
     pageIntervalSeconds: 6,
   }
@@ -424,10 +483,27 @@ const emptySlotClasses = computed(() => {
   return 'text-xs sm:text-sm md:text-base'
 })
 
+// Filter venues based on gridFilterMode ('active_only' vs 'all')
+const filteredVenues = computed(() => {
+  if (props.gridFilterMode === 'all') {
+    return props.venues
+  }
+  // Curated Active Mode: Keep only venues that have scheduled events in the timeline window (today, tonight, tomorrow)
+  const active = props.venues.filter(v => {
+    return (
+      getVenueSlotEvents(v.id, 'today').length > 0 ||
+      getVenueSlotEvents(v.id, 'tonight').length > 0 ||
+      getVenueSlotEvents(v.id, 'tomorrow').length > 0
+    )
+  })
+  // Fallback: If no venues have events scheduled in the window, show all venues so grid is never empty
+  return active.length > 0 ? active : props.venues
+})
+
 // Duplicate venue list to enable smooth infinite loop
 const displayedVenues = computed(() => {
-  if (props.venues.length === 0) return []
-  return [...props.venues, ...props.venues]
+  if (filteredVenues.value.length === 0) return []
+  return [...filteredVenues.value, ...filteredVenues.value]
 })
 
 function getCategoryColor(category: string): string {
@@ -456,6 +532,34 @@ function getSportsDetails(evt: EventItem): { league?: string; teamA: TeamBrandin
     teamA: resolveTeamBranding(parsed.teamA),
     teamB: resolveTeamBranding(parsed.teamB),
   }
+}
+
+function getEventBadge(evt: EventItem): { text: string; bg: string; textCol: string; border: string } | null {
+  const cat = (evt.category || '').toLowerCase()
+  const src = (evt.source || '').toLowerCase()
+
+  if (src === 'tripadvisor') {
+    return { text: 'TRIPADVISOR', bg: 'bg-[#00382B]', textCol: 'text-[#00FFB2]', border: 'border-[#00AF87]' }
+  }
+  if (src === 'viator') {
+    return { text: 'VIATOR', bg: 'bg-[#002B33]', textCol: 'text-[#00FFFF]', border: 'border-[#00A389]' }
+  }
+  if (cat === 'music') {
+    return { text: 'CONCERT', bg: 'bg-[#2E0854]', textCol: 'text-[#FF88FF]', border: 'border-[#CC44FF]' }
+  }
+  if (cat === 'arts' || cat === 'theatre' || cat === 'theater') {
+    return { text: 'STAGE', bg: 'bg-[#331100]', textCol: 'text-[#FFAA00]', border: 'border-[#FF8800]' }
+  }
+  if (cat === 'comedy') {
+    return { text: 'COMEDY', bg: 'bg-[#262600]', textCol: 'text-[#FFFF55]', border: 'border-[#CCCC00]' }
+  }
+  if (cat === 'travel' || cat === 'tour') {
+    return { text: 'TOUR', bg: 'bg-[#002244]', textCol: 'text-[#55FFFF]', border: 'border-[#00A3CC]' }
+  }
+  if (cat === 'family') {
+    return { text: 'FAMILY', bg: 'bg-[#003322]', textCol: 'text-[#55FF88]', border: 'border-[#00CC66]' }
+  }
+  return null
 }
 
 function formatDisplayTitle(evt: EventItem): string {

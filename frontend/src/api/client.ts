@@ -1,4 +1,5 @@
 import type {
+  ActivityLogEntry,
   EventItem,
   GeocodeResult,
   HealthData,
@@ -322,5 +323,21 @@ export async function commandDisplayPower(state: 'on' | 'off' | 'toggle'): Promi
     body: JSON.stringify({ state }),
   })
   if (!res.ok) throw new Error(`Failed sending display power command: ${res.statusText}`)
+  return res.json()
+}
+
+export async function fetchActivityLogs(limit: number = 50, component?: string): Promise<ActivityLogEntry[]> {
+  const query = new URLSearchParams({ limit: String(limit) })
+  if (component && component !== 'ALL') {
+    query.append('component', component)
+  }
+  const res = await fetch(`${API_BASE}/system/activity?${query.toString()}`)
+  if (!res.ok) throw new Error(`Failed to fetch activity logs: ${res.statusText}`)
+  return res.json()
+}
+
+export async function clearActivityLogs(): Promise<{ status: string; message: string }> {
+  const res = await fetch(`${API_BASE}/system/activity/clear`, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to clear activity logs: ${res.statusText}`)
   return res.json()
 }

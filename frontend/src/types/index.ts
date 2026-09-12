@@ -73,6 +73,21 @@ export interface HealthData {
     error?: string
   }>
   telegram_bot: string
+  speech?: Record<string, any> | null
+  next_sync?: string | null
+  websocket_clients?: number
+  docker_socket_mounted?: boolean
+  circuit_breakers?: Record<string, string>
+  issues?: string[]
+}
+
+export interface ActivityLogEntry {
+  id: string | number
+  timestamp: string
+  component: string
+  action: string
+  status: string
+  details?: string | null
 }
 
 export interface UpdateStatusResponse {
@@ -165,6 +180,7 @@ export interface SystemSettings {
   radius_miles: string
   autoscroll_speed: string
   grid_density?: 'classic_tv' | 'balanced' | 'dense' | 'single_row' | string
+  grid_filter_mode?: 'active_only' | 'all' | string
   scroll_pause_duration?: string
   scroll_page_interval?: string
   marquee_rotation_seconds: string

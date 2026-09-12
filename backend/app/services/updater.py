@@ -466,13 +466,46 @@ class UpdateService:
 
                 new_container_id = create_resp.json().get("Id")
 
-                # 5. Start new container
-                start_resp = await client.post(f"http://localhost/containers/{new_container_id}/start")
-                if start_resp.status_code not in (200, 204):
-                    raise RuntimeError(f"Docker container start failed: {start_resp.text}")
+                # 5. Create ephemeral swapper container to execute atomic port-safe handoff
+                swapper_name = f"openprevue-swapper-{int(datetime.now(timezone.utc).timestamp())}"
+                swapper_script = (
+                    "import http.client, socket, time, sys\n"
+                    "time.sleep(1.5)\n"
+                    "def req(m, u):\n"
+                    "    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)\n"
+                    "    s.connect('/var/run/docker.sock')\n"
+                    "    c = http.client.HTTPConnection('localhost')\n"
+                    "    c.sock = s\n"
+                    "    c.request(m, u)\n"
+                    "    r = c.getresponse()\n"
+                    "    r.read()\n"
+                    "    return r.status\n"
+                    f"req('POST', '/containers/{hostname}/stop?t=5')\n"
+                    f"r_start = req('POST', '/containers/{new_container_id}/start')\n"
+                    f"if r_start in (200, 204):\n"
+                    f"    req('DELETE', '/containers/{hostname}?v=false')\n"
+                    "sys.exit(0)\n"
+                )
 
-                # 6. Schedule graceful shutdown of retired container
-                asyncio.create_task(self._retire_old_docker_container(hostname))
+                swapper_payload = {
+                    "Image": target_image,
+                    "User": "0:0",
+                    "Cmd": ["python3", "-c", swapper_script],
+                    "HostConfig": {
+                        "AutoRemove": True,
+                        "Binds": [f"{docker_socket}:/var/run/docker.sock"],
+                    },
+                }
+                swapper_resp = await client.post(f"http://localhost/containers/create?name={swapper_name}", json=swapper_payload)
+                if swapper_resp.status_code in (200, 201):
+                    swapper_id = swapper_resp.json().get("Id")
+                    start_swapper = await client.post(f"http://localhost/containers/{swapper_id}/start")
+                    if start_swapper.status_code not in (200, 204):
+                        logger.warning("Swapper container start failed (%s); attempting direct retirement.", start_swapper.text)
+                        asyncio.create_task(self._retire_and_start_direct(hostname, new_container_id))
+                else:
+                    logger.warning("Swapper container create failed (%s); attempting direct retirement.", swapper_resp.text)
+                    asyncio.create_task(self._retire_and_start_direct(hostname, new_container_id))
 
                 return {
                     "status": "success",
@@ -480,7 +513,7 @@ class UpdateService:
                     "target_version": version,
                     "target_image": target_image,
                     "new_container_id": new_container_id,
-                    "message": f"Successfully launched updated OpenPrevue container (v{version}). Swapping containers...",
+                    "message": f"Successfully initiated container swap to OpenPrevue v{version}. Swapping containers...",
                 }
         except Exception as err:
             logger.error("Docker socket update failed: %s", err)
@@ -491,18 +524,19 @@ class UpdateService:
                 "message": f"Docker Engine upgrade encountered an error: {err}",
             }
 
-    async def _retire_old_docker_container(self, container_id: str, delay: float = 2.5) -> None:
-        """Asynchronously stop and remove the retiring container after client response is dispatched."""
+    async def _retire_and_start_direct(self, old_id: str, new_id: str, delay: float = 1.0) -> None:
+        """Fallback asynchronous container replacement if ephemeral swapper cannot be launched."""
         try:
             await asyncio.sleep(delay)
             docker_socket = os.getenv("DOCKER_SOCKET_PATH", "/var/run/docker.sock")
             transport = httpx.AsyncHTTPTransport(uds=docker_socket)
-            async with httpx.AsyncClient(transport=transport, timeout=20.0) as client:
-                await client.post(f"http://localhost/containers/{container_id}/stop?t=5")
-                await client.delete(f"http://localhost/containers/{container_id}?v=false")
-                logger.info("Successfully stopped and removed retired OpenPrevue container: %s", container_id)
+            async with httpx.AsyncClient(transport=transport, timeout=30.0) as client:
+                await client.post(f"http://localhost/containers/{old_id}/stop?t=5")
+                await client.post(f"http://localhost/containers/{new_id}/start")
+                await client.delete(f"http://localhost/containers/{old_id}?v=false")
+                logger.info("Direct container retirement completed for old container %s", old_id)
         except Exception as e:
-            logger.warning("Error retiring old container %s: %s", container_id, e)
+            logger.error("Direct container retirement encountered error: %s", e)
 
     async def _apply_git(self, version: str, dry_run: bool) -> dict:
         """Perform bare-metal update via Git pull and frontend build."""

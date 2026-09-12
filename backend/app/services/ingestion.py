@@ -127,8 +127,8 @@ class IngestionService:
 
             async with get_db() as db:
                 for raw in raw_events:
-                    # Geo-filter if coordinates are provided
-                    if raw.venue_latitude is not None and raw.venue_longitude is not None:
+                    # Geo-filter if coordinates are provided (exempt custom travel wishlists which are explicitly curated trips)
+                    if provider.provider_name != "travel_wishlist" and raw.venue_latitude is not None and raw.venue_longitude is not None:
                         dist = calculate_haversine_distance(
                             center.latitude,
                             center.longitude,

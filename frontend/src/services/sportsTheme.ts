@@ -674,6 +674,27 @@ const PROVIDERS_DATABASE: Record<string, ProviderBranding> = {
     textColor: '#FFFF00',
     badgeText: 'PREVUE FEED',
   },
+  tripadvisor: {
+    name: 'TripAdvisor',
+    shortName: 'TA',
+    brandColor: '#00382B',
+    textColor: '#00FFB2',
+    badgeText: 'TRIPADVISOR',
+  },
+  viator: {
+    name: 'Viator',
+    shortName: 'VT',
+    brandColor: '#002B33',
+    textColor: '#00FFFF',
+    badgeText: 'VIATOR',
+  },
+  travel_wishlist: {
+    name: 'Travel Wishlist',
+    shortName: 'TRIP',
+    brandColor: '#004455',
+    textColor: '#00FFFF',
+    badgeText: 'WISHLIST',
+  },
 }
 
 export function resolveLeagueBranding(leagueName?: string): LeagueBranding | null {

@@ -101,6 +101,15 @@ CREATE TABLE IF NOT EXISTS watchlist (
     FOREIGN KEY(chat_id) REFERENCES telegram_users(chat_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    component TEXT NOT NULL,
+    action TEXT NOT NULL,
+    status TEXT NOT NULL,
+    details TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_events_start_time ON events(start_time);
 CREATE INDEX IF NOT EXISTS idx_events_venue_id ON events(venue_id);
 CREATE INDEX IF NOT EXISTS idx_events_category ON events(category);

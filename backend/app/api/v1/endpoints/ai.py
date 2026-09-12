@@ -49,6 +49,14 @@ async def ping_ollama_instance(req: OllamaPingRequest) -> OllamaPingResponse:
                 except Exception:
                     pass
 
+                from backend.app.services.activity import log_activity
+                await log_activity(
+                    component="OLLAMA",
+                    action="ping_server",
+                    status="success",
+                    details=f"Connected to {base_url} ({latency}ms, {len(models)} model(s) available)",
+                )
+
                 return OllamaPingResponse(
                     status="online",
                     ollama_url=base_url,

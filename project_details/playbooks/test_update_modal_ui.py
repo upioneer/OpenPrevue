@@ -1,8 +1,5 @@
-"""Verify UpdateModal segmented LED progress bar and dry-run animation."""
-
 import asyncio
 from playwright.async_api import async_playwright
-
 
 async def run():
     async with async_playwright() as p:
@@ -14,32 +11,23 @@ async def run():
         await page.goto("http://localhost:8080/settings?tab=updates", wait_until="networkidle")
         await asyncio.sleep(1.0)
 
-        # Open the firmware upgrade modal
+        # 1. Capture Tab 10 with Advanced Diagnostics accordion
+        diag_toggle = await page.query_selector("button:has-text('[ ADVANCED UPGRADE DIAGNOSTICS')")
+        if diag_toggle:
+            await diag_toggle.click()
+            await asyncio.sleep(0.5)
+        await page.screenshot(path="project_details/proof/proof_tab10_advanced_diagnostics.png")
+        print("Captured: proof_tab10_advanced_diagnostics.png")
+
+        # 2. Open normal upgrade modal (Standard user view: ONLY Apply Live Upgrade in footer)
         launch_btn = await page.query_selector("button:has-text('LAUNCH FIRMWARE UPGRADE ENGINE')")
         if launch_btn:
             await launch_btn.click()
             await asyncio.sleep(0.8)
-
-            # Screenshot 1: Initial opened state (clean LED segments, ready status)
-            await page.screenshot(path="project_details/proof/proof_modal_led_idle.png")
-            print("Captured: proof_modal_led_idle.png")
-
-            # Click TEST DRY-RUN
-            dry_run_btn = await page.query_selector("button:has-text('[ TEST DRY-RUN ]')")
-            if dry_run_btn:
-                await dry_run_btn.click()
-                # Wait for mid-run animation
-                await asyncio.sleep(0.8)
-                await page.screenshot(path="project_details/proof/proof_modal_led_animating.png")
-                print("Captured: proof_modal_led_animating.png")
-
-                # Wait for dry-run completion
-                await asyncio.sleep(2.0)
-                await page.screenshot(path="project_details/proof/proof_modal_led_completed.png")
-                print("Captured: proof_modal_led_completed.png")
+            await page.screenshot(path="project_details/proof/proof_modal_standard_user.png")
+            print("Captured: proof_modal_standard_user.png")
 
         await browser.close()
-
 
 if __name__ == "__main__":
     asyncio.run(run())

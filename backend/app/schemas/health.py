@@ -24,6 +24,10 @@ class HealthResponse(BaseModel):
     telegram_bot: str
     speech: dict | None = None
     next_sync: str | datetime | None = None
+    websocket_clients: int = 0
+    docker_socket_mounted: bool = False
+    circuit_breakers: dict[str, str] = {}
+    issues: list[str] = []
 
 
 class IngestionLogEntry(BaseModel):

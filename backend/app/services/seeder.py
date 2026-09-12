@@ -16,6 +16,7 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "radius_miles": str(settings.DEFAULT_RADIUS_MILES),
     "autoscroll_speed": "30",
     "grid_density": "balanced",
+    "grid_filter_mode": "active_only",
     "scroll_pause_duration": "4",
     "scroll_page_interval": "6",
     "marquee_rotation_seconds": "20",

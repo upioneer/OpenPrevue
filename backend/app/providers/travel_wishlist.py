@@ -23,6 +23,21 @@ OG_TAG_REGEX = re.compile(
 PRICE_REGEX = re.compile(r'\$([0-9]+(?:\.[0-9]{2})?)')
 
 
+def enhance_travel_image_url(url: str | None) -> str | None:
+    """Sanitize and upgrade travel thumbnail URLs to high-resolution assets."""
+    if not url:
+        return None
+    cleaned = url.strip()
+    # TripAdvisor CDN: upgrade small photo variants (/photo-s/, /photo-l/, /photo-f/) to original /photo-o/
+    if "tripadvisor" in cleaned or "tacdn" in cleaned:
+        cleaned = re.sub(r'/photo-[smlf]/', '/photo-o/', cleaned)
+        cleaned = re.sub(r'(\d+)x(\d+)', '1200x800', cleaned)
+    # Viator CDN: uncap dynamic downscaling query params
+    if "viator" in cleaned:
+        cleaned = re.sub(r'[?&](w|h)=\d+', '', cleaned)
+    return cleaned
+
+
 def extract_opengraph_meta(html: str) -> dict[str, str]:
     """Extract standard OpenGraph and Twitter meta tags from HTML."""
     tags: dict[str, str] = {}
@@ -91,6 +106,10 @@ class TravelWishlistProvider(BaseProvider):
         is_viator = "viator" in source_url.lower()
         source_tag = "tripadvisor" if is_tripadvisor else ("viator" if is_viator else "travel_wishlist")
 
+        # Extract page-level OpenGraph metadata as hero fallback
+        og = extract_opengraph_meta(html)
+        page_hero_img = enhance_travel_image_url(og.get("og:image") or og.get("twitter:image"))
+
         # 1. Parse Schema.org JSON-LD scripts
         matches = JSON_LD_SCRIPT_REGEX.findall(html)
         for raw_json in matches:
@@ -113,7 +132,7 @@ class TravelWishlistProvider(BaseProvider):
                         items = [data]
 
                 for item in items:
-                    parsed = self._extract_event_from_json_ld(item, source_url, source_tag)
+                    parsed = self._extract_event_from_json_ld(item, source_url, source_tag, default_image=page_hero_img)
                     if parsed:
                         events.append(parsed)
             except Exception as exc:
@@ -121,11 +140,10 @@ class TravelWishlistProvider(BaseProvider):
 
         # 2. Fallback to OpenGraph / Meta scraping if no JSON-LD items were found
         if not events:
-            og = extract_opengraph_meta(html)
             title = og.get("og:title") or og.get("twitter:title")
             if title and "page not found" not in title.lower():
                 desc = og.get("og:description") or og.get("description") or ""
-                img = og.get("og:image") or og.get("twitter:image")
+                img = page_hero_img
                 
                 # Check for price in text
                 price_min = None
@@ -169,7 +187,7 @@ class TravelWishlistProvider(BaseProvider):
 
         return events
 
-    def _extract_event_from_json_ld(self, item: dict[str, Any], source_url: str, source_tag: str) -> RawEvent | None:
+    def _extract_event_from_json_ld(self, item: dict[str, Any], source_url: str, source_tag: str, default_image: str | None = None) -> RawEvent | None:
         """Extract RawEvent from Schema.org item dict."""
         type_val = item.get("@type", "")
         if isinstance(type_val, list):
@@ -227,14 +245,17 @@ class TravelWishlistProvider(BaseProvider):
 
         # Extract image
         image_url = None
-        raw_img = item.get("image")
+        raw_img = item.get("image") or item.get("thumbnailUrl") or item.get("photo")
         if isinstance(raw_img, str):
             image_url = raw_img
         elif isinstance(raw_img, list) and len(raw_img) > 0:
             first = raw_img[0]
             image_url = first if isinstance(first, str) else first.get("url")
         elif isinstance(raw_img, dict):
-            image_url = raw_img.get("url")
+            image_url = raw_img.get("url") or raw_img.get("contentUrl")
+
+        # Sanitize and upgrade to high-res, or fallback to page hero image
+        image_url = enhance_travel_image_url(image_url) or default_image
 
         # Extract pricing
         price_min = None

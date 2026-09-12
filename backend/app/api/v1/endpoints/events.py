@@ -214,35 +214,60 @@ async def ingest_url(payload: UrlIngestRequest) -> dict:
     if not raw_events:
         raise HTTPException(status_code=422, detail="Unable to extract structured event or experience metadata from the provided URL.")
 
-    raw = raw_events[0]
-    raw.is_featured = payload.is_featured
+    from backend.app.services.activity import log_activity
+
+    persisted_results: list[dict[str, Any]] = []
 
     async with get_db() as db:
-        venue_id = await ingestion_service._resolve_or_create_venue(db, raw)
-        persist_status = await ingestion_service._persist_event(db, raw, venue_id)
-        canonical_id = ingestion_service._generate_canonical_event_id(raw, venue_id)
+        for raw in raw_events:
+            raw.is_featured = payload.is_featured
+            venue_id = await ingestion_service._resolve_or_create_venue(db, raw)
+            persist_status = await ingestion_service._persist_event(db, raw, venue_id)
+            canonical_id = ingestion_service._generate_canonical_event_id(raw, venue_id)
 
-        if payload.has_ticket:
-            await db.execute("UPDATE events SET has_ticket = ? WHERE id = ?", (payload.has_ticket, canonical_id))
+            if payload.has_ticket:
+                await db.execute("UPDATE events SET has_ticket = ? WHERE id = ?", (payload.has_ticket, canonical_id))
+
+            persisted_results.append({
+                "action": persist_status,
+                "event_id": canonical_id,
+                "title": raw.title,
+                "venue_name": raw.venue_name,
+                "start_time": raw.start_time,
+                "source": raw.source,
+                "ticket_url": raw.ticket_url,
+            })
 
         await db.commit()
 
     # Broadcast real-time schedule update to all connected CRT clients
+    primary = persisted_results[0]
     await connection_manager.broadcast("events_updated", {
         "action": "ingest_url",
-        "event_id": canonical_id,
-        "title": raw.title,
-        "source": raw.source,
+        "count": len(persisted_results),
+        "event_id": primary["event_id"],
+        "title": primary["title"],
+        "source": primary["source"],
     })
+
+    # Record operational activity
+    await log_activity(
+        component="WEB_INGEST",
+        action="ingest_url",
+        status="success",
+        details=f"Ingested {len(persisted_results)} item(s) from {url} (Primary: '{primary['title']}')",
+    )
 
     return {
         "status": "success",
-        "action": persist_status,
-        "event_id": canonical_id,
-        "title": raw.title,
-        "venue_name": raw.venue_name,
-        "start_time": raw.start_time,
-        "source": raw.source,
-        "ticket_url": raw.ticket_url,
+        "count": len(persisted_results),
+        "items": persisted_results,
+        "action": primary["action"],
+        "event_id": primary["event_id"],
+        "title": primary["title"],
+        "venue_name": primary["venue_name"],
+        "start_time": primary["start_time"],
+        "source": primary["source"],
+        "ticket_url": primary["ticket_url"],
     }
 
