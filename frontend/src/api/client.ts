@@ -341,3 +341,53 @@ export async function clearActivityLogs(): Promise<{ status: string; message: st
   if (!res.ok) throw new Error(`Failed to clear activity logs: ${res.statusText}`)
   return res.json()
 }
+
+export async function fetchBackupStatus(): Promise<{
+  exists: boolean
+  path: string
+  size_bytes?: number
+  last_modified?: string
+  settings_count?: number
+  version?: string
+  error?: string
+}> {
+  const res = await fetch(`${API_BASE}/settings/backup/status`)
+  if (!res.ok) throw new Error(`Failed to fetch backup status: ${res.statusText}`)
+  return res.json()
+}
+
+export async function exportSettingsBackup(): Promise<{
+  version: string
+  exported_at: string
+  settings: Record<string, any>
+  custom_venues: any[]
+}> {
+  const res = await fetch(`${API_BASE}/settings/backup/export`)
+  if (!res.ok) throw new Error(`Failed to export backup: ${res.statusText}`)
+  return res.json()
+}
+
+export async function importSettingsBackup(payload: {
+  settings: Record<string, any>
+  custom_venues?: any[]
+}): Promise<{ status: string; imported_settings: number; imported_venues: number; message: string }> {
+  const res = await fetch(`${API_BASE}/settings/backup/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(`Failed to import backup: ${res.statusText}`)
+  return res.json()
+}
+
+export async function restoreDiskBackup(): Promise<{
+  status: string
+  restored_settings?: number
+  restored_venues?: number
+  message: string
+}> {
+  const res = await fetch(`${API_BASE}/settings/backup/restore-disk`, { method: 'POST' })
+  if (!res.ok) throw new Error(`Failed to restore disk backup: ${res.statusText}`)
+  return res.json()
+}
+

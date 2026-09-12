@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     DATA_DIR: str = "./data"
     LOG_LEVEL: str = "INFO"
     APP_ENV: str = "development"
-    VERSION: str = "0.24.0"
+    VERSION: str = "0.25.0"
 
     # Aggregator defaults (Default: New York City)
     DEFAULT_POSTAL_CODE: str = "10001"
@@ -47,6 +47,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
 
 
 

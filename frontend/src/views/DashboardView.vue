@@ -3,7 +3,7 @@
     <!-- First-Boot Setup Wizard Modal -->
     <SetupModal
       :initial-setup-completed="settings?.initial_setup_completed"
-      @setup-completed="loadData"
+      @setup-completed="handleSetupCompleted"
     />
 
     <!-- 1. Ultrawide & Rack Bar Layout (21:9, 32:9, 10" Rack Displays 1920x480) -->
@@ -191,9 +191,13 @@ import SetupModal from '../components/SetupModal.vue'
 import { fetchEvents, fetchSettings, fetchVenues } from '../api/client'
 import { wsService } from '../services/websocket'
 import { wakeLockService } from '../services/wakeLock'
+import { isDismissedOnStartup, openOnboardingModal } from '../services/onboardingModalState'
 import type { EventItem, SystemSettings, VenueItem } from '../types'
 
 const route = useRoute()
+const isKioskMode = computed(() => {
+  return route.query.kiosk === '1' || route.query.kiosk === 'true' || route.query.header === '0'
+})
 const events = ref<EventItem[]>([])
 const venues = ref<VenueItem[]>([])
 const settings = ref<SystemSettings | null>(null)
@@ -375,6 +379,13 @@ function handleTicketToggled(eventId: string, hasTicket: number) {
   }
 }
 
+function handleSetupCompleted() {
+  loadData()
+  if (!isDismissedOnStartup() && !isKioskMode.value) {
+    openOnboardingModal()
+  }
+}
+
 onMounted(() => {
   checkUltrawideRatio()
   if (typeof window !== 'undefined') {
@@ -408,6 +419,12 @@ onMounted(() => {
   unsubscribeSettingsWs = wsService.on('settings_updated', () => {
     loadData()
   })
+
+  // Trigger onboarding welcome modal on startup if setup already completed and not dismissed
+  const localOnboarded = localStorage.getItem('openprevue_onboarded')
+  if (!isDismissedOnStartup() && !isKioskMode.value && localOnboarded === '1') {
+    openOnboardingModal()
+  }
 })
 
 onUnmounted(() => {

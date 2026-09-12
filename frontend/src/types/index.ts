@@ -108,6 +108,7 @@ export interface UpdateStatusResponse {
 
 export interface UpdateCapabilityResponse {
   can_update: boolean
+  can_upgrade_now?: boolean
   detected_method: 'docker_socket' | 'git' | 'trigger_file' | 'manual'
   available_methods: string[]
   docker_socket_available: boolean
@@ -121,7 +122,7 @@ export interface UpdateCapabilityResponse {
 }
 
 export interface UpdateApplyResponse {
-  status: 'dry_run_success' | 'triggered' | 'success' | 'manual_required' | 'error'
+  status: 'dry_run_success' | 'triggered' | 'success' | 'manual_required' | 'error' | 'up_to_date'
   method: string
   target_version?: string
   target_image?: string

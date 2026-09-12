@@ -45,7 +45,7 @@
           <span
             class="font-bold"
             :class="{
-              'text-[#00FF00]': statusState === 'ready' || statusState === 'success',
+              'text-[#00FF00]': statusState === 'ready' || statusState === 'success' || statusState === 'up_to_date',
               'text-[#FFFF00] animate-pulse': statusState === 'working' || statusState === 'polling',
               'text-[#FF4444]': statusState === 'error',
             }"
@@ -57,6 +57,20 @@
 
       <!-- Content Area -->
       <div class="p-4 overflow-y-auto space-y-4 grow">
+        <!-- Up-to-Date Informational Banner -->
+        <div
+          v-if="!isUpgradeAvailable"
+          class="bg-[#002200] border-2 border-[#00FF00] p-3 text-[11px] text-[#00FF00] space-y-1 shadow-[0_0_12px_rgba(0,255,0,0.3)]"
+        >
+          <div class="font-bold flex items-center space-x-2 uppercase">
+            <span class="w-2.5 h-2.5 bg-[#00FF00] inline-block"></span>
+            <span>[ SYSTEM FIRMWARE IS CURRENT ]</span>
+          </div>
+          <p class="text-[#D0FFD0] leading-relaxed">
+            Your system is currently running version <strong>v{{ currentVersion }}</strong>, which matches or exceeds the target release (<strong>v{{ resolvedTargetVersion }}</strong>). In-place live upgrades are restricted to strictly newer releases to prevent redundant container rebuilds. Diagnostic simulations remain available to verify headend deployment hooks.
+          </p>
+        </div>
+
         <!-- Capability Description Banner -->
         <div class="bg-[#000044] border border-[#333366] p-3 text-[11px] leading-relaxed space-y-2">
           <div class="flex items-center justify-between border-b border-[#222255] pb-1">
@@ -143,6 +157,7 @@
           </div>
           <div
             ref="terminalRef"
+            data-testid="telemetry-terminal"
             class="bg-[#000011] border-2 border-[#333366] p-3 text-[11px] font-mono text-[#00FF00] h-44 overflow-y-auto whitespace-pre-wrap select-text leading-tight"
           >
             <div v-for="(line, idx) in logLines" :key="idx" class="leading-relaxed">
@@ -182,15 +197,18 @@
           <span v-else-if="isPolling" class="text-[#FFFF00] font-bold">
             POLLING HEADEND RECOVERY ON /api/v1/health...
           </span>
+          <span v-else-if="!isUpgradeAvailable && !diagnosticMode" class="text-[#00FF00] font-bold">
+            CURRENT FIRMWARE (v{{ currentVersion }}) IS UP TO DATE. NO UPGRADE REQUIRED.
+          </span>
           <span v-else>
             READY TO UPGRADE TO v{{ resolvedTargetVersion }}
           </span>
         </div>
 
         <div class="flex items-center space-x-2">
-          <!-- Diagnostic Dry Run Button (Shown only when launched in Diagnostic Mode) -->
+          <!-- Diagnostic Dry Run Button (Shown when launched in Diagnostic Mode or when up-to-date) -->
           <button
-            v-if="diagnosticMode"
+            v-if="diagnosticMode || !isUpgradeAvailable"
             type="button"
             :disabled="isProcessing || isPolling"
             @click="runDryRun"
@@ -202,11 +220,22 @@
           <!-- Primary Live Apply Button -->
           <button
             type="button"
-            :disabled="isProcessing || isPolling || reloadCountdown !== null"
+            :disabled="!isUpgradeAvailable || isProcessing || isPolling || reloadCountdown !== null"
             @click="runApplyUpdate"
-            class="bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-5 py-2 text-xs font-black tracking-wider cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(255,255,0,0.8)] transition-all"
+            class="px-5 py-2 text-xs font-black tracking-wider transition-all"
+            :class="isUpgradeAvailable && !isProcessing && !isPolling && reloadCountdown === null
+              ? 'bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] cursor-pointer shadow-[0_0_12px_rgba(255,255,0,0.8)]'
+              : 'bg-[#001122] border border-[#334466] text-[#6688AA] cursor-not-allowed opacity-60'"
           >
-            {{ isProcessing ? '[ EXECUTING... ]' : (isPolling ? '[ AWAITING REBOOT... ]' : '[ APPLY LIVE UPGRADE ]') }}
+            {{
+              isProcessing
+                ? '[ EXECUTING... ]'
+                : isPolling
+                  ? '[ AWAITING REBOOT... ]'
+                  : isUpgradeAvailable
+                    ? `[ APPLY LIVE UPGRADE: v${resolvedTargetVersion} ]`
+                    : '[ FIRMWARE IS UP TO DATE ]'
+            }}
           </button>
         </div>
       </div>
@@ -217,6 +246,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { fetchHealth, fetchUpdateCapability, triggerApplyUpdate } from '../api/client'
+import { isNewerVersion } from '../services/semver'
 import type { UpdateCapabilityResponse } from '../types'
 
 interface LogEntry {
@@ -289,11 +319,17 @@ onUnmounted(() => {
 const currentVersion = computed(() => capability.value?.current_version || '0.21.0')
 const resolvedTargetVersion = computed(() => props.initialTargetVersion || capability.value?.latest_version || '0.22.0')
 
-const statusState = computed<'ready' | 'working' | 'polling' | 'success' | 'error'>(() => {
+const isUpgradeAvailable = computed(() => {
+  if (!currentVersion.value || !resolvedTargetVersion.value) return false
+  return isNewerVersion(currentVersion.value, resolvedTargetVersion.value)
+})
+
+const statusState = computed<'ready' | 'working' | 'polling' | 'success' | 'error' | 'up_to_date'>(() => {
   if (hasError.value) return 'error'
   if (reloadCountdown.value !== null || (currentStep.value === 4 && !isProcessing.value && !isPolling.value)) return 'success'
   if (isPolling.value) return 'polling'
   if (isProcessing.value) return 'working'
+  if (!isUpgradeAvailable.value && !props.diagnosticMode) return 'up_to_date'
   return 'ready'
 })
 
@@ -303,6 +339,7 @@ const statusLabel = computed(() => {
   if (isPolling.value) return 'AWAITING REBOOT'
   if (isProcessing.value) return 'EXECUTING...'
   if (currentStep.value === 4 && !isProcessing.value && !isPolling.value && !hasError.value) return 'DRY-RUN COMPLETE'
+  if (!isUpgradeAvailable.value && !props.diagnosticMode) return 'UP TO DATE'
   return 'READY'
 })
 
@@ -396,7 +433,10 @@ async function loadCapability() {
     capability.value = cap
     selectedMethod.value = cap.detected_method
     addLog(`Host update capability resolved: ${cap.detected_method}`, 'success')
-    addLog(`Target version: v${resolvedTargetVersion.value}`, 'info')
+    addLog(`Installed firmware: v${currentVersion.value} | Target release: v${resolvedTargetVersion.value}`, 'info')
+    if (!isUpgradeAvailable.value && !props.diagnosticMode) {
+      addLog(`[NOTICE] Installed version v${currentVersion.value} is already up to date with release v${resolvedTargetVersion.value}. In-place upgrades are disabled until a newer release is published.`, 'warn')
+    }
   } catch (err: any) {
     addLog(`Failed resolving capability: ${err.message}`, 'error')
   }
@@ -452,6 +492,10 @@ async function runDryRun() {
 }
 
 async function runApplyUpdate() {
+  if (!isUpgradeAvailable.value && !props.diagnosticMode) {
+    addLog(`[REJECTED] In-place upgrade aborted: target version v${resolvedTargetVersion.value} is not strictly newer than current version v${currentVersion.value}.`, 'warn')
+    return
+  }
   if (isProcessing.value || isPolling.value) return
   isProcessing.value = true
   hasError.value = false
@@ -475,6 +519,12 @@ async function runApplyUpdate() {
       dry_run: false,
       method: selectedMethod.value,
     })
+
+    if (res.status === 'up_to_date') {
+      isProcessing.value = false
+      addLog(res.message || `System is already up to date (v${currentVersion.value}). No upgrade required.`, 'warn')
+      return
+    }
 
     if (res.status === 'error') {
       hasError.value = true

@@ -340,8 +340,10 @@ class UpdateService:
         if not available_methods:
             available_methods.append("manual")
 
+        is_newer = is_newer_version(self.current_version, self.latest_version)
         return {
             "can_update": detected_method != "manual",
+            "can_upgrade_now": (detected_method != "manual") and is_newer,
             "detected_method": detected_method,
             "available_methods": available_methods,
             "docker_socket_available": docker_available,
@@ -351,7 +353,7 @@ class UpdateService:
             "description": description,
             "current_version": self.current_version,
             "latest_version": self.latest_version,
-            "update_available": self.update_available,
+            "update_available": is_newer,
         }
 
     async def apply_update(
@@ -373,6 +375,30 @@ class UpdateService:
         if not chosen_method:
             detected, _ = await self.detect_update_method()
             chosen_method = detected
+
+        target_check_ver = (
+            self.latest_version
+            if resolved_version == "latest"
+            else resolved_version
+        )
+
+        # Strict semver validation: Live in-place upgrades are only permitted for strictly newer releases
+        if not dry_run and not is_newer_version(self.current_version, target_check_ver):
+            logger.info(
+                "Refusing live in-place upgrade: target version v%s is not strictly newer than current version v%s",
+                target_check_ver,
+                self.current_version,
+            )
+            return {
+                "status": "up_to_date",
+                "method": chosen_method,
+                "current_version": self.current_version,
+                "target_version": target_check_ver,
+                "message": (
+                    f"System is already running version v{self.current_version}. "
+                    f"In-place live upgrades are only permitted for strictly newer releases (target: v{target_check_ver})."
+                ),
+            }
 
         logger.info(
             "Update apply requested: method=%s, target_version=%s, dry_run=%s",
@@ -449,13 +475,27 @@ class UpdateService:
                     logger.warning("Failed renaming old container: %s", rename_resp.text)
 
                 # 4. Create new container with preserved config
+                host_config = dict(info.get("HostConfig", {}) or {})
+                existing_binds = list(host_config.get("Binds") or [])
+                inspect_mounts = info.get("Mounts") or []
+                for m in inspect_mounts:
+                    src = m.get("Source") or m.get("Name")
+                    dest = m.get("Destination")
+                    rw = "rw" if m.get("RW", True) else "ro"
+                    if src and dest:
+                        bind_spec = f"{src}:{dest}:{rw}"
+                        if not any(b.startswith(f"{src}:{dest}") or b.endswith(f":{dest}:{rw}") for b in existing_binds):
+                            existing_binds.append(bind_spec)
+                if existing_binds:
+                    host_config["Binds"] = existing_binds
+
                 create_payload = {
                     "Image": target_image,
                     "Env": info.get("Config", {}).get("Env", []),
                     "Cmd": info.get("Config", {}).get("Cmd"),
                     "Entrypoint": info.get("Config", {}).get("Entrypoint"),
                     "Labels": info.get("Config", {}).get("Labels", {}),
-                    "HostConfig": info.get("HostConfig", {}),
+                    "HostConfig": host_config,
                     "NetworkingConfig": {
                         "EndpointsConfig": info.get("NetworkSettings", {}).get("Networks", {})
                     },

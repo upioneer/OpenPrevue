@@ -97,13 +97,13 @@ async def test_updates_api_endpoints():
 
 @pytest.mark.asyncio
 async def test_apply_trigger_file_execution():
-    """Verify writing trigger file writes correct JSON payload to disk."""
+    """Verify writing trigger file writes correct JSON payload to disk when target is newer."""
     trigger_path = Path(settings.DATA_DIR) / ".update_trigger"
     if trigger_path.exists():
         trigger_path.unlink()
 
     res = await update_service.apply_update(
-        target_version="0.22.0",
+        target_version="1.0.0",
         dry_run=False,
         method="trigger_file",
     )
@@ -112,19 +112,49 @@ async def test_apply_trigger_file_execution():
     assert trigger_path.exists()
 
     content = json.loads(trigger_path.read_text(encoding="utf-8"))
-    assert content["target_version"] == "0.22.0"
+    assert content["target_version"] == "1.0.0"
     assert content["action"] == "upgrade"
-    assert "ghcr.io/upioneer/OpenPrevue:v0.22.0" in content["image"]
+    assert "ghcr.io/upioneer/OpenPrevue:v1.0.0" in content["image"]
 
     # Clean up test artifact
     trigger_path.unlink()
 
 
 @pytest.mark.asyncio
+async def test_apply_update_blocks_equal_or_older_version():
+    """Verify live in-place update is refused when target version is equal or older than current version."""
+    # Equal version
+    res_equal = await update_service.apply_update(
+        target_version=settings.VERSION,
+        dry_run=False,
+        method="trigger_file",
+    )
+    assert res_equal["status"] == "up_to_date"
+    assert "strictly newer releases" in res_equal["message"]
+
+    # Older version
+    res_older = await update_service.apply_update(
+        target_version="0.20.0",
+        dry_run=False,
+        method="trigger_file",
+    )
+    assert res_older["status"] == "up_to_date"
+    assert "strictly newer releases" in res_older["message"]
+
+    # Dry run should still be permitted for simulation/diagnostics
+    res_dry = await update_service.apply_update(
+        target_version=settings.VERSION,
+        dry_run=True,
+        method="trigger_file",
+    )
+    assert res_dry["status"] == "dry_run_success"
+
+
+@pytest.mark.asyncio
 async def test_apply_docker_socket_dry_run():
     """Verify Docker socket dry run step generation."""
     res = await update_service.apply_update(
-        target_version="0.22.0",
+        target_version="1.0.0",
         dry_run=True,
         method="docker_socket",
     )

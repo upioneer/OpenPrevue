@@ -39,6 +39,8 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 # Create persistent data volume directory
 RUN mkdir -p /app/data
+VOLUME ["/app/data"]
+
 
 # Non-root user setup
 RUN useradd -u 1000 -U -s /bin/sh -d /app appuser && \

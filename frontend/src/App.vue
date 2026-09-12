@@ -22,6 +22,15 @@
       :diagnostic-mode="updateModalDiagnosticMode"
       @close="closeUpdateModal"
     />
+    <OnboardingModal
+      :is-open="isOnboardingModalOpen"
+      @close="closeOnboardingModal"
+    />
+    <ChangelogModal
+      :is-open="isChangelogModalOpen"
+      :version="activeChangelogVersion"
+      @close="closeChangelogModal"
+    />
   </div>
 </template>
 
@@ -33,11 +42,15 @@ import EASBanner from './components/EASBanner.vue'
 import UpdateToast from './components/UpdateToast.vue'
 import UpdateModal from './components/UpdateModal.vue'
 import SpotifyPlayerModal from './components/SpotifyPlayerModal.vue'
-import { fetchSettings } from './api/client'
+import OnboardingModal from './components/OnboardingModal.vue'
+import ChangelogModal from './components/ChangelogModal.vue'
+import { fetchHealth, fetchSettings } from './api/client'
 import { wsService } from './services/websocket'
 import { audioSynth } from './services/audioSynth'
 import { isSpotifyModalOpen, openSpotifyModal, closeSpotifyModal } from './services/spotifyModalState'
 import { isUpdateModalOpen, updateModalTargetVersion, updateModalDiagnosticMode, closeUpdateModal } from './services/updateModalState'
+import { isOnboardingModalOpen, isDismissedOnStartup, openOnboardingModal, closeOnboardingModal } from './services/onboardingModalState'
+import { isChangelogModalOpen, activeChangelogVersion, checkShouldShowChangelog, closeChangelogModal, openChangelogModal } from './services/changelogModalState'
 
 const route = useRoute()
 const isKioskMode = computed(() => {
@@ -70,7 +83,7 @@ async function loadDisplaySettings() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   wsService.connect()
   loadDisplaySettings()
   audioSynth.initAutoPlayTrigger()
@@ -78,6 +91,20 @@ onMounted(() => {
   unsubscribeSettings = wsService.on('settings_updated', () => {
     loadDisplaySettings()
   })
+
+  const localOnboarded = localStorage.getItem('openprevue_onboarded')
+  if (!isDismissedOnStartup() && !isKioskMode.value && localOnboarded === '1' && route.path === '/') {
+    openOnboardingModal()
+  } else if (!isKioskMode.value && route.path === '/') {
+    try {
+      const health = await fetchHealth()
+      if (health.version && checkShouldShowChangelog(health.version)) {
+        openChangelogModal(health.version)
+      }
+    } catch {
+      // Ignore network errors on boot
+    }
+  }
 })
 
 onUnmounted(() => {

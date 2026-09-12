@@ -44,6 +44,40 @@
         </div>
       </div>
 
+      <!-- Browser Local Cache Mirror Auto-Detection Banner -->
+      <div
+        v-if="showBrowserMirrorBanner"
+        class="bg-[#000033] border-2 border-[#FFFF00] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[0_0_15px_rgba(255,255,0,0.3)]"
+      >
+        <div class="space-y-0.5">
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 bg-[#FFFF00] inline-block animate-ping"></span>
+            <span class="text-xs font-black text-[#FFFF00] uppercase tracking-wider">
+              [ BROWSER CONFIGURATION MIRROR DETECTED ]
+            </span>
+          </div>
+          <p class="text-[11px] text-[#E0E0E0] leading-relaxed">
+            A cached configuration was found in this browser (saved {{ cachedMirrorTimestamp || 'recently' }}). You can restore your custom AI URLs, keys, and regional preferences if your container was upgraded or recreated without persistent volumes.
+          </p>
+        </div>
+        <div class="flex items-center space-x-2 shrink-0">
+          <button
+            type="button"
+            class="bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-3 py-1.5 text-xs font-black uppercase cursor-pointer shadow-[0_0_8px_rgba(255,255,0,0.8)] transition-all"
+            @click="handleRestoreBrowserMirror"
+          >
+            [ RESTORE FROM BROWSER CACHE ]
+          </button>
+          <button
+            type="button"
+            class="bg-[#000044] hover:bg-[#000066] border border-[#333366] text-[#8888AA] hover:text-[#E0E0E0] px-2.5 py-1.5 text-xs font-bold cursor-pointer transition-colors"
+            @click="dismissBrowserMirror"
+          >
+            [ DISMISS ]
+          </button>
+        </div>
+      </div>
+
       <!-- Navigation Tabs -->
       <div class="flex flex-wrap gap-1 border-b border-[#333366] pb-1">
         <button
@@ -2367,6 +2401,98 @@
           </div>
         </div>
 
+        <!-- Configuration Backup, Persistence & Disk Recovery Card -->
+        <div class="bg-[#000033] p-4 border border-[#00FFFF] space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
+            <div>
+              <span class="text-xs font-black text-[#00FFFF] block uppercase tracking-wider">
+                [ CONFIGURATION PERSISTENCE, BACKUP & DISK RECOVERY ]
+              </span>
+              <span class="text-[11px] text-[#8888AA]">
+                Automatic disk-backed configuration persistence protecting AI endpoints, metro settings, and venues across Docker upgrades and container restarts.
+              </span>
+            </div>
+            <span
+              class="text-[10px] px-2 py-0.5 border font-bold uppercase shrink-0"
+              :class="backupStatus?.exists ? 'bg-[#003300] text-[#00FF00] border-[#00FF00]' : 'bg-[#332200] text-[#FFAA00] border-[#FFAA00]'"
+            >
+              {{ backupStatus?.exists ? '[ DISK BACKUP: PRESENT ]' : '[ DISK BACKUP: NOT FOUND ]' }}
+            </span>
+          </div>
+
+          <!-- Backup Telemetry Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+            <div class="bg-[#000022] p-2 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px] font-bold">PERSISTENCE FILE:</span>
+              <span class="text-[#FFFF00] font-mono text-[10px] truncate block" :title="backupStatus?.path || './data/openprevue_settings_backup.json'">
+                openprevue_settings_backup.json
+              </span>
+            </div>
+            <div class="bg-[#000022] p-2 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px] font-bold">LAST BACKUP:</span>
+              <span class="text-[#E0E0E0] font-bold">
+                {{ backupStatus?.last_modified ? new Date(backupStatus.last_modified).toLocaleTimeString() : 'Pending Save' }}
+              </span>
+            </div>
+            <div class="bg-[#000022] p-2 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px] font-bold">SETTINGS COUNT:</span>
+              <span class="text-[#00FFFF] font-bold">
+                {{ backupStatus?.settings_count !== undefined ? `${backupStatus.settings_count} Keys` : '-' }}
+              </span>
+            </div>
+            <div class="bg-[#000022] p-2 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px] font-bold">BACKUP SIZE:</span>
+              <span class="text-[#00FF00] font-bold">
+                {{ backupStatus?.size_bytes ? `${Math.round(backupStatus.size_bytes / 1024 * 10) / 10} KB` : '-' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-wrap items-center gap-2 pt-1">
+            <button
+              type="button"
+              :disabled="isDownloadingBackup"
+              class="bg-[#000066] hover:bg-[#000099] border border-[#00FFFF] text-[#00FFFF] px-3 py-1.5 text-xs font-bold font-mono cursor-pointer transition-colors disabled:opacity-50"
+              @click="handleDownloadBackup"
+            >
+              {{ isDownloadingBackup ? '[ DOWNLOADING... ]' : '[ DOWNLOAD BACKUP (JSON) ]' }}
+            </button>
+            <button
+              type="button"
+              :disabled="isRestoringDisk || !backupStatus?.exists"
+              class="bg-[#003300] hover:bg-[#005500] border border-[#00FF00] text-[#00FF00] px-3 py-1.5 text-xs font-bold font-mono cursor-pointer transition-colors disabled:opacity-50"
+              @click="handleRestoreDiskBackup"
+            >
+              {{ isRestoringDisk ? '[ RESTORING... ]' : '[ RESTORE FROM SERVER DISK ]' }}
+            </button>
+            <button
+              type="button"
+              :disabled="isImportingBackup"
+              class="bg-[#332200] hover:bg-[#553300] border border-[#FFAA00] text-[#FFCC00] px-3 py-1.5 text-xs font-bold font-mono cursor-pointer transition-colors disabled:opacity-50"
+              @click="triggerImportFileInput"
+            >
+              {{ isImportingBackup ? '[ IMPORTING... ]' : '[ IMPORT BACKUP (JSON) ]' }}
+            </button>
+            <input
+              ref="backupFileInput"
+              type="file"
+              accept=".json,application/json"
+              class="hidden"
+              @change="handleImportFile"
+            />
+          </div>
+
+          <!-- Feedback notification -->
+          <div
+            v-if="backupActionMessage"
+            class="p-2 border text-xs font-mono"
+            :class="backupActionSuccess ? 'bg-[#002200] border-[#00FF00] text-[#00FF00]' : 'bg-[#330000] border-[#FF4444] text-[#FF8888]'"
+          >
+            {{ backupActionMessage }}
+          </div>
+        </div>
+
         <!-- Independent In-Place Firmware Upgrade Engine Card -->
         <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#333366] pb-2">
@@ -2391,13 +2517,35 @@
           </p>
 
           <div class="flex flex-wrap items-center gap-3 pt-1">
+            <!-- Upgrade available: Active 1-click upgrade button -->
             <button
+              v-if="updateStatus?.update_available"
               type="button"
-              class="bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-5 py-2 text-xs font-black tracking-wider cursor-pointer shadow-[0_0_12px_rgba(255,255,0,0.8)] transition-all"
+              class="bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-5 py-2 text-xs font-black tracking-wider cursor-pointer shadow-[0_0_12px_rgba(255,255,0,0.8)] transition-all animate-pulse"
               @click="openInPlaceUpgrader()"
             >
-              [ LAUNCH FIRMWARE UPGRADE ENGINE ]
+              [ UPGRADE TO v{{ updateStatus.latest_version }} NOW ]
             </button>
+
+            <!-- Already up to date: Disabled status indicator with optional diagnostic simulation trigger -->
+            <template v-else>
+              <button
+                type="button"
+                disabled
+                class="bg-[#002200] border border-[#00FF00]/60 text-[#00FF00] px-4 py-2 text-xs font-bold tracking-wider cursor-not-allowed opacity-80"
+              >
+                [ FIRMWARE UP TO DATE: v{{ updateStatus?.current_version || '0.25.0' }} ]
+              </button>
+              <button
+                type="button"
+                class="bg-[#000055] hover:bg-[#000077] border border-[#333366] hover:border-[#00FFFF] text-[#A0A0C0] hover:text-[#00FFFF] px-3 py-2 text-xs font-bold tracking-wider cursor-pointer transition-colors"
+                @click="openInPlaceUpgrader(undefined, true)"
+                title="Run safe dry-run simulation of Docker container swap without performing an upgrade"
+              >
+                [ RUN DIAGNOSTIC SIMULATION ]
+              </button>
+            </template>
+
             <span v-if="updateCapability?.trigger_file_available && updateCapability?.detected_method === 'trigger_file'" class="text-[10px] text-[#8888AA]">
               Companion watcher: <code class="text-[#00FF00]">openprevue-host-updater.sh</code>
             </span>
@@ -2629,6 +2777,88 @@
               <p class="text-[11px] text-[#C0C0E0] leading-normal">
                 Pair your Telegram account in Tab 7 for automated morning voice briefs and show notifications. In severe weather, the Emergency Alert System (EAS) halts video and crawls official National Weather Service bulletins with authentic dual-tone retro sirens.
               </p>
+            </div>
+          </div>
+
+          <!-- Welcome Modal Control & Reset Banner -->
+          <div class="bg-[#000022] p-3.5 border border-[#00FFFF]/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-black text-[#00FFFF] uppercase tracking-wider">
+                  // STARTUP WELCOME GUIDE MODAL PREFERENCE
+                </span>
+                <span
+                  class="text-[10px] px-2 py-0.5 font-bold uppercase border"
+                  :class="isOnboardingDismissed
+                    ? 'bg-[#332200] border-[#FFFF00] text-[#FFFF00]'
+                    : 'bg-[#003300] border-[#00FF00] text-[#00FF00]'"
+                >
+                  {{ isOnboardingDismissed ? '[ STATUS: DISMISSED / HIDDEN ]' : '[ STATUS: ACTIVE ON STARTUP ]' }}
+                </span>
+              </div>
+              <p class="text-[11px] text-[#A0A0C0] leading-normal">
+                Controls the initial welcome guide modal showing navigation landmarks for Settings, curated Spotify radio, where to add events, and local Ollama AI support.
+              </p>
+              <div v-if="modalResetNotice" class="text-[11px] text-[#00FF00] font-bold animate-pulse">
+                {{ modalResetNotice }}
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                class="px-3 py-1.5 bg-[#000044] hover:bg-[#000066] border border-[#00FFFF] text-[#00FFFF] text-xs font-bold uppercase cursor-pointer transition-colors"
+                @click="handlePreviewOnboardingModal"
+              >
+                [ PREVIEW MODAL NOW ]
+              </button>
+              <button
+                type="button"
+                class="px-3 py-1.5 bg-[#000088] hover:bg-[#0000AA] border border-[#FFFF00] text-[#FFFF00] text-xs font-black uppercase cursor-pointer transition-colors"
+                @click="handleResetOnboardingModal"
+              >
+                [ RE-ENABLE ON STARTUP ]
+              </button>
+            </div>
+          </div>
+
+          <!-- Post-Update Changelog Modal Control & Reset Banner -->
+          <div class="bg-[#000022] p-3.5 border border-[#00FF00]/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-black text-[#00FF00] uppercase tracking-wider">
+                  // POST-UPDATE CHANGELOG MODAL PREFERENCE
+                </span>
+                <span
+                  class="text-[10px] px-2 py-0.5 font-bold uppercase border"
+                  :class="isChangelogDismissedState
+                    ? 'bg-[#332200] border-[#FFFF00] text-[#FFFF00]'
+                    : 'bg-[#003300] border-[#00FF00] text-[#00FF00]'"
+                >
+                  {{ isChangelogDismissedState ? '[ STATUS: SUPPRESSED / NEVER SHOW ]' : '[ STATUS: ACTIVE ON UPDATES ]' }}
+                </span>
+              </div>
+              <p class="text-[11px] text-[#A0A0C0] leading-normal">
+                Controls the post-update release notes modal that automatically presents new features and architectural changes when your instance is upgraded.
+              </p>
+              <div v-if="changelogResetNotice" class="text-[11px] text-[#00FF00] font-bold animate-pulse">
+                {{ changelogResetNotice }}
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                class="px-3 py-1.5 bg-[#000044] hover:bg-[#000066] border border-[#00FFFF] text-[#00FFFF] text-xs font-bold uppercase cursor-pointer transition-colors"
+                @click="handlePreviewChangelogModal"
+              >
+                [ PREVIEW CHANGELOG NOW ]
+              </button>
+              <button
+                type="button"
+                class="px-3 py-1.5 bg-[#003300] hover:bg-[#004400] border border-[#00FF00] text-[#00FF00] text-xs font-black uppercase cursor-pointer transition-colors"
+                @click="handleResetChangelogPreference"
+              >
+                [ RE-ENABLE ON UPDATES ]
+              </button>
             </div>
           </div>
         </div>
@@ -2989,6 +3219,10 @@ import {
   testSpeechPipeline,
   triggerSync,
   unpairTelegramUser,
+  exportSettingsBackup,
+  fetchBackupStatus,
+  importSettingsBackup,
+  restoreDiskBackup,
   updateSetting,
   validateYouTubeSource,
 } from '../api/client'
@@ -2998,6 +3232,16 @@ import { commercialsEngine } from '../services/commercialsEngine'
 import { REGIONAL_PRESETS, type RegionalPreset } from '../services/regionalPresets'
 import { wakeLockService } from '../services/wakeLock'
 import { openUpdateModal } from '../services/updateModalState'
+import {
+  openOnboardingModal,
+  resetOnboardingModalPreference,
+  isDismissedOnStartup
+} from '../services/onboardingModalState'
+import {
+  openChangelogModal,
+  resetChangelogPreference,
+  isChangelogDismissed
+} from '../services/changelogModalState'
 import type { ActivityLogEntry, HealthData, OllamaPingResponse, SystemSettings, UpdateCapabilityResponse, UpdateStatusResponse, YouTubeValidationResponse } from '../types'
 
 const tabs = [
@@ -3028,11 +3272,193 @@ const getInitialTab = (): string => {
 
 const activeTab = ref(getInitialTab())
 
+const isOnboardingDismissed = ref(false)
+const modalResetNotice = ref('')
+
+const isChangelogDismissedState = ref(false)
+const changelogResetNotice = ref('')
+
+function checkOnboardingModalState() {
+  isOnboardingDismissed.value = isDismissedOnStartup()
+}
+
+function checkChangelogModalState() {
+  isChangelogDismissedState.value = isChangelogDismissed()
+}
+
+function handleResetOnboardingModal() {
+  resetOnboardingModalPreference()
+  isOnboardingDismissed.value = false
+  modalResetNotice.value = '[ STARTUP WELCOME GUIDE RESTORED: WILL DISPLAY ON NEXT BOOT ]'
+  setTimeout(() => {
+    modalResetNotice.value = ''
+  }, 5000)
+}
+
+function handlePreviewOnboardingModal() {
+  openOnboardingModal()
+}
+
+function handleResetChangelogPreference() {
+  resetChangelogPreference()
+  isChangelogDismissedState.value = false
+  changelogResetNotice.value = '[ POST-UPDATE CHANGELOG RESTORED: WILL DISPLAY ON NEXT UPGRADE ]'
+  setTimeout(() => {
+    changelogResetNotice.value = ''
+  }, 5000)
+}
+
+function handlePreviewChangelogModal() {
+  openChangelogModal()
+}
+
+// Configuration Persistence, Disk Backup & Browser Mirror State
+const showBrowserMirrorBanner = ref(false)
+const cachedMirrorData = ref<Record<string, any> | null>(null)
+const cachedMirrorTimestamp = ref('')
+
+const backupStatus = ref<{
+  exists: boolean
+  path: string
+  size_bytes?: number
+  last_modified?: string
+  settings_count?: number
+  version?: string
+} | null>(null)
+const isDownloadingBackup = ref(false)
+const isRestoringDisk = ref(false)
+const isImportingBackup = ref(false)
+const backupActionMessage = ref('')
+const backupActionSuccess = ref(true)
+const backupFileInput = ref<HTMLInputElement | null>(null)
+
+async function loadBackupStatus() {
+  try {
+    backupStatus.value = await fetchBackupStatus()
+  } catch (err) {
+    console.debug('Failed fetching backup status:', err)
+  }
+}
+
+async function handleDownloadBackup() {
+  isDownloadingBackup.value = true
+  backupActionMessage.value = ''
+  try {
+    const data = await exportSettingsBackup()
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `openprevue_settings_backup_${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    backupActionSuccess.value = true
+    backupActionMessage.value = 'Configuration backup JSON generated and downloaded.'
+  } catch (err: any) {
+    backupActionSuccess.value = false
+    backupActionMessage.value = `Failed exporting configuration: ${err?.message || err}`
+  } finally {
+    isDownloadingBackup.value = false
+  }
+}
+
+async function handleRestoreDiskBackup() {
+  if (!window.confirm('Restore system configuration and venues from server disk backup? Existing settings will be updated.')) {
+    return
+  }
+  isRestoringDisk.value = true
+  backupActionMessage.value = ''
+  try {
+    const res = await restoreDiskBackup()
+    backupActionSuccess.value = true
+    backupActionMessage.value = res.message || 'Settings restored from server disk!'
+    await loadAll()
+    await loadBackupStatus()
+  } catch (err: any) {
+    backupActionSuccess.value = false
+    backupActionMessage.value = `Failed restoring from disk: ${err?.message || err}`
+  } finally {
+    isRestoringDisk.value = false
+  }
+}
+
+function triggerImportFileInput() {
+  backupFileInput.value?.click()
+}
+
+async function handleImportFile(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  isImportingBackup.value = true
+  backupActionMessage.value = ''
+
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    try {
+      const text = e.target?.result as string
+      const parsed = JSON.parse(text)
+      if (!parsed.settings || typeof parsed.settings !== 'object') {
+        throw new Error('Invalid backup file: missing "settings" map.')
+      }
+      const res = await importSettingsBackup({
+        settings: parsed.settings,
+        custom_venues: parsed.custom_venues || [],
+      })
+      backupActionSuccess.value = true
+      backupActionMessage.value = res.message || 'Configuration successfully restored and applied!'
+      target.value = ''
+      await loadAll()
+      await loadBackupStatus()
+    } catch (err: any) {
+      backupActionSuccess.value = false
+      backupActionMessage.value = `Import error: ${err?.message || err}`
+      target.value = ''
+    } finally {
+      isImportingBackup.value = false
+    }
+  }
+  reader.onerror = () => {
+    backupActionSuccess.value = false
+    backupActionMessage.value = 'Failed reading uploaded backup file.'
+    isImportingBackup.value = false
+    target.value = ''
+  }
+  reader.readAsText(file)
+}
+
+async function handleRestoreBrowserMirror() {
+  if (!cachedMirrorData.value) return
+  for (const [key, val] of Object.entries(cachedMirrorData.value)) {
+    if (key in form && val !== undefined && val !== null) {
+      (form as any)[key] = String(val)
+    }
+  }
+  showBrowserMirrorBanner.value = false
+  await savePendingChanges(true)
+  backupActionSuccess.value = true
+  backupActionMessage.value = 'Configuration successfully restored from browser cache and synced to disk.'
+}
+
+function dismissBrowserMirror() {
+  showBrowserMirrorBanner.value = false
+}
+
 function selectTab(tabId: string) {
   if (autoSaveTimeout) {
     savePendingChanges().catch(() => {})
   }
   activeTab.value = tabId
+  if (tabId === 'guide') {
+    checkOnboardingModalState()
+    checkChangelogModalState()
+  }
+  if (tabId === 'updates') {
+    loadBackupStatus()
+  }
   router.replace({ query: { ...route.query, tab: tabId } }).catch(() => {})
 }
 
@@ -3041,6 +3467,13 @@ watch(
   (newTab) => {
     if (newTab && typeof newTab === 'string' && validTabIds.includes(newTab)) {
       activeTab.value = newTab
+      if (newTab === 'guide') {
+        checkOnboardingModalState()
+        checkChangelogModalState()
+      }
+      if (newTab === 'updates') {
+        loadBackupStatus()
+      }
     }
   }
 )
@@ -3392,6 +3825,19 @@ async function savePendingChanges(forceAll = false) {
     autoSaveState.value = 'saved'
     const now = new Date()
     lastSavedTimestamp.value = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+
+    try {
+      localStorage.setItem(
+        'openprevue_settings_mirror',
+        JSON.stringify({
+          timestamp: now.toISOString(),
+          settings: { ...form },
+        })
+      )
+    } catch {
+      // LocalStorage access
+    }
+    loadBackupStatus().catch(() => {})
   } catch (err: any) {
     console.error('Auto-save failed:', err)
     autoSaveState.value = 'error'
@@ -3783,6 +4229,45 @@ async function loadAll() {
     await nextTick()
     isLoaded.value = true
     autoSaveState.value = 'saved'
+
+    loadBackupStatus().catch(() => {})
+
+    try {
+      const rawMirror = localStorage.getItem('openprevue_settings_mirror')
+      if (rawMirror) {
+        const parsed = JSON.parse(rawMirror)
+        const mirrorSettings = parsed.settings || parsed
+        const hasCustomAi = Boolean(mirrorSettings.ai_ollama_url || mirrorSettings.ai_groq_key || mirrorSettings.ai_openai_key)
+        const currentLacksAi = !form.ai_ollama_url && !form.ai_groq_key && !form.ai_openai_key
+        const metroDiffers = Boolean(mirrorSettings.metro_label && mirrorSettings.metro_label !== form.metro_label)
+
+        if ((hasCustomAi && currentLacksAi) || (metroDiffers && (form.metro_label === 'AUSTIN, TX' || form.metro_label === 'NEW YORK CITY')) || (mirrorSettings.initial_setup_completed === '1' && form.initial_setup_completed !== '1')) {
+          cachedMirrorData.value = mirrorSettings
+          if (parsed.timestamp) {
+            cachedMirrorTimestamp.value = new Date(parsed.timestamp).toLocaleString()
+          }
+          showBrowserMirrorBanner.value = true
+        } else if (hasCustomAi || (form.metro_label !== 'AUSTIN, TX' && form.metro_label !== 'NEW YORK CITY') || s.initial_setup_completed === '1') {
+          localStorage.setItem(
+            'openprevue_settings_mirror',
+            JSON.stringify({
+              timestamp: new Date().toISOString(),
+              settings: { ...form },
+            })
+          )
+        }
+      } else if (form.ai_ollama_url || form.metro_label !== 'AUSTIN, TX' || s.initial_setup_completed === '1') {
+        localStorage.setItem(
+          'openprevue_settings_mirror',
+          JSON.stringify({
+            timestamp: new Date().toISOString(),
+            settings: { ...form },
+          })
+        )
+      }
+    } catch {
+      // LocalStorage error
+    }
   } catch (err) {
     console.error('Failed loading settings data:', err)
   }
@@ -3925,6 +4410,8 @@ onMounted(() => {
     window.addEventListener('beforeunload', handleBeforeUnload)
   }
   loadAll()
+  checkOnboardingModalState()
+  checkChangelogModalState()
 })
 
 onUnmounted(() => {

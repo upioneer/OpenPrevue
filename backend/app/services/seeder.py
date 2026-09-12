@@ -32,6 +32,12 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "tripadvisor_wishlist_url": "",
     "viator_wishlist_url": "",
     "viator_api_key": "",
+    "ai_ollama_url": "http://localhost:11434",
+    "ai_ollama_model": "llama3.2",
+    "ai_groq_key": "",
+    "ai_openai_key": "",
+    "ai_anthropic_key": "",
+    "listing_filter": "all",
     "audio_source": "spotify",
     "spotify_playlist_url": "https://open.spotify.com/playlist/3jiPmIT4RugR8TPhli5Obk",
     "icecast_stream_preset": "weatherscan",
@@ -60,6 +66,14 @@ async def seed_initial_data() -> None:
     """Seed initial system settings and mock listings if datastore is empty."""
     logger.info("Checking datastore seed status...")
 
+    from backend.app.services.settings_backup import (
+        backup_settings_to_disk,
+        restore_settings_from_backup_if_needed,
+    )
+
+    # Attempt automatic recovery from disk backup if existing database is clean/recreated
+    await restore_settings_from_backup_if_needed()
+
     async with get_db() as db:
         # Seed default settings if missing
         for key, value in DEFAULT_SETTINGS.items():
@@ -73,6 +87,9 @@ async def seed_initial_data() -> None:
         async with db.execute("SELECT COUNT(*) AS count FROM events") as cursor:
             row = await cursor.fetchone()
             event_count = row["count"] if row else 0
+
+    # Ensure disk backup reflects current state
+    await backup_settings_to_disk()
 
     if event_count == 0:
         logger.info("Datastore has 0 events. Executing initial mock ingestion...")
