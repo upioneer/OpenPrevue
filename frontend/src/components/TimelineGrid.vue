@@ -128,7 +128,7 @@
 
                 <!-- Event Title -->
                 <span
-                  class="truncate font-bold cursor-pointer hover:underline"
+                  class="truncate min-w-0 font-bold cursor-pointer hover:underline"
                   :class="[
                     eventTitleClasses,
                     evt.has_ticket === 1 ? 'text-[#00FF00] font-black' : ''
@@ -231,7 +231,7 @@
                 </button>
 
                 <span
-                  class="truncate font-bold cursor-pointer hover:underline"
+                  class="truncate min-w-0 font-bold cursor-pointer hover:underline"
                   :class="[
                     eventTitleClasses,
                     evt.has_ticket === 1 ? 'text-[#00FF00] font-black' : ''
@@ -333,7 +333,7 @@
                 </button>
 
                 <span
-                  class="truncate font-bold cursor-pointer hover:underline"
+                  class="truncate min-w-0 font-bold cursor-pointer hover:underline"
                   :class="[
                     eventTitleClasses,
                     evt.has_ticket === 1 ? 'text-[#00FF00] font-black' : ''
@@ -359,7 +359,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { updateEvent } from '../api/client'
-import { parseMatchup, resolveTeamBranding, type TeamBranding } from '../services/sportsTheme'
+import { cleanEventTitle, parseMatchup, resolveTeamBranding, type TeamBranding } from '../services/sportsTheme'
 import type { EventItem, VenueItem } from '../types'
 
 const props = withDefaults(
@@ -567,7 +567,7 @@ function formatDisplayTitle(evt: EventItem): string {
   if (sports) {
     return `${sports.teamA.name} vs ${sports.teamB.name}`
   }
-  return evt.title
+  return cleanEventTitle(evt.title)
 }
 
 function formatEventTime(isoString: string): string {

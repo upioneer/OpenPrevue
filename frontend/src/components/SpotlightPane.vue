@@ -363,7 +363,7 @@
 
           <!-- Event Title (Large Chunky 1990s TV Typography) -->
           <div class="text-base sm:text-lg md:text-xl lg:text-2xl font-black text-[#FFFF00] leading-tight line-clamp-2 tracking-wide drop-shadow-md uppercase shrink-0">
-            {{ currentEvent?.title || 'NO FEATURED EVENTS SCHEDULED' }}
+            {{ displayTitle }}
           </div>
 
           <!-- Date & Time -->
@@ -471,7 +471,7 @@
         </div>
 
         <div class="space-y-1">
-          <div class="text-sm font-black text-[#FFFF00] uppercase">{{ currentEvent?.title }}</div>
+          <div class="text-sm font-black text-[#FFFF00] uppercase">{{ displayTitle }}</div>
           <div class="text-xs text-[#00FF00] font-bold">{{ currentEvent?.venue_name }}</div>
           <div class="text-xs text-[#8888AA]">Scan directly with your phone camera to open tickets.</div>
         </div>
@@ -496,6 +496,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import QRCode from 'qrcode'
 import { fetchSpotifyMetadata } from '../api/client'
 import {
+  cleanEventTitle,
   parseMatchup,
   resolveLeagueBranding,
   resolveProviderBranding,
@@ -611,6 +612,11 @@ const leagueBranding = computed(() => {
     return resolveLeagueBranding(m[1])
   }
   return null
+})
+
+const displayTitle = computed(() => {
+  if (!currentEvent.value?.title) return 'NO FEATURED EVENTS SCHEDULED'
+  return cleanEventTitle(currentEvent.value.title)
 })
 
 const providerBranding = computed(() => {

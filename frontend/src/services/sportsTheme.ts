@@ -452,18 +452,58 @@ const TEAMS_DATABASE: Record<string, TeamBranding> = {
 }
 
 /**
+ * Strip redundant static broadcast timezones and embedded start times from event titles.
+ * E.g., "(1:00 PM ET / 12:00 PM CT)", "- 1:00 PM ET", "1:00 PM EST", "4:25 PM PT".
+ */
+export function cleanEventTitle(rawTitle?: string | null): string {
+  if (!rawTitle) return ''
+  let cleaned = rawTitle
+
+  // 1. Remove parenthesized or bracketed multi-zone/broadcast times
+  // E.g. "(1:00 PM ET / 12:00 PM CT)", "(1:00PM EST / 12:00PM CST)", "(1:00 PM / 12:00 PM)"
+  cleaned = cleaned.replace(/\s*[\(\[]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?\s*(?:[/|\-–—]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?)+\s*[\)\]]/gi, '')
+
+  // 2. Remove unparenthesized multi-zone broadcast times: "1:00 PM ET / 12:00 PM CT"
+  cleaned = cleaned.replace(/\s*(?:[-–—|•@]\s*)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?\s*[/|\-–—]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)/gi, '')
+
+  // 3. Remove single parenthesized time/zone: "(1:00 PM ET)", "(1:00 PM)", "(12:00 PM CT)", "(1:00PM)"
+  cleaned = cleaned.replace(/\s*[\(\[]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt|local)?\s*[\)\]]/gi, '')
+
+  // 4. Remove trailing or hyphenated times: " - 1:00 PM ET", " - 12:00 PM", " @ 1:00 PM ET", " | 1:00 PM EST"
+  cleaned = cleaned.replace(/\s*[-–—|•@]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt|local)?\b/gi, '')
+
+  // 5. Remove trailing standalone time and time zone at end of string: " 1:00 PM ET", " 1:00PM EST", " 12:00 PM CT"
+  cleaned = cleaned.replace(/\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?\s*$/gi, '')
+
+  // 6. Remove leading times: "1:00 PM ET - ...", "12:00 PM - ..."
+  cleaned = cleaned.replace(/^\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?\s*[-–—|:]\s*/gi, '')
+
+  // 7. Remove standalone timezone suffixes: "(ET)", "[ET]", " - ET"
+  cleaned = cleaned.replace(/\s*[\(\[]\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)\s*[\)\]]/gi, '')
+  cleaned = cleaned.replace(/\s*[-–—|]\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)\b/gi, '')
+
+  // 8. Clean up leftover trailing separators
+  cleaned = cleaned.replace(/[\s\-–—|/:]+$/g, '').trim()
+
+  return cleaned
+}
+
+/**
  * Robust case-insensitive sports title parser that splits matchup pairs and extracts league prefixes.
  */
 export function parseMatchup(rawTitle: string): ParsedMatchup | null {
   if (!rawTitle) return null
 
+  // Strip static broadcast timezones and embedded start times first
+  const cleanedTitle = cleanEventTitle(rawTitle)
+
   let league: string | undefined
-  const leagueMatch = rawTitle.match(/^(nba|nfl|mlb|mls|nhl|wnba|nascar|indycar|motogp|formula 1|f1):\s*/i)
+  const leagueMatch = cleanedTitle.match(/^(nba|nfl|mlb|mls|nhl|wnba|nascar|indycar|motogp|formula 1|f1):\s*/i)
   if (leagueMatch) {
     league = leagueMatch[1].toUpperCase()
   }
 
-  const title = rawTitle.replace(/^(nba|nfl|mlb|mls|nhl|wnba|nascar|indycar|motogp|formula 1|f1):\s*/i, '').trim()
+  const title = cleanedTitle.replace(/^(nba|nfl|mlb|mls|nhl|wnba|nascar|indycar|motogp|formula 1|f1):\s*/i, '').trim()
 
   // Match VS variations case-insensitively
   if (/\s+(?:vs\.?|against|v)\s+/i.test(title)) {
@@ -473,9 +513,9 @@ export function parseMatchup(rawTitle: string): ParsedMatchup | null {
     }
   }
 
-  // Match @ variations (Away @ Home)
-  if (/\s+@\s+/i.test(title)) {
-    const parts = title.split(/\s+@\s+/i)
+  // Match @ or AT variations (Away @ Home / Away at Home)
+  if (/\s+(?:@|at)\s+/i.test(title)) {
+    const parts = title.split(/\s+(?:@|at)\s+/i)
     if (parts.length >= 2) {
       return { teamA: parts[1].trim(), teamB: parts[0].trim(), league }
     }

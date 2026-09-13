@@ -34,6 +34,80 @@ def generate_canonical_id(name: str) -> str:
     return re.sub(r"[-\s]+", "-", clean).strip("-")
 
 
+def clean_event_title(raw_title: str) -> str:
+    """Strip redundant static broadcast timezones and embedded start times from event titles."""
+    if not raw_title:
+        return ""
+    cleaned = raw_title
+
+    # 1. Parenthesized or bracketed multi-zone/broadcast times
+    # E.g. "(1:00 PM ET / 12:00 PM CT)", "(1:00PM EST / 12:00PM CST)", "(1:00 PM / 12:00 PM)"
+    cleaned = re.sub(
+        r"\s*[\(\[]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?\s*(?:[/|\-–—]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?)+\s*[\)\]]",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    # 2. Unparenthesized multi-zone broadcast times: "1:00 PM ET / 12:00 PM CT"
+    cleaned = re.sub(
+        r"\s*(?:[-–—|•@]\s*)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?\s*[/|\-–—]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    # 3. Single parenthesized time/zone: "(1:00 PM ET)", "(1:00 PM)", "(12:00 PM CT)", "(1:00PM)"
+    cleaned = re.sub(
+        r"\s*[\(\[]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt|local)?\s*[\)\]]",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    # 4. Trailing or hyphenated times: " - 1:00 PM ET", " - 12:00 PM", " @ 1:00 PM ET", " | 1:00 PM EST"
+    cleaned = re.sub(
+        r"\s*[-–—|•@]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt|local)?\b",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    # 5. Trailing standalone time and time zone at end of string: " 1:00 PM ET", " 1:00PM EST", " 12:00 PM CT"
+    cleaned = re.sub(
+        r"\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?\s*$",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    # 6. Leading times: "1:00 PM ET - ...", "12:00 PM - ..."
+    cleaned = re.sub(
+        r"^\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?\s*[-–—|:]\s*",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    # 7. Standalone timezone suffixes: "(ET)", "[ET]", " - ET"
+    cleaned = re.sub(
+        r"\s*[\(\[]\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)\s*[\)\]]",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"\s*[-–—|]\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)\b",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    # 8. Clean up leftover trailing separators
+    cleaned = re.sub(r"[\s\-–—|/:]+$", "", cleaned).strip()
+    return cleaned
+
+
 class IngestionService:
     """Orchestrates event fetching, normalization, deduplication, and database persistence."""
 
@@ -237,6 +311,7 @@ class IngestionService:
 
     async def _persist_event(self, db: aiosqlite.Connection, raw: RawEvent, venue_id: str) -> str:
         """Deduplicate and insert or update event record."""
+        raw.title = clean_event_title(raw.title)
         event_id = f"{raw.source}-{raw.source_event_id}"
         now_iso = datetime.now(timezone.utc).isoformat()
 

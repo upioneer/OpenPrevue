@@ -3,6 +3,8 @@
  * Provides 100% complete coverage for all 32 NFL, 30 NBA, 30 MLB, 32 NHL, 29 MLS, 20 Premier League teams & F1.
  */
 
+import { cleanEventTitle } from './sportsTheme';
+
 export interface TeamInfo {
   name: string;
   city: string;
@@ -264,7 +266,8 @@ export function findTeamByQuery(query: string): TeamInfo | null {
 }
 
 export function parseSportsMatchup(title: string): MatchupInfo | null {
-  const upper = title.toUpperCase();
+  const cleaned = cleanEventTitle(title);
+  const upper = cleaned.toUpperCase();
 
   // Detect League
   let league = "SPORTS";
@@ -286,9 +289,9 @@ export function parseSportsMatchup(title: string): MatchupInfo | null {
     league = "NASCAR";
   }
 
-  // Check for VS pattern
-  if (upper.includes(" VS ") || upper.includes(" VS. ") || upper.includes(" @ ")) {
-    const parts = upper.split(/ VS\.? | @ /);
+  // Check for VS or @ or AT pattern
+  if (upper.includes(" VS ") || upper.includes(" VS. ") || upper.includes(" @ ") || upper.includes(" AT ")) {
+    const parts = upper.split(/ VS\.? | @ | AT /);
     if (parts.length >= 2) {
       const awayRaw = parts[0].replace(/NFL:|NBA:|MLB:|NHL:|MLS:|PREMIER LEAGUE:|LIVE NATION PRESENTS:|VIVID SEATS:/gi, "").trim();
       const homeRaw = parts[1].trim();

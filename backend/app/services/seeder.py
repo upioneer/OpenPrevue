@@ -88,6 +88,16 @@ async def seed_initial_data() -> None:
             row = await cursor.fetchone()
             event_count = row["count"] if row else 0
 
+        # Sanitize existing event titles to strip redundant static broadcast timezones
+        from backend.app.services.ingestion import clean_event_title
+        async with db.execute("SELECT id, title FROM events WHERE title LIKE '%ET%' OR title LIKE '%CT%' OR title LIKE '%PT%' OR title LIKE '%PM%' OR title LIKE '%AM%'") as cursor:
+            rows = await cursor.fetchall()
+            for r in rows:
+                cleaned = clean_event_title(r["title"])
+                if cleaned != r["title"]:
+                    await db.execute("UPDATE events SET title = ? WHERE id = ?", (cleaned, r["id"]))
+        await db.commit()
+
     # Ensure disk backup reflects current state
     await backup_settings_to_disk()
 
