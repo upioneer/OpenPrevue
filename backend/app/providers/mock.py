@@ -12,9 +12,13 @@ class MockEventProvider(BaseProvider):
 
     async def fetch_events(self, location: GeoPoint, radius_miles: float) -> list[RawEvent]:
         """Generate mock events relative to current timestamp and target coordinates."""
-        tz = ZoneInfo("America/New_York")
-        now = datetime.now(timezone.utc)
-        today = now.date()
+        # Determine if target coordinates match New York City or another metro
+        is_nyc = abs(location.latitude - 40.7128) < 1.0 and abs(location.longitude - (-74.0060)) < 1.0
+        is_nola = abs(location.latitude - 29.9511) < 1.0 and abs(location.longitude - (-90.0715)) < 1.0
+
+        tz = ZoneInfo("America/Chicago" if is_nola else ("America/New_York" if is_nyc else "UTC"))
+        now_local = datetime.now(tz)
+        today = now_local.date()
 
         # Build dates relative to today
         t_today_2pm = datetime(today.year, today.month, today.day, 14, 0, tzinfo=tz)
@@ -32,10 +36,6 @@ class MockEventProvider(BaseProvider):
         if d_sunday == today:
             d_sunday = today + timedelta(days=7)
         t_sun_12pm = datetime(d_sunday.year, d_sunday.month, d_sunday.day, 12, 0, tzinfo=tz)
-
-        # Determine if target coordinates match New York City or another metro
-        is_nyc = abs(location.latitude - 40.7128) < 1.0 and abs(location.longitude - (-74.0060)) < 1.0
-        is_nola = abs(location.latitude - 29.9511) < 1.0 and abs(location.longitude - (-90.0715)) < 1.0
 
         if is_nola:
             city = "New Orleans"

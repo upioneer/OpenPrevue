@@ -63,6 +63,60 @@ def map_travel_category(title: str, description: str = "") -> str:
     return "community"
 
 
+def extract_date_from_text(text: str) -> str | None:
+    """Extract an explicit calendar date from title or description if present."""
+    if not text:
+        return None
+    now = datetime.now(timezone.utc)
+    current_year = now.year
+
+    # Match YYYY-MM-DD
+    m = re.search(r"\b(20\d\d)-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])\b", text)
+    if m:
+        try:
+            dt = datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), 12, 0, tzinfo=timezone.utc)
+            return dt.isoformat()
+        except ValueError:
+            pass
+
+    # Match MM/DD or MM/DD/YYYY
+    m = re.search(r"\b(0?[1-9]|1[0-2])/([0-2]?[1-9]|3[01])(?:/(20\d\d|\d{2}))?\b", text)
+    if m:
+        try:
+            m_month = int(m.group(1))
+            m_day = int(m.group(2))
+            m_year = int(m.group(3)) if m.group(3) else current_year
+            if m_year < 100:
+                m_year += 2000
+            dt = datetime(m_year, m_month, m_day, 12, 0, tzinfo=timezone.utc)
+            return dt.isoformat()
+        except ValueError:
+            pass
+
+    # Match month name like "Oct 5" or "October 5, 2026"
+    months = {
+        "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+        "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12
+    }
+    m = re.search(
+        r"\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+([0-2]?[1-9]|3[01])(?:st|nd|rd|th)?(?:\s*,\s*(20\d\d))?\b",
+        text,
+        re.IGNORECASE,
+    )
+    if m:
+        try:
+            mon_prefix = m.group(1)[:3].lower()
+            m_month = months.get(mon_prefix, 1)
+            m_day = int(m.group(2))
+            m_year = int(m.group(3)) if m.group(3) else current_year
+            dt = datetime(m_year, m_month, m_day, 12, 0, tzinfo=timezone.utc)
+            return dt.isoformat()
+        except ValueError:
+            pass
+
+    return None
+
+
 class TravelWishlistProvider(BaseProvider):
     """Ingestion provider scraping public TripAdvisor & Viator wishlist and trip URLs."""
 
@@ -174,7 +228,7 @@ class TravelWishlistProvider(BaseProvider):
                         title=clean_title,
                         description=desc,
                         category=map_travel_category(clean_title, desc),
-                        start_time=now_iso,
+                        start_time=extract_date_from_text(f"{clean_title} {desc}") or now_iso,
                         end_time=None,
                         price_min=price_min,
                         price_max=price_min,
@@ -215,7 +269,8 @@ class TravelWishlistProvider(BaseProvider):
         # Extract start time
         start_time = item.get("startDate") or item.get("validFrom")
         if not start_time or not isinstance(start_time, str):
-            start_time = datetime.now(timezone.utc).isoformat()
+            extracted = extract_date_from_text(f"{title} {desc}")
+            start_time = extracted if extracted else datetime.now(timezone.utc).isoformat()
 
         end_time = item.get("endDate")
         if end_time and not isinstance(end_time, str):

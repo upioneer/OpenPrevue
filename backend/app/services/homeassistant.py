@@ -104,7 +104,7 @@ class HomeAssistantService:
 
         return {
             "status": "operational",
-            "version": "0.25.1",
+            "version": "0.25.2",
             "uptime_seconds": uptime,
             "metro_label": metro_label,
             "counts": {
@@ -183,6 +183,7 @@ rest:
 
 
 homeassistant_service = HomeAssistantService()
+
 
 
 

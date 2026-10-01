@@ -98,3 +98,12 @@ def test_parse_viator_opengraph_fallback():
     assert evt.price_min == 75.00
     assert evt.is_featured == 1
     assert evt.image_url is not None
+
+
+def test_extract_date_from_text():
+    from backend.app.providers.travel_wishlist import extract_date_from_text
+
+    assert extract_date_from_text("Grand Prix Session - October 5, 2026") == "2026-10-05T12:00:00+00:00"
+    assert extract_date_from_text("VIP Tour on 10/5/2026 at noon") == "2026-10-05T12:00:00+00:00"
+    assert extract_date_from_text("Experience 2026-10-05 evening tour") == "2026-10-05T12:00:00+00:00"
+    assert extract_date_from_text("General Walking Tour with no date") is None

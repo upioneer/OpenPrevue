@@ -500,10 +500,23 @@ const filteredVenues = computed(() => {
   return active.length > 0 ? active : props.venues
 })
 
-// Duplicate venue list to enable smooth infinite loop
+// Duplicate venue list to enable smooth infinite loop and guarantee viewport fill
 const displayedVenues = computed(() => {
-  if (filteredVenues.value.length === 0) return []
-  return [...filteredVenues.value, ...filteredVenues.value]
+  const base = filteredVenues.value
+  if (base.length === 0) return []
+
+  // Ensure enough rows to fill any viewport (including vertical portrait 9:16 or 4K kiosks)
+  // and guarantee scrollHeight is at least 2.5x container clientHeight for smooth infinite wrap
+  const targetMinRows = 36
+  const rawRepeats = Math.ceil(targetMinRows / base.length)
+  // Ensure repeats is always an even number so dividing scrollHeight by 2 splits cleanly on a full repetition boundary
+  const repeats = Math.max(2, rawRepeats % 2 === 0 ? rawRepeats : rawRepeats + 1)
+
+  const result: VenueItem[] = []
+  for (let i = 0; i < repeats; i++) {
+    result.push(...base)
+  }
+  return result
 })
 
 function getCategoryColor(category: string): string {
@@ -579,18 +592,26 @@ function formatEventTime(isoString: string): string {
   }
 }
 
+function getLocalDateKey(d: Date): string {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function getVenueSlotEvents(venueId: string, slot: 'today' | 'tonight' | 'tomorrow'): EventItem[] {
   const now = new Date()
-  const todayDateStr = now.toISOString().split('T')[0]
+  const todayDateStr = getLocalDateKey(now)
 
-  const tomorrow = new Date(now)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const tomorrowDateStr = tomorrow.toISOString().split('T')[0]
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  const tomorrowDateStr = getLocalDateKey(tomorrow)
 
   return props.events.filter(e => {
     if (e.venue_id !== venueId) return false
     const eventDate = new Date(e.start_time)
-    const eventDateStr = e.start_time.split('T')[0]
+    if (isNaN(eventDate.getTime())) return false
+
+    const eventDateStr = getLocalDateKey(eventDate)
     const eventHour = eventDate.getHours()
 
     if (slot === 'today') {
@@ -661,9 +682,9 @@ function startAutoScroll() {
             phaseTimer = 0
 
             // Seamless infinite wrap check on clean boundary
-            if (halfHeight > 0 && container.scrollTop >= halfHeight) {
-              container.scrollTop -= halfHeight
-              currentTargetTop -= halfHeight
+            if (halfHeight > 0 && (container.scrollTop >= halfHeight || container.scrollTop + container.clientHeight >= content.scrollHeight - 2)) {
+              container.scrollTop = container.scrollTop >= halfHeight ? container.scrollTop - halfHeight : 0
+              currentTargetTop = container.scrollTop
               targetRowIndex = 0
               for (let i = 0; i < rows.length; i++) {
                 if ((rows[i] as HTMLElement).offsetTop >= container.scrollTop) {
@@ -678,8 +699,8 @@ function startAutoScroll() {
         // Continuous non-stop scroll mode if pause duration is 0
         const pixelsToMove = (props.scrollSpeed || 30) * deltaSeconds
         container.scrollTop += pixelsToMove
-        if (halfHeight > 0 && container.scrollTop >= halfHeight) {
-          container.scrollTop -= halfHeight
+        if (halfHeight > 0 && (container.scrollTop >= halfHeight || container.scrollTop + container.clientHeight >= content.scrollHeight - 2)) {
+          container.scrollTop = container.scrollTop >= halfHeight ? container.scrollTop - halfHeight : 0
         }
       }
     }

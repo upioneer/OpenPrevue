@@ -6,7 +6,7 @@ import httpx
 
 from backend.app.core.logging import logger
 from backend.app.providers.base import BaseProvider, GeoPoint, ProviderStatus, RateLimitConfig, RawEvent
-from backend.app.providers.travel_wishlist import map_travel_category
+from backend.app.providers.travel_wishlist import extract_date_from_text, map_travel_category
 
 
 class ViatorPartnerProvider(BaseProvider):
@@ -97,6 +97,14 @@ class ViatorPartnerProvider(BaseProvider):
                     else:
                         image_url = first_img.get("url")
 
+                # Date extraction
+                start_time = (
+                    item.get("startDate")
+                    or item.get("availableFrom")
+                    or extract_date_from_text(f"{title} {desc}")
+                    or now_iso
+                )
+
                 events.append(
                     RawEvent(
                         source="viator",
@@ -111,7 +119,7 @@ class ViatorPartnerProvider(BaseProvider):
                         title=title,
                         description=desc,
                         category=map_travel_category(title, desc),
-                        start_time=now_iso,
+                        start_time=start_time,
                         end_time=None,
                         price_min=price_min,
                         price_max=price_min,
