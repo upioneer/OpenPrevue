@@ -350,6 +350,13 @@
               >
                 [TICKET OWNED]
               </span>
+
+              <span
+                v-if="isCustomUserEvent"
+                class="bg-[#FFFF00] text-[#000033] text-xs px-2 py-0.5 font-black rounded-xs shadow-[0_0_6px_rgba(255,255,0,0.8)] shrink-0 uppercase"
+              >
+                [USER EVENT]
+              </span>
             </div>
             <span class="text-[#8888AA] text-xs sm:text-sm shrink-0 font-black">
               SPOTLIGHT {{ currentIndex + 1 }} OF {{ featuredEvents.length }}
@@ -554,16 +561,159 @@ function handleImageError(e: Event) {
   target.style.display = 'none'
 }
 
-// Filter featured events, or fallback to all events if none flagged featured
+// Compute spotlight relevance and graphical richness score
+function calculateEventSpotlightScore(evt: EventItem, nowMs: number): number {
+  let score = 0
+
+  // 1. User-submitted custom events receive highest priority (+60)
+  const src = (evt.source || '').toLowerCase()
+  const isCustom =
+    src === 'custom' ||
+    src === 'user' ||
+    src === 'manual' ||
+    evt.id.startsWith('custom-') ||
+    (evt.source_event_id && evt.source_event_id.startsWith('custom-'))
+  if (isCustom) {
+    score += 60
+  }
+
+  // 2. Personal ticket hold commitment (+50)
+  if (evt.has_ticket === 1) {
+    score += 50
+  }
+
+  // 3. Explicitly pinned or featured (+30)
+  if (evt.is_featured === 1) {
+    score += 30
+  }
+
+  // 4. Meta-saturation: Visual Artwork Poster (+25)
+  if (evt.image_url && evt.image_url.trim().length > 0 && !imageErrorMap.value[evt.id]) {
+    score += 25
+  }
+
+  // 5. Meta-saturation: Live Sports Matchup Graphics with Franchise Branding (+25)
+  if ((evt.category || '').toLowerCase() === 'sports') {
+    const teams = parseMatchup(evt.title)
+    if (teams && teams.teamA && teams.teamB) {
+      score += 25
+    }
+  }
+
+  // 6. Meta-saturation: Rich Description (+15)
+  if (evt.description && evt.description.trim().length >= 25) {
+    score += 15
+  }
+
+  // 7. Meta-saturation: Scannable Box Office Ticket URL (+10)
+  if (evt.ticket_url && evt.ticket_url.trim().length > 0) {
+    score += 10
+  }
+
+  // 8. Meta-saturation: Explicit Pricing (+10)
+  if (evt.price_min != null && evt.price_min > 0) {
+    score += 10
+  }
+
+  // 9. Imminence Decay within 1-week horizon (+0 to +15 pts)
+  try {
+    const eventTime = new Date(evt.start_time).getTime()
+    const msUntil = eventTime - nowMs
+    const hoursUntil = msUntil / (1000 * 3600)
+    if (hoursUntil >= -2 && hoursUntil <= 168) {
+      const proximityFactor = Math.max(0, 1 - Math.max(0, hoursUntil) / 168)
+      score += Math.round(proximityFactor * 15)
+    }
+  } catch {
+    // Retain base score on parse failure
+  }
+
+  return score
+}
+
+// 1-Week Scope Meta-Saturated & Custom User Event Selection
 const featuredEvents = computed(() => {
   if (!props.events || props.events.length === 0) return []
-  const explicitFeatured = props.events.filter(e => e.is_featured === 1)
-  return explicitFeatured.length > 0 ? explicitFeatured : props.events.slice(0, 10)
+
+  const now = new Date()
+  const nowMs = now.getTime()
+  const twoHoursAgoMs = nowMs - 2 * 60 * 60 * 1000
+  const sevenDaysAheadMs = nowMs + 7 * 24 * 60 * 60 * 1000
+  const fourteenDaysAheadMs = nowMs + 14 * 24 * 60 * 60 * 1000
+
+  const getEventTime = (e: EventItem) => {
+    try {
+      const t = new Date(e.start_time).getTime()
+      return isNaN(t) ? 0 : t
+    } catch {
+      return 0
+    }
+  }
+
+  // 1. Primary candidate pool: Events in the 7-day (1-week) window
+  let candidatePool = props.events.filter((e) => {
+    const t = getEventTime(e)
+    return t >= twoHoursAgoMs && t <= sevenDaysAheadMs
+  })
+
+  // 2. Graceful scope expansion: If fewer than 4 events found within 7 days, expand to 14 days
+  if (candidatePool.length < 4) {
+    candidatePool = props.events.filter((e) => {
+      const t = getEventTime(e)
+      return t >= twoHoursAgoMs && t <= fourteenDaysAheadMs
+    })
+  }
+
+  // 3. Fallback: If still under 4 events, include all active future events
+  if (candidatePool.length < 4) {
+    candidatePool = props.events.filter((e) => getEventTime(e) >= twoHoursAgoMs)
+  }
+
+  // If no future events exist at all, fall back to props.events
+  if (candidatePool.length === 0) {
+    candidatePool = props.events.slice(0, 10)
+  }
+
+  // 4. Calculate spotlight score for each candidate
+  const scored = candidatePool.map((e) => ({
+    event: e,
+    score: calculateEventSpotlightScore(e, nowMs),
+    startTime: getEventTime(e),
+  }))
+
+  // 5. Sort by score descending (highest quality and saturation first)
+  scored.sort((a, b) => b.score - a.score)
+
+  // 6. Select top candidates (up to 12 featured slots)
+  const topTier = scored.slice(0, 12)
+
+  // 7. Sort the top candidates chronologically by start time so the spotlight carousel flows naturally forward through time
+  topTier.sort((a, b) => a.startTime - b.startTime)
+
+  return topTier.map((item) => item.event)
 })
 
 const currentEvent = computed<EventItem | null>(() => {
   if (featuredEvents.value.length === 0) return null
   return featuredEvents.value[currentIndex.value % featuredEvents.value.length]
+})
+
+const isCustomUserEvent = computed(() => {
+  if (!currentEvent.value) return false
+  const src = (currentEvent.value.source || '').toLowerCase()
+  return (
+    src === 'custom' ||
+    src === 'user' ||
+    src === 'manual' ||
+    currentEvent.value.id.startsWith('custom-') ||
+    Boolean(currentEvent.value.source_event_id && currentEvent.value.source_event_id.startsWith('custom-'))
+  )
+})
+
+watch(featuredEvents, (newList) => {
+  if (newList.length === 0 || currentIndex.value >= newList.length) {
+    currentIndex.value = 0
+  }
 })
 
 const eventCategory = computed(() => {

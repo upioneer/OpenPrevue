@@ -422,7 +422,7 @@ class IngestionService:
 
         # Add ticket link
         await db.execute(
-            "INSERT INTO ticket_links (event_id, source, url, label) VALUES (?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO ticket_links (event_id, source, url, label) VALUES (?, ?, ?, ?)",
             (event_id, raw.source, raw.ticket_url, f"Official {raw.source.title()} Tickets"),
         )
 

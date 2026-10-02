@@ -55,8 +55,15 @@ class HomeAssistantService:
                     SELECT e.id, e.title, e.category, e.start_time, e.price_min, e.price_max, e.ticket_url, e.image_url, v.name AS venue_name
                     FROM events e
                     JOIN venues v ON e.venue_id = v.id
-                    WHERE e.status = 'active' AND e.is_featured = 1
-                    ORDER BY e.start_time ASC
+                    WHERE e.status = 'active'
+                      AND (e.is_featured = 1 OR e.has_ticket = 1 OR e.source IN ('custom', 'user', 'manual'))
+                    ORDER BY (
+                        (CASE WHEN e.source IN ('custom', 'user', 'manual') THEN 60 ELSE 0 END) +
+                        (CASE WHEN e.has_ticket = 1 THEN 50 ELSE 0 END) +
+                        (CASE WHEN e.is_featured = 1 THEN 30 ELSE 0 END) +
+                        (CASE WHEN e.image_url IS NOT NULL AND length(e.image_url) > 0 THEN 25 ELSE 0 END) +
+                        (CASE WHEN e.category = 'sports' AND lower(e.title) LIKE '% vs %' THEN 25 ELSE 0 END)
+                    ) DESC, e.start_time ASC
                     LIMIT 1
                     """
                 ) as cursor:
@@ -104,7 +111,7 @@ class HomeAssistantService:
 
         return {
             "status": "operational",
-            "version": "0.25.2",
+            "version": "0.26.0",
             "uptime_seconds": uptime,
             "metro_label": metro_label,
             "counts": {
@@ -183,6 +190,7 @@ rest:
 
 
 homeassistant_service = HomeAssistantService()
+
 
 
 

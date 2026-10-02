@@ -4,15 +4,15 @@
     @mouseenter="isHoverPaused = true"
     @mouseleave="isHoverPaused = false"
   >
-    <!-- Fixed Column Headers -->
+    <!-- Fixed Column Headers (Balanced 3x3x3x3 12-Column Grid) -->
     <div
       class="bg-[#000066] border-b-2 border-[#333366] grid grid-cols-12 font-black tracking-wider text-[#FFFF00] px-3 sm:px-4 items-center z-10 shadow shrink-0"
       :class="headerClasses"
     >
-      <div class="col-span-4 uppercase border-r-2 border-[#333366] pr-2 truncate">SOURCE / VENUE</div>
+      <div class="col-span-3 uppercase border-r-2 border-[#333366] pr-2 truncate">VENUE / CHANNEL</div>
       <div class="col-span-3 uppercase border-r-2 border-[#333366] px-2 text-[#00FFFF] truncate">TODAY</div>
       <div class="col-span-3 uppercase border-r-2 border-[#333366] px-2 text-[#00FFFF] truncate">TONIGHT</div>
-      <div class="col-span-2 uppercase pl-2 text-[#00FFFF] truncate">TOMORROW</div>
+      <div class="col-span-3 uppercase pl-2 text-[#00FFFF] truncate">TOMORROW</div>
     </div>
 
     <!-- Scrolling Grid Area -->
@@ -31,322 +31,654 @@
             rowDensityClasses
           ]"
         >
-          <!-- Venue Name & Channel Number -->
-          <div class="col-span-4 font-black text-[#E0E0E0] truncate border-r-2 border-[#333366] pr-2 flex items-center space-x-1.5 sm:space-x-2.5">
-            <span class="text-[#8888AA] shrink-0 font-bold" :class="channelNumClasses">
-              {{ String((idx % (filteredVenues.length || 1)) + 1).padStart(2, '0') }}
-            </span>
-            <span class="truncate uppercase text-[#FFFFFF] font-black" :class="venueTitleClasses">
-              {{ venue.name }}
-            </span>
+          <!-- Venue Name & Channel Number (col-span-3) -->
+          <div class="col-span-3 font-black text-[#E0E0E0] truncate border-r-2 border-[#333366] pr-2 min-w-0">
+            <!-- Multiline Mode: Channel Number & City on Line 1, Venue Name on Line 2 -->
+            <div v-if="isMultilineMode" class="flex flex-col justify-center min-w-0 overflow-hidden">
+              <div class="flex items-center space-x-1.5 shrink-0 text-[#8888AA] font-bold" :class="channelNumClasses">
+                <span class="bg-[#000022] border border-[#444466] px-1 py-0.2 rounded-xs text-[#00FFFF] font-black">
+                  CH {{ String((idx % (filteredVenues.length || 1)) + 1).padStart(2, '0') }}
+                </span>
+                <span v-if="venue.city" class="text-[9px] sm:text-[10px] text-[#A0A0C0] uppercase truncate">
+                  {{ venue.city }}{{ venue.state ? `, ${venue.state}` : '' }}
+                </span>
+              </div>
+              <span class="truncate uppercase text-[#FFFFFF] font-black mt-0.5 block" :class="venueTitleClasses" :title="venue.name">
+                {{ venue.name }}
+              </span>
+            </div>
+
+            <!-- Single Line Mode: Inline Channel & Venue -->
+            <div v-else class="flex items-center space-x-1.5 sm:space-x-2.5 min-w-0 truncate">
+              <span class="text-[#8888AA] shrink-0 font-bold" :class="channelNumClasses">
+                {{ String((idx % (filteredVenues.length || 1)) + 1).padStart(2, '0') }}
+              </span>
+              <span class="truncate uppercase text-[#FFFFFF] font-black" :class="venueTitleClasses" :title="venue.name">
+                {{ venue.name }}
+              </span>
+            </div>
           </div>
 
-          <!-- Today Events (< 5 PM) -->
-          <div class="col-span-3 truncate border-r-2 border-[#333366] px-2">
+          <!-- Today Events (< 5 PM) (col-span-3) -->
+          <div class="col-span-3 border-r-2 border-[#333366] px-2 min-w-0 overflow-hidden">
             <template v-if="getVenueSlotEvents(venue.id, 'today').length > 0">
-              <div
-                v-for="evt in getVenueSlotEvents(venue.id, 'today')"
-                :key="evt.id"
-                class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group"
-              >
-                <!-- Category Color Pip -->
-                <span
-                  class="rounded-full inline-block shrink-0 shadow-[0_0_4px_currentColor]"
-                  :class="[getCategoryColor(evt.category), pipSizeClasses]"
-                ></span>
+              <template v-if="isMultilineMode">
+                <div
+                  v-for="evt in getVenueSlotEvents(venue.id, 'today')"
+                  :key="evt.id"
+                  class="flex flex-col justify-center min-w-0 py-0.5 group"
+                >
+                  <!-- Line 1: Meta badges on left, Time & Ticket Action on right -->
+                  <div class="flex items-center justify-between space-x-1.5 min-w-0 w-full">
+                    <div class="flex items-center space-x-1 sm:space-x-1.5 min-w-0 truncate">
+                      <span
+                        class="rounded-full inline-block shrink-0 shadow-[0_0_4px_currentColor]"
+                        :class="[getCategoryColor(evt.category), pipSizeClasses]"
+                      ></span>
 
-                <!-- Sports League & Team Badges if Sports Matchup -->
-                <template v-if="getSportsDetails(evt)">
-                  <span
-                    v-if="getSportsDetails(evt)?.league"
-                    class="bg-[#000088] text-[#00FFFF] border border-[#00FFFF] font-black rounded-xs shrink-0 uppercase"
-                    :class="leagueBadgeClasses"
-                  >
-                    {{ getSportsDetails(evt)?.league }}
-                  </span>
-                  <div class="flex items-center space-x-1 shrink-0">
-                    <span
-                      class="font-black rounded-xs border shrink-0"
-                      :class="teamPillClasses"
-                      :style="{
-                        backgroundColor: getSportsDetails(evt)?.teamA.primaryColor,
-                        borderColor: getSportsDetails(evt)?.teamA.secondaryColor,
-                        color: getSportsDetails(evt)?.teamA.textColor
-                      }"
-                    >
-                      {{ getSportsDetails(evt)?.teamA.shortName }}
-                    </span>
-                    <span class="font-black text-[#FF4444]" :class="vsTextClasses">VS</span>
-                    <span
-                      class="font-black rounded-xs border shrink-0"
-                      :class="teamPillClasses"
-                      :style="{
-                        backgroundColor: getSportsDetails(evt)?.teamB.primaryColor,
-                        borderColor: getSportsDetails(evt)?.teamB.secondaryColor,
-                        color: getSportsDetails(evt)?.teamB.textColor
-                      }"
-                    >
-                      {{ getSportsDetails(evt)?.teamB.shortName }}
-                    </span>
+                      <!-- Sports Matchup Badges -->
+                      <template v-if="getSportsDetails(evt)">
+                        <span
+                          v-if="getSportsDetails(evt)?.league"
+                          class="bg-[#000088] text-[#00FFFF] border border-[#00FFFF] font-black rounded-xs shrink-0 uppercase"
+                          :class="leagueBadgeClasses"
+                        >
+                          {{ getSportsDetails(evt)?.league }}
+                        </span>
+                        <div class="flex items-center space-x-0.5 sm:space-x-1 shrink-0">
+                          <span
+                            class="font-black rounded-xs border shrink-0"
+                            :class="teamPillClasses"
+                            :style="{
+                              backgroundColor: getSportsDetails(evt)?.teamA.primaryColor,
+                              borderColor: getSportsDetails(evt)?.teamA.secondaryColor,
+                              color: getSportsDetails(evt)?.teamA.textColor
+                            }"
+                          >
+                            {{ getSportsDetails(evt)?.teamA.shortName }}
+                          </span>
+                          <span class="font-black text-[#FF4444]" :class="vsTextClasses">VS</span>
+                          <span
+                            class="font-black rounded-xs border shrink-0"
+                            :class="teamPillClasses"
+                            :style="{
+                              backgroundColor: getSportsDetails(evt)?.teamB.primaryColor,
+                              borderColor: getSportsDetails(evt)?.teamB.secondaryColor,
+                              color: getSportsDetails(evt)?.teamB.textColor
+                            }"
+                          >
+                            {{ getSportsDetails(evt)?.teamB.shortName }}
+                          </span>
+                        </div>
+                      </template>
+
+                      <!-- Non-Sports Genre Badge / Image Thumbnail -->
+                      <template v-else>
+                        <img
+                          v-if="evt.image_url"
+                          :src="evt.image_url"
+                          :alt="evt.title"
+                          class="w-3.5 h-3.5 sm:w-4 sm:h-4 object-cover rounded-xs border border-[#333366] shrink-0 inline-block group-hover:border-[#00FFFF]"
+                          loading="lazy"
+                          @error="(e: any) => e.target.style.display='none'"
+                        />
+                        <span
+                          v-if="getEventBadge(evt)"
+                          class="font-black rounded-xs border shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 uppercase tracking-wide"
+                          :class="[getEventBadge(evt)!.bg, getEventBadge(evt)!.textCol, getEventBadge(evt)!.border]"
+                        >
+                          {{ getEventBadge(evt)!.text }}
+                        </span>
+                      </template>
+                    </div>
+
+                    <!-- Right: Time & Ticket Commitment Button -->
+                    <div class="flex items-center space-x-1 sm:space-x-1.5 shrink-0">
+                      <span class="text-[#00FFFF] shrink-0 font-bold" :class="eventTimeClasses">
+                        {{ formatEventTime(evt.start_time) }}
+                      </span>
+                      <button
+                        type="button"
+                        class="shrink-0 rounded-xs font-black cursor-pointer transition-all border"
+                        :class="[
+                          ticketButtonClasses,
+                          evt.has_ticket === 1
+                            ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
+                            : 'bg-[#000022]/90 text-[#8888AA] border-[#444466] hover:text-[#00FFFF] hover:border-[#00FFFF] hover:bg-[#000055]'
+                        ]"
+                        :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
+                        @click.stop="toggleTicketStatus(evt)"
+                      >
+                        {{ evt.has_ticket === 1 ? '[TICKET]' : '[+TKT]' }}
+                      </button>
+                    </div>
                   </div>
-                </template>
 
-                <!-- Non-Sports Genre Badge / Image Thumbnail -->
-                <template v-else>
-                  <img
-                    v-if="evt.image_url"
-                    :src="evt.image_url"
-                    :alt="evt.title"
-                    class="w-4 h-4 sm:w-4.5 sm:h-4.5 object-cover rounded-xs border border-[#333366] shrink-0 inline-block group-hover:border-[#00FFFF]"
-                    loading="lazy"
-                    @error="(e: any) => e.target.style.display='none'"
-                  />
+                  <!-- Line 2: Auto-Scrolling Headline when characters exceed boundaries -->
+                  <div class="w-full min-w-0 mt-0.5 overflow-hidden">
+                    <HeadlineMarquee
+                      :title="formatDisplayTitle(evt)"
+                      :has-ticket="evt.has_ticket === 1"
+                      :custom-classes="eventTitleClasses"
+                      @click="toggleTicketStatus(evt)"
+                    />
+                  </div>
+                </div>
+              </template>
+
+              <!-- Single-Line Fallback for single_row Rack Bar Density -->
+              <template v-else>
+                <div
+                  v-for="evt in getVenueSlotEvents(venue.id, 'today')"
+                  :key="evt.id"
+                  class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group"
+                >
                   <span
-                    v-if="getEventBadge(evt)"
-                    class="font-black rounded-xs border shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 uppercase tracking-wide"
-                    :class="[getEventBadge(evt)!.bg, getEventBadge(evt)!.textCol, getEventBadge(evt)!.border]"
+                    class="rounded-full inline-block shrink-0 shadow-[0_0_4px_currentColor]"
+                    :class="[getCategoryColor(evt.category), pipSizeClasses]"
+                  ></span>
+
+                  <template v-if="getSportsDetails(evt)">
+                    <span
+                      v-if="getSportsDetails(evt)?.league"
+                      class="bg-[#000088] text-[#00FFFF] border border-[#00FFFF] font-black rounded-xs shrink-0 uppercase"
+                      :class="leagueBadgeClasses"
+                    >
+                      {{ getSportsDetails(evt)?.league }}
+                    </span>
+                    <div class="flex items-center space-x-1 shrink-0">
+                      <span
+                        class="font-black rounded-xs border shrink-0"
+                        :class="teamPillClasses"
+                        :style="{
+                          backgroundColor: getSportsDetails(evt)?.teamA.primaryColor,
+                          borderColor: getSportsDetails(evt)?.teamA.secondaryColor,
+                          color: getSportsDetails(evt)?.teamA.textColor
+                        }"
+                      >
+                        {{ getSportsDetails(evt)?.teamA.shortName }}
+                      </span>
+                      <span class="font-black text-[#FF4444]" :class="vsTextClasses">VS</span>
+                      <span
+                        class="font-black rounded-xs border shrink-0"
+                        :class="teamPillClasses"
+                        :style="{
+                          backgroundColor: getSportsDetails(evt)?.teamB.primaryColor,
+                          borderColor: getSportsDetails(evt)?.teamB.secondaryColor,
+                          color: getSportsDetails(evt)?.teamB.textColor
+                        }"
+                      >
+                        {{ getSportsDetails(evt)?.teamB.shortName }}
+                      </span>
+                    </div>
+                  </template>
+
+                  <template v-else>
+                    <img
+                      v-if="evt.image_url"
+                      :src="evt.image_url"
+                      :alt="evt.title"
+                      class="w-4 h-4 sm:w-4.5 sm:h-4.5 object-cover rounded-xs border border-[#333366] shrink-0 inline-block group-hover:border-[#00FFFF]"
+                      loading="lazy"
+                      @error="(e: any) => e.target.style.display='none'"
+                    />
+                    <span
+                      v-if="getEventBadge(evt)"
+                      class="font-black rounded-xs border shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 uppercase tracking-wide"
+                      :class="[getEventBadge(evt)!.bg, getEventBadge(evt)!.textCol, getEventBadge(evt)!.border]"
+                    >
+                      {{ getEventBadge(evt)!.text }}
+                    </span>
+                  </template>
+
+                  <button
+                    type="button"
+                    class="shrink-0 rounded-xs font-black cursor-pointer transition-all border"
+                    :class="[
+                      ticketButtonClasses,
+                      evt.has_ticket === 1
+                        ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
+                        : 'bg-[#000022]/90 text-[#8888AA] border-[#444466] hover:text-[#00FFFF] hover:border-[#00FFFF] hover:bg-[#000055]'
+                    ]"
+                    :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
+                    @click.stop="toggleTicketStatus(evt)"
                   >
-                    {{ getEventBadge(evt)!.text }}
+                    {{ evt.has_ticket === 1 ? '[TICKET]' : '[+TKT]' }}
+                  </button>
+
+                  <span
+                    class="truncate min-w-0 font-bold cursor-pointer hover:underline"
+                    :class="[
+                      eventTitleClasses,
+                      evt.has_ticket === 1 ? 'text-[#00FF00]' : ''
+                    ]"
+                    :title="formatDisplayTitle(evt)"
+                    @click.stop="toggleTicketStatus(evt)"
+                  >
+                    {{ formatDisplayTitle(evt) }}
                   </span>
-                </template>
 
-                <!-- Ticket Commitment Badge / Toggle Button -->
-                <button
-                  type="button"
-                  class="shrink-0 rounded-xs font-black cursor-pointer transition-all border"
-                  :class="[
-                    ticketButtonClasses,
-                    evt.has_ticket === 1
-                      ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
-                      : 'bg-[#000022]/90 text-[#8888AA] border-[#444466] hover:text-[#00FFFF] hover:border-[#00FFFF] hover:bg-[#000055]'
-                  ]"
-                  :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
-                  @click.stop="toggleTicketStatus(evt)"
-                >
-                  {{ evt.has_ticket === 1 ? '[TICKET]' : '[+TKT]' }}
-                </button>
-
-                <!-- Event Title -->
-                <span
-                  class="truncate min-w-0 font-bold cursor-pointer hover:underline"
-                  :class="[
-                    eventTitleClasses,
-                    evt.has_ticket === 1 ? 'text-[#00FF00] font-black' : ''
-                  ]"
-                  @click.stop="toggleTicketStatus(evt)"
-                >
-                  {{ formatDisplayTitle(evt) }}
-                </span>
-
-                <!-- Event Time -->
-                <span class="text-[#00FFFF] shrink-0 font-bold" :class="eventTimeClasses">
-                  {{ formatEventTime(evt.start_time) }}
-                </span>
-              </div>
+                  <span class="text-[#00FFFF] shrink-0 font-bold" :class="eventTimeClasses">
+                    {{ formatEventTime(evt.start_time) }}
+                  </span>
+                </div>
+              </template>
             </template>
             <span v-else class="text-[#555577] italic" :class="emptySlotClasses">[ Box Office Open ]</span>
           </div>
 
-          <!-- Tonight Events (>= 5 PM) -->
-          <div class="col-span-3 truncate border-r-2 border-[#333366] px-2">
+          <!-- Tonight Events (>= 5 PM) (col-span-3) -->
+          <div class="col-span-3 border-r-2 border-[#333366] px-2 min-w-0 overflow-hidden">
             <template v-if="getVenueSlotEvents(venue.id, 'tonight').length > 0">
-              <div
-                v-for="evt in getVenueSlotEvents(venue.id, 'tonight')"
-                :key="evt.id"
-                class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group"
-              >
-                <span
-                  class="rounded-full inline-block shrink-0 shadow-[0_0_4px_currentColor]"
-                  :class="[getCategoryColor(evt.category), pipSizeClasses]"
-                ></span>
+              <template v-if="isMultilineMode">
+                <div
+                  v-for="evt in getVenueSlotEvents(venue.id, 'tonight')"
+                  :key="evt.id"
+                  class="flex flex-col justify-center min-w-0 py-0.5 group"
+                >
+                  <!-- Line 1: Meta badges on left, Time & Ticket Action on right -->
+                  <div class="flex items-center justify-between space-x-1.5 min-w-0 w-full">
+                    <div class="flex items-center space-x-1 sm:space-x-1.5 min-w-0 truncate">
+                      <span
+                        class="rounded-full inline-block shrink-0 shadow-[0_0_4px_currentColor]"
+                        :class="[getCategoryColor(evt.category), pipSizeClasses]"
+                      ></span>
 
-                <!-- Sports League & Team Badges if Sports Matchup -->
-                <template v-if="getSportsDetails(evt)">
-                  <span
-                    v-if="getSportsDetails(evt)?.league"
-                    class="bg-[#000088] text-[#00FFFF] border border-[#00FFFF] font-black rounded-xs shrink-0 uppercase"
-                    :class="leagueBadgeClasses"
-                  >
-                    {{ getSportsDetails(evt)?.league }}
-                  </span>
-                  <div class="flex items-center space-x-1 shrink-0">
-                    <span
-                      class="font-black rounded-xs border shrink-0"
-                      :class="teamPillClasses"
-                      :style="{
-                        backgroundColor: getSportsDetails(evt)?.teamA.primaryColor,
-                        borderColor: getSportsDetails(evt)?.teamA.secondaryColor,
-                        color: getSportsDetails(evt)?.teamA.textColor
-                      }"
-                    >
-                      {{ getSportsDetails(evt)?.teamA.shortName }}
-                    </span>
-                    <span class="font-black text-[#FF4444]" :class="vsTextClasses">VS</span>
-                    <span
-                      class="font-black rounded-xs border shrink-0"
-                      :class="teamPillClasses"
-                      :style="{
-                        backgroundColor: getSportsDetails(evt)?.teamB.primaryColor,
-                        borderColor: getSportsDetails(evt)?.teamB.secondaryColor,
-                        color: getSportsDetails(evt)?.teamB.textColor
-                      }"
-                    >
-                      {{ getSportsDetails(evt)?.teamB.shortName }}
-                    </span>
+                      <!-- Sports League & Team Badges -->
+                      <template v-if="getSportsDetails(evt)">
+                        <span
+                          v-if="getSportsDetails(evt)?.league"
+                          class="bg-[#000088] text-[#00FFFF] border border-[#00FFFF] font-black rounded-xs shrink-0 uppercase"
+                          :class="leagueBadgeClasses"
+                        >
+                          {{ getSportsDetails(evt)?.league }}
+                        </span>
+                        <div class="flex items-center space-x-0.5 sm:space-x-1 shrink-0">
+                          <span
+                            class="font-black rounded-xs border shrink-0"
+                            :class="teamPillClasses"
+                            :style="{
+                              backgroundColor: getSportsDetails(evt)?.teamA.primaryColor,
+                              borderColor: getSportsDetails(evt)?.teamA.secondaryColor,
+                              color: getSportsDetails(evt)?.teamA.textColor
+                            }"
+                          >
+                            {{ getSportsDetails(evt)?.teamA.shortName }}
+                          </span>
+                          <span class="font-black text-[#FF4444]" :class="vsTextClasses">VS</span>
+                          <span
+                            class="font-black rounded-xs border shrink-0"
+                            :class="teamPillClasses"
+                            :style="{
+                              backgroundColor: getSportsDetails(evt)?.teamB.primaryColor,
+                              borderColor: getSportsDetails(evt)?.teamB.secondaryColor,
+                              color: getSportsDetails(evt)?.teamB.textColor
+                            }"
+                          >
+                            {{ getSportsDetails(evt)?.teamB.shortName }}
+                          </span>
+                        </div>
+                      </template>
+
+                      <!-- Non-Sports Genre Badge / Image Thumbnail -->
+                      <template v-else>
+                        <img
+                          v-if="evt.image_url"
+                          :src="evt.image_url"
+                          :alt="evt.title"
+                          class="w-3.5 h-3.5 sm:w-4 sm:h-4 object-cover rounded-xs border border-[#333366] shrink-0 inline-block group-hover:border-[#00FFFF]"
+                          loading="lazy"
+                          @error="(e: any) => e.target.style.display='none'"
+                        />
+                        <span
+                          v-if="getEventBadge(evt)"
+                          class="font-black rounded-xs border shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 uppercase tracking-wide"
+                          :class="[getEventBadge(evt)!.bg, getEventBadge(evt)!.textCol, getEventBadge(evt)!.border]"
+                        >
+                          {{ getEventBadge(evt)!.text }}
+                        </span>
+                      </template>
+                    </div>
+
+                    <!-- Right: Time & Ticket Commitment Button -->
+                    <div class="flex items-center space-x-1 sm:space-x-1.5 shrink-0">
+                      <span class="text-[#00FFFF] shrink-0 font-bold" :class="eventTimeClasses">
+                        {{ formatEventTime(evt.start_time) }}
+                      </span>
+                      <button
+                        type="button"
+                        class="shrink-0 rounded-xs font-black cursor-pointer transition-all border"
+                        :class="[
+                          ticketButtonClasses,
+                          evt.has_ticket === 1
+                            ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
+                            : 'bg-[#000022]/90 text-[#8888AA] border-[#444466] hover:text-[#00FFFF] hover:border-[#00FFFF] hover:bg-[#000055]'
+                        ]"
+                        :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
+                        @click.stop="toggleTicketStatus(evt)"
+                      >
+                        {{ evt.has_ticket === 1 ? '[TICKET]' : '[+TKT]' }}
+                      </button>
+                    </div>
                   </div>
-                </template>
 
-                <!-- Non-Sports Genre Badge / Image Thumbnail -->
-                <template v-else>
-                  <img
-                    v-if="evt.image_url"
-                    :src="evt.image_url"
-                    :alt="evt.title"
-                    class="w-4 h-4 sm:w-4.5 sm:h-4.5 object-cover rounded-xs border border-[#333366] shrink-0 inline-block group-hover:border-[#00FFFF]"
-                    loading="lazy"
-                    @error="(e: any) => e.target.style.display='none'"
-                  />
+                  <!-- Line 2: Auto-Scrolling Headline when characters exceed boundaries -->
+                  <div class="w-full min-w-0 mt-0.5 overflow-hidden">
+                    <HeadlineMarquee
+                      :title="formatDisplayTitle(evt)"
+                      :has-ticket="evt.has_ticket === 1"
+                      :custom-classes="eventTitleClasses"
+                      @click="toggleTicketStatus(evt)"
+                    />
+                  </div>
+                </div>
+              </template>
+
+              <!-- Single-Line Fallback for single_row Rack Bar Density -->
+              <template v-else>
+                <div
+                  v-for="evt in getVenueSlotEvents(venue.id, 'tonight')"
+                  :key="evt.id"
+                  class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group"
+                >
                   <span
-                    v-if="getEventBadge(evt)"
-                    class="font-black rounded-xs border shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 uppercase tracking-wide"
-                    :class="[getEventBadge(evt)!.bg, getEventBadge(evt)!.textCol, getEventBadge(evt)!.border]"
+                    class="rounded-full inline-block shrink-0 shadow-[0_0_4px_currentColor]"
+                    :class="[getCategoryColor(evt.category), pipSizeClasses]"
+                  ></span>
+
+                  <template v-if="getSportsDetails(evt)">
+                    <span
+                      v-if="getSportsDetails(evt)?.league"
+                      class="bg-[#000088] text-[#00FFFF] border border-[#00FFFF] font-black rounded-xs shrink-0 uppercase"
+                      :class="leagueBadgeClasses"
+                    >
+                      {{ getSportsDetails(evt)?.league }}
+                    </span>
+                    <div class="flex items-center space-x-1 shrink-0">
+                      <span
+                        class="font-black rounded-xs border shrink-0"
+                        :class="teamPillClasses"
+                        :style="{
+                          backgroundColor: getSportsDetails(evt)?.teamA.primaryColor,
+                          borderColor: getSportsDetails(evt)?.teamA.secondaryColor,
+                          color: getSportsDetails(evt)?.teamA.textColor
+                        }"
+                      >
+                        {{ getSportsDetails(evt)?.teamA.shortName }}
+                      </span>
+                      <span class="font-black text-[#FF4444]" :class="vsTextClasses">VS</span>
+                      <span
+                        class="font-black rounded-xs border shrink-0"
+                        :class="teamPillClasses"
+                        :style="{
+                          backgroundColor: getSportsDetails(evt)?.teamB.primaryColor,
+                          borderColor: getSportsDetails(evt)?.teamB.secondaryColor,
+                          color: getSportsDetails(evt)?.teamB.textColor
+                        }"
+                      >
+                        {{ getSportsDetails(evt)?.teamB.shortName }}
+                      </span>
+                    </div>
+                  </template>
+
+                  <template v-else>
+                    <img
+                      v-if="evt.image_url"
+                      :src="evt.image_url"
+                      :alt="evt.title"
+                      class="w-4 h-4 sm:w-4.5 sm:h-4.5 object-cover rounded-xs border border-[#333366] shrink-0 inline-block group-hover:border-[#00FFFF]"
+                      loading="lazy"
+                      @error="(e: any) => e.target.style.display='none'"
+                    />
+                    <span
+                      v-if="getEventBadge(evt)"
+                      class="font-black rounded-xs border shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 uppercase tracking-wide"
+                      :class="[getEventBadge(evt)!.bg, getEventBadge(evt)!.textCol, getEventBadge(evt)!.border]"
+                    >
+                      {{ getEventBadge(evt)!.text }}
+                    </span>
+                  </template>
+
+                  <button
+                    type="button"
+                    class="shrink-0 rounded-xs font-black cursor-pointer transition-all border"
+                    :class="[
+                      ticketButtonClasses,
+                      evt.has_ticket === 1
+                        ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
+                        : 'bg-[#000022]/90 text-[#8888AA] border-[#444466] hover:text-[#00FFFF] hover:border-[#00FFFF] hover:bg-[#000055]'
+                    ]"
+                    :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
+                    @click.stop="toggleTicketStatus(evt)"
                   >
-                    {{ getEventBadge(evt)!.text }}
+                    {{ evt.has_ticket === 1 ? '[TICKET]' : '[+TKT]' }}
+                  </button>
+
+                  <span
+                    class="truncate min-w-0 font-bold cursor-pointer hover:underline"
+                    :class="[
+                      eventTitleClasses,
+                      evt.has_ticket === 1 ? 'text-[#00FF00]' : ''
+                    ]"
+                    :title="formatDisplayTitle(evt)"
+                    @click.stop="toggleTicketStatus(evt)"
+                  >
+                    {{ formatDisplayTitle(evt) }}
                   </span>
-                </template>
 
-                <button
-                  type="button"
-                  class="shrink-0 rounded-xs font-black cursor-pointer transition-all border"
-                  :class="[
-                    ticketButtonClasses,
-                    evt.has_ticket === 1
-                      ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
-                      : 'bg-[#000022]/90 text-[#8888AA] border-[#444466] hover:text-[#00FFFF] hover:border-[#00FFFF] hover:bg-[#000055]'
-                  ]"
-                  :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
-                  @click.stop="toggleTicketStatus(evt)"
-                >
-                  {{ evt.has_ticket === 1 ? '[TICKET]' : '[+TKT]' }}
-                </button>
-
-                <span
-                  class="truncate min-w-0 font-bold cursor-pointer hover:underline"
-                  :class="[
-                    eventTitleClasses,
-                    evt.has_ticket === 1 ? 'text-[#00FF00] font-black' : ''
-                  ]"
-                  @click.stop="toggleTicketStatus(evt)"
-                >
-                  {{ formatDisplayTitle(evt) }}
-                </span>
-
-                <span class="text-[#00FFFF] shrink-0 font-bold" :class="eventTimeClasses">
-                  {{ formatEventTime(evt.start_time) }}
-                </span>
-              </div>
+                  <span class="text-[#00FFFF] shrink-0 font-bold" :class="eventTimeClasses">
+                    {{ formatEventTime(evt.start_time) }}
+                  </span>
+                </div>
+              </template>
             </template>
             <span v-else class="text-[#555577] italic" :class="emptySlotClasses">[ Box Office Open ]</span>
           </div>
 
-          <!-- Tomorrow Events -->
-          <div class="col-span-2 truncate pl-2">
+          <!-- Tomorrow Events (col-span-3) -->
+          <div class="col-span-3 pl-2 min-w-0 overflow-hidden">
             <template v-if="getVenueSlotEvents(venue.id, 'tomorrow').length > 0">
-              <div
-                v-for="evt in getVenueSlotEvents(venue.id, 'tomorrow')"
-                :key="evt.id"
-                class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group"
-              >
-                <span
-                  class="rounded-full inline-block shrink-0 shadow-[0_0_4px_currentColor]"
-                  :class="[getCategoryColor(evt.category), pipSizeClasses]"
-                ></span>
+              <template v-if="isMultilineMode">
+                <div
+                  v-for="evt in getVenueSlotEvents(venue.id, 'tomorrow')"
+                  :key="evt.id"
+                  class="flex flex-col justify-center min-w-0 py-0.5 group"
+                >
+                  <!-- Line 1: Meta badges on left, Time & Ticket Action on right -->
+                  <div class="flex items-center justify-between space-x-1.5 min-w-0 w-full">
+                    <div class="flex items-center space-x-1 sm:space-x-1.5 min-w-0 truncate">
+                      <span
+                        class="rounded-full inline-block shrink-0 shadow-[0_0_4px_currentColor]"
+                        :class="[getCategoryColor(evt.category), pipSizeClasses]"
+                      ></span>
 
-                <!-- Sports League & Team Badges if Sports Matchup -->
-                <template v-if="getSportsDetails(evt)">
-                  <span
-                    v-if="getSportsDetails(evt)?.league"
-                    class="bg-[#000088] text-[#00FFFF] border border-[#00FFFF] font-black rounded-xs shrink-0 uppercase"
-                    :class="leagueBadgeClasses"
-                  >
-                    {{ getSportsDetails(evt)?.league }}
-                  </span>
-                  <div class="flex items-center space-x-1 shrink-0">
-                    <span
-                      class="font-black rounded-xs border shrink-0"
-                      :class="teamPillClasses"
-                      :style="{
-                        backgroundColor: getSportsDetails(evt)?.teamA.primaryColor,
-                        borderColor: getSportsDetails(evt)?.teamA.secondaryColor,
-                        color: getSportsDetails(evt)?.teamA.textColor
-                      }"
-                    >
-                      {{ getSportsDetails(evt)?.teamA.shortName }}
-                    </span>
-                    <span class="font-black text-[#FF4444]" :class="vsTextClasses">VS</span>
-                    <span
-                      class="font-black rounded-xs border shrink-0"
-                      :class="teamPillClasses"
-                      :style="{
-                        backgroundColor: getSportsDetails(evt)?.teamB.primaryColor,
-                        borderColor: getSportsDetails(evt)?.teamB.secondaryColor,
-                        color: getSportsDetails(evt)?.teamB.textColor
-                      }"
-                    >
-                      {{ getSportsDetails(evt)?.teamB.shortName }}
-                    </span>
+                      <!-- Sports League & Team Badges -->
+                      <template v-if="getSportsDetails(evt)">
+                        <span
+                          v-if="getSportsDetails(evt)?.league"
+                          class="bg-[#000088] text-[#00FFFF] border border-[#00FFFF] font-black rounded-xs shrink-0 uppercase"
+                          :class="leagueBadgeClasses"
+                        >
+                          {{ getSportsDetails(evt)?.league }}
+                        </span>
+                        <div class="flex items-center space-x-0.5 sm:space-x-1 shrink-0">
+                          <span
+                            class="font-black rounded-xs border shrink-0"
+                            :class="teamPillClasses"
+                            :style="{
+                              backgroundColor: getSportsDetails(evt)?.teamA.primaryColor,
+                              borderColor: getSportsDetails(evt)?.teamA.secondaryColor,
+                              color: getSportsDetails(evt)?.teamA.textColor
+                            }"
+                          >
+                            {{ getSportsDetails(evt)?.teamA.shortName }}
+                          </span>
+                          <span class="font-black text-[#FF4444]" :class="vsTextClasses">VS</span>
+                          <span
+                            class="font-black rounded-xs border shrink-0"
+                            :class="teamPillClasses"
+                            :style="{
+                              backgroundColor: getSportsDetails(evt)?.teamB.primaryColor,
+                              borderColor: getSportsDetails(evt)?.teamB.secondaryColor,
+                              color: getSportsDetails(evt)?.teamB.textColor
+                            }"
+                          >
+                            {{ getSportsDetails(evt)?.teamB.shortName }}
+                          </span>
+                        </div>
+                      </template>
+
+                      <!-- Non-Sports Genre Badge / Image Thumbnail -->
+                      <template v-else>
+                        <img
+                          v-if="evt.image_url"
+                          :src="evt.image_url"
+                          :alt="evt.title"
+                          class="w-3.5 h-3.5 sm:w-4 sm:h-4 object-cover rounded-xs border border-[#333366] shrink-0 inline-block group-hover:border-[#00FFFF]"
+                          loading="lazy"
+                          @error="(e: any) => e.target.style.display='none'"
+                        />
+                        <span
+                          v-if="getEventBadge(evt)"
+                          class="font-black rounded-xs border shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 uppercase tracking-wide"
+                          :class="[getEventBadge(evt)!.bg, getEventBadge(evt)!.textCol, getEventBadge(evt)!.border]"
+                        >
+                          {{ getEventBadge(evt)!.text }}
+                        </span>
+                      </template>
+                    </div>
+
+                    <!-- Right: Time & Ticket Commitment Button -->
+                    <div class="flex items-center space-x-1 sm:space-x-1.5 shrink-0">
+                      <span class="text-[#00FFFF] shrink-0 font-bold" :class="eventTimeClasses">
+                        {{ formatEventTime(evt.start_time) }}
+                      </span>
+                      <button
+                        type="button"
+                        class="shrink-0 rounded-xs font-black cursor-pointer transition-all border"
+                        :class="[
+                          ticketButtonClasses,
+                          evt.has_ticket === 1
+                            ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
+                            : 'bg-[#000022]/90 text-[#8888AA] border-[#444466] hover:text-[#00FFFF] hover:border-[#00FFFF] hover:bg-[#000055]'
+                        ]"
+                        :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
+                        @click.stop="toggleTicketStatus(evt)"
+                      >
+                        {{ evt.has_ticket === 1 ? '[TICKET]' : '[+TKT]' }}
+                      </button>
+                    </div>
                   </div>
-                </template>
 
-                <!-- Non-Sports Genre Badge / Image Thumbnail -->
-                <template v-else>
-                  <img
-                    v-if="evt.image_url"
-                    :src="evt.image_url"
-                    :alt="evt.title"
-                    class="w-4 h-4 sm:w-4.5 sm:h-4.5 object-cover rounded-xs border border-[#333366] shrink-0 inline-block group-hover:border-[#00FFFF]"
-                    loading="lazy"
-                    @error="(e: any) => e.target.style.display='none'"
-                  />
+                  <!-- Line 2: Auto-Scrolling Headline when characters exceed boundaries -->
+                  <div class="w-full min-w-0 mt-0.5 overflow-hidden">
+                    <HeadlineMarquee
+                      :title="formatDisplayTitle(evt)"
+                      :has-ticket="evt.has_ticket === 1"
+                      :custom-classes="eventTitleClasses"
+                      @click="toggleTicketStatus(evt)"
+                    />
+                  </div>
+                </div>
+              </template>
+
+              <!-- Single-Line Fallback for single_row Rack Bar Density -->
+              <template v-else>
+                <div
+                  v-for="evt in getVenueSlotEvents(venue.id, 'tomorrow')"
+                  :key="evt.id"
+                  class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group"
+                >
                   <span
-                    v-if="getEventBadge(evt)"
-                    class="font-black rounded-xs border shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 uppercase tracking-wide"
-                    :class="[getEventBadge(evt)!.bg, getEventBadge(evt)!.textCol, getEventBadge(evt)!.border]"
+                    class="rounded-full inline-block shrink-0 shadow-[0_0_4px_currentColor]"
+                    :class="[getCategoryColor(evt.category), pipSizeClasses]"
+                  ></span>
+
+                  <template v-if="getSportsDetails(evt)">
+                    <span
+                      v-if="getSportsDetails(evt)?.league"
+                      class="bg-[#000088] text-[#00FFFF] border border-[#00FFFF] font-black rounded-xs shrink-0 uppercase"
+                      :class="leagueBadgeClasses"
+                    >
+                      {{ getSportsDetails(evt)?.league }}
+                    </span>
+                    <div class="flex items-center space-x-1 shrink-0">
+                      <span
+                        class="font-black rounded-xs border shrink-0"
+                        :class="teamPillClasses"
+                        :style="{
+                          backgroundColor: getSportsDetails(evt)?.teamA.primaryColor,
+                          borderColor: getSportsDetails(evt)?.teamA.secondaryColor,
+                          color: getSportsDetails(evt)?.teamA.textColor
+                        }"
+                      >
+                        {{ getSportsDetails(evt)?.teamA.shortName }}
+                      </span>
+                      <span class="font-black text-[#FF4444]" :class="vsTextClasses">VS</span>
+                      <span
+                        class="font-black rounded-xs border shrink-0"
+                        :class="teamPillClasses"
+                        :style="{
+                          backgroundColor: getSportsDetails(evt)?.teamB.primaryColor,
+                          borderColor: getSportsDetails(evt)?.teamB.secondaryColor,
+                          color: getSportsDetails(evt)?.teamB.textColor
+                        }"
+                      >
+                        {{ getSportsDetails(evt)?.teamB.shortName }}
+                      </span>
+                    </div>
+                  </template>
+
+                  <template v-else>
+                    <img
+                      v-if="evt.image_url"
+                      :src="evt.image_url"
+                      :alt="evt.title"
+                      class="w-4 h-4 sm:w-4.5 sm:h-4.5 object-cover rounded-xs border border-[#333366] shrink-0 inline-block group-hover:border-[#00FFFF]"
+                      loading="lazy"
+                      @error="(e: any) => e.target.style.display='none'"
+                    />
+                    <span
+                      v-if="getEventBadge(evt)"
+                      class="font-black rounded-xs border shrink-0 text-[8px] sm:text-[9px] px-1 py-0.2 uppercase tracking-wide"
+                      :class="[getEventBadge(evt)!.bg, getEventBadge(evt)!.textCol, getEventBadge(evt)!.border]"
+                    >
+                      {{ getEventBadge(evt)!.text }}
+                    </span>
+                  </template>
+
+                  <button
+                    type="button"
+                    class="shrink-0 rounded-xs font-black cursor-pointer transition-all border"
+                    :class="[
+                      ticketButtonClasses,
+                      evt.has_ticket === 1
+                        ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
+                        : 'bg-[#000022]/90 text-[#8888AA] border-[#444466] hover:text-[#00FFFF] hover:border-[#00FFFF] hover:bg-[#000055]'
+                    ]"
+                    :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
+                    @click.stop="toggleTicketStatus(evt)"
                   >
-                    {{ getEventBadge(evt)!.text }}
+                    {{ evt.has_ticket === 1 ? '[TICKET]' : '[+TKT]' }}
+                  </button>
+
+                  <span
+                    class="truncate min-w-0 font-bold cursor-pointer hover:underline"
+                    :class="[
+                      eventTitleClasses,
+                      evt.has_ticket === 1 ? 'text-[#00FF00]' : ''
+                    ]"
+                    :title="formatDisplayTitle(evt)"
+                    @click.stop="toggleTicketStatus(evt)"
+                  >
+                    {{ formatDisplayTitle(evt) }}
                   </span>
-                </template>
 
-                <button
-                  type="button"
-                  class="shrink-0 rounded-xs font-black cursor-pointer transition-all border"
-                  :class="[
-                    ticketButtonClasses,
-                    evt.has_ticket === 1
-                      ? 'bg-[#00FF00] text-[#000033] border-[#00FF00] shadow-[0_0_6px_rgba(0,255,0,0.8)]'
-                      : 'bg-[#000022]/90 text-[#8888AA] border-[#444466] hover:text-[#00FFFF] hover:border-[#00FFFF] hover:bg-[#000055]'
-                  ]"
-                  :title="evt.has_ticket === 1 ? 'Committed: Ticket Owned (Click to toggle)' : 'Click to mark as Committed Ticket'"
-                  @click.stop="toggleTicketStatus(evt)"
-                >
-                  {{ evt.has_ticket === 1 ? '[TICKET]' : '[+TKT]' }}
-                </button>
-
-                <span
-                  class="truncate min-w-0 font-bold cursor-pointer hover:underline"
-                  :class="[
-                    eventTitleClasses,
-                    evt.has_ticket === 1 ? 'text-[#00FF00] font-black' : ''
-                  ]"
-                  @click.stop="toggleTicketStatus(evt)"
-                >
-                  {{ formatDisplayTitle(evt) }}
-                </span>
-
-                <span class="text-[#00FFFF] shrink-0 font-bold" :class="eventTimeClasses">
-                  {{ formatEventTime(evt.start_time) }}
-                </span>
-              </div>
+                  <span class="text-[#00FFFF] shrink-0 font-bold" :class="eventTimeClasses">
+                    {{ formatEventTime(evt.start_time) }}
+                  </span>
+                </div>
+              </template>
             </template>
             <span v-else class="text-[#555577] italic" :class="emptySlotClasses">[ No Listings ]</span>
           </div>
@@ -359,6 +691,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { updateEvent } from '../api/client'
+import HeadlineMarquee from './HeadlineMarquee.vue'
 import { cleanEventTitle, parseMatchup, resolveTeamBranding, type TeamBranding } from '../services/sportsTheme'
 import type { EventItem, VenueItem } from '../types'
 
@@ -367,7 +700,7 @@ const props = withDefaults(
     venues: VenueItem[]
     events: EventItem[]
     scrollSpeed?: number
-    gridDensity?: 'classic_tv' | 'balanced' | 'dense' | string
+    gridDensity?: 'classic_tv' | 'balanced' | 'dense' | 'single_row' | string
     gridFilterMode?: 'active_only' | 'all' | string
     pauseDurationSeconds?: number
     pageIntervalSeconds?: number
@@ -397,6 +730,10 @@ let currentTargetTop = 0
 let targetRowIndex = 0
 
 // Density Computed Classes for 1 Row (Rack Bar / Ultrawide), 4 Rows (Classic TV), 7 Rows (Balanced), 12 Rows (Dense)
+const isMultilineMode = computed(() => {
+  return props.gridDensity !== 'single_row'
+})
+
 const headerClasses = computed(() => {
   if (props.gridDensity === 'single_row') {
     return 'h-6 sm:h-7 text-[10px] sm:text-xs'
@@ -413,12 +750,12 @@ const rowDensityClasses = computed(() => {
   if (props.gridDensity === 'single_row') {
     return 'py-1 sm:py-1.5 min-h-[36px] sm:min-h-[42px]'
   } else if (props.gridDensity === 'dense') {
-    return 'py-1 sm:py-1.5 min-h-[34px] sm:min-h-[38px]'
+    return 'py-1.5 sm:py-2 min-h-[40px] sm:min-h-[46px]'
   } else if (props.gridDensity === 'balanced') {
-    return 'py-2 sm:py-2.5 min-h-[46px] sm:min-h-[52px]'
+    return 'py-2 sm:py-2.5 min-h-[50px] sm:min-h-[58px]'
   }
   // classic_tv (4 rows default) - Generous CRT broadcast row scale
-  return 'py-3 sm:py-4 md:py-5 min-h-[64px] sm:min-h-[78px] md:min-h-[88px]'
+  return 'py-3 sm:py-4 md:py-5 min-h-[68px] sm:min-h-[82px] md:min-h-[92px]'
 })
 
 const channelNumClasses = computed(() => {
@@ -478,24 +815,23 @@ const eventTimeClasses = computed(() => {
 })
 
 const emptySlotClasses = computed(() => {
-  if (props.gridDensity === 'dense') return 'text-[10px]'
-  if (props.gridDensity === 'balanced') return 'text-xs'
+  if (props.gridDensity === 'single_row') return 'text-[10px]'
+  if (props.gridDensity === 'dense') return 'text-[10px] sm:text-[11px]'
+  if (props.gridDensity === 'balanced') return 'text-xs sm:text-sm'
   return 'text-xs sm:text-sm md:text-base'
 })
 
-// Filter venues based on gridFilterMode ('active_only' vs 'all')
+// Curated active listing vs all configured channels
 const filteredVenues = computed(() => {
-  if (props.gridFilterMode === 'all') {
+  if (props.gridFilterMode !== 'active_only') {
     return props.venues
   }
   // Curated Active Mode: Keep only venues that have scheduled events in the timeline window (today, tonight, tomorrow)
-  const active = props.venues.filter(v => {
-    return (
-      getVenueSlotEvents(v.id, 'today').length > 0 ||
-      getVenueSlotEvents(v.id, 'tonight').length > 0 ||
-      getVenueSlotEvents(v.id, 'tomorrow').length > 0
-    )
-  })
+  const active = props.venues.filter(v =>
+    getVenueSlotEvents(v.id, 'today').length > 0 ||
+    getVenueSlotEvents(v.id, 'tonight').length > 0 ||
+    getVenueSlotEvents(v.id, 'tomorrow').length > 0
+  )
   // Fallback: If no venues have events scheduled in the window, show all venues so grid is never empty
   return active.length > 0 ? active : props.venues
 })
