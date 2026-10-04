@@ -95,9 +95,10 @@ async def test_youtube_spotlight_settings_defaults_and_updates():
         assert res.status_code == 200
         settings = res.json()
         assert settings.get("spotlight_mode") == "featured"
+        assert settings.get("youtube_source_url") == "https://www.youtube.com/playlist?list=PLQ82R4ElALew"
         assert settings.get("youtube_audio_mode") == "mute"
         assert settings.get("youtube_aspect_ratio") == "4:3"
-        assert settings.get("youtube_shuffle_enabled") == "0"
+        assert settings.get("youtube_shuffle_enabled") == "1"
 
         # Update spotlight mode to 'youtube'
         await client.put("/api/v1/settings/spotlight_mode", json={"value": "youtube"})

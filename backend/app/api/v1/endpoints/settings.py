@@ -65,8 +65,8 @@ async def update_setting(key: str, payload: SettingUpdate) -> SettingItem:
 
     from backend.app.services.activity import log_activity
 
-    # If location coordinate changed, refresh weather & re-sync events immediately
-    if key in ("latitude", "longitude", "metro_label", "postal_code", "radius_miles"):
+    # If location coordinate or sports coverage mode changed, refresh weather & re-sync events immediately
+    if key in ("latitude", "longitude", "metro_label", "postal_code", "radius_miles", "sports_coverage_mode"):
         try:
             weather = await weather_service.get_current_weather(force_refresh=True)
             await connection_manager.broadcast("weather_updated", weather.to_dict())
@@ -75,7 +75,7 @@ async def update_setting(key: str, payload: SettingUpdate) -> SettingItem:
 
         try:
             await ingestion_service.sync_all_registered_providers()
-            await connection_manager.broadcast("events_updated", {"trigger": "location_changed"})
+            await connection_manager.broadcast("events_updated", {"trigger": f"{key}_changed"})
         except Exception:
             pass
 
@@ -147,7 +147,7 @@ async def export_settings_backup() -> dict:
                 })
 
     return {
-        "version": getattr(app_settings, "VERSION", "0.24.0"),
+        "version": getattr(app_settings, "VERSION", "0.26.0"),
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "settings": all_settings,
         "custom_venues": venues_list,

@@ -9,13 +9,16 @@ from backend.app.services.ingestion import ingestion_service
 
 @pytest.mark.asyncio
 async def test_sports_leagues_provider_fixtures():
-    """Verify SportsLeagueProvider returns F1, NASCAR, IndyCar, MotoGP, NFL, NBA, MLB, MLS fixtures."""
+    """Verify SportsLeagueProvider returns fixtures according to coverage_mode."""
     provider = SportsLeagueProvider()
-    center = GeoPoint(latitude=29.9511, longitude=-90.0715)
-    events = await provider.fetch_events(center, 50.0)
 
-    assert len(events) >= 8
-    titles = [e.title for e in events]
+    # 1. National Broadcasts Mode: returns F1, NASCAR, IndyCar, MotoGP, and major league games
+    provider.coverage_mode = "national_broadcasts"
+    no_center = GeoPoint(latitude=29.9511, longitude=-90.0715)
+    events_national = await provider.fetch_events(no_center, 50.0)
+
+    assert len(events_national) >= 8
+    titles = [e.title for e in events_national]
     assert any("FORMULA 1" in t for t in titles)
     assert any("NASCAR" in t for t in titles)
     assert any("INDYCAR" in t for t in titles)
@@ -23,10 +26,35 @@ async def test_sports_leagues_provider_fixtures():
     assert any("SAINTS" in t for t in titles)
     assert any("PELICANS" in t for t in titles)
 
-    for event in events:
+    for event in events_national:
         assert event.category == "sports"
         assert event.price_min is not None
         assert bool(event.ticket_url)
+
+    # 2. Local Only Mode (New Orleans): Only games at local venues (Caesars Superdome, Smoothie King Center)
+    provider.coverage_mode = "local_only"
+    events_local = await provider.fetch_events(no_center, 25.0)
+    local_titles = [e.title for e in events_local]
+    # Local teams should be present
+    assert any("SAINTS" in t for t in local_titles)
+    assert any("PELICANS" in t for t in local_titles)
+    # Distant national races (Austin, TX; Lincoln, AL) must NOT be present
+    assert not any("FORMULA 1" in t for t in local_titles)
+    assert not any("NASCAR" in t for t in local_titles)
+
+    # 3. Local Only Mode (New York City): MSG/Barclays local, New Orleans/Austin suppressed
+    nyc_center = GeoPoint(latitude=40.7128, longitude=-74.0060)
+    events_nyc = await provider.fetch_events(nyc_center, 25.0)
+    nyc_titles = [e.title for e in events_nyc]
+    assert any("KNICKS" in t or "NETS" in t or "GIANTS" in t for t in nyc_titles)
+    assert not any("SAINTS" in t for t in nyc_titles)
+    assert not any("PELICANS" in t for t in nyc_titles)
+    assert not any("FORMULA 1" in t for t in nyc_titles)
+
+    # 4. Disabled Mode: returns empty list
+    provider.coverage_mode = "disabled"
+    events_disabled = await provider.fetch_events(no_center, 50.0)
+    assert len(events_disabled) == 0
 
 
 @pytest.mark.asyncio
@@ -50,6 +78,7 @@ async def test_sports_and_ticketing_ingestion_sync():
     center = GeoPoint(latitude=29.9511, longitude=-90.0715)
 
     sports_prov = SportsLeagueProvider()
+    sports_prov.coverage_mode = "national_broadcasts"
     sports_res = await ingestion_service.sync_provider(sports_prov, center, 100.0)
     assert sports_res["status"] == "success"
     assert sports_res["events_fetched"] >= 8

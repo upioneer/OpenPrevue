@@ -40,9 +40,15 @@
       <!-- Left: YouTube Broadcast Status -->
       <div class="flex items-center space-x-2 shrink-0">
         <div class="flex items-center space-x-1.5">
-          <span class="w-2.5 h-2.5 bg-[#FF0000] inline-block animate-ping rounded-full"></span>
-          <span class="font-black text-xs sm:text-sm tracking-wider text-[#FF0000]">
-            YOUTUBE STREAM
+          <span
+            class="w-2.5 h-2.5 inline-block animate-ping rounded-full"
+            :class="isCommercialBreak ? 'bg-[#FFFF00]' : 'bg-[#FF0000]'"
+          ></span>
+          <span
+            class="font-black text-xs sm:text-sm tracking-wider"
+            :class="isCommercialBreak ? 'text-[#FFFF00]' : 'text-[#FF0000]'"
+          >
+            {{ isCommercialBreak ? 'RETRO COMMERCIAL BREAK' : 'YOUTUBE STREAM' }}
           </span>
         </div>
       </div>
@@ -54,8 +60,18 @@
         </div>
       </div>
 
-      <!-- Right: Channel Skipper & Audio Status Badge -->
+      <!-- Right: Channel Skipper, Return to Guide & Audio Status Badge -->
       <div class="shrink-0 flex items-center space-x-2">
+        <button
+          v-if="isCommercialBreak"
+          type="button"
+          class="text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 border cursor-pointer transition-colors bg-[#000044] text-[#FFFF00] border-[#FFFF00] hover:bg-[#FFFF00] hover:text-[#000033]"
+          @click="emit('commercialFinished')"
+          title="Return to regular guide programming"
+        >
+          [ RETURN TO GUIDE ]
+        </button>
+
         <button
           v-if="parsedResource.type === 'playlist'"
           type="button"
@@ -91,18 +107,21 @@ const props = withDefaults(
     aspectRatio?: 'auto' | '4:3' | '16:9' | 'stretch' | string
     isUltrawide?: boolean
     shuffleEnabled?: string | boolean
+    isCommercialBreak?: boolean
   }>(),
   {
     audioMode: 'mute',
     aspectRatio: '4:3',
     isUltrawide: false,
     shuffleEnabled: false,
+    isCommercialBreak: false,
   }
 )
 
 const emit = defineEmits<{
   (e: 'error', code: number): void
   (e: 'update:audioMode', mode: string): void
+  (e: 'commercialFinished'): void
 }>()
 
 const playerId = `yt-player-${Math.random().toString(36).substring(2, 9)}`
@@ -190,6 +209,7 @@ function toggleAudio() {
 function skipNextClip() {
   if (playerInstance && typeof playerInstance.nextVideo === 'function') {
     playerInstance.nextVideo()
+    setTimeout(updateTitle, 800)
   }
 }
 
@@ -234,6 +254,22 @@ async function mountPlayer() {
 
   const isPlaylist = parsedResource.value.type === 'playlist'
   const isMuted = !isAudioAudible.value && props.audioMode === 'mute'
+  let hasShuffledOnBoot = false
+
+  const applyBootShuffle = (target: any) => {
+    if (!isPlaylist || !isShuffleOn.value || hasShuffledOnBoot) return
+    if (typeof target.setShuffle === 'function') {
+      target.setShuffle(true)
+    }
+    if (typeof target.getPlaylist === 'function' && typeof target.playVideoAt === 'function') {
+      const pl = target.getPlaylist()
+      if (Array.isArray(pl) && pl.length > 1) {
+        hasShuffledOnBoot = true
+        const randIdx = Math.floor(Math.random() * pl.length)
+        target.playVideoAt(randIdx)
+      }
+    }
+  }
 
   const playerVars: any = {
     autoplay: 1,
@@ -273,20 +309,25 @@ async function mountPlayer() {
             e.target.setVolume(audioSynth.masterVolume.value)
           }
         }
-        if (isPlaylist && isShuffleOn.value && typeof e.target.setShuffle === 'function') {
-          e.target.setShuffle(true)
+        if (isPlaylist && isShuffleOn.value) {
+          applyBootShuffle(e.target)
         }
         e.target.playVideo()
         updateTitle()
       },
       onStateChange: (e: any) => {
         // e.data: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
+        if (isPlaylist && isShuffleOn.value && !hasShuffledOnBoot && (e.data === 5 || e.data === -1 || e.data === 1)) {
+          applyBootShuffle(e.target)
+        }
+
         if (e.data === 1) {
           isPlaying.value = true
           updateTitle()
         } else if (e.data === 0) {
-          // Continuous loop
-          if (isPlaylist) {
+          if (props.isCommercialBreak) {
+            emit('commercialFinished')
+          } else if (isPlaylist) {
             e.target.nextVideo()
           } else {
             e.target.playVideo()

@@ -29,6 +29,7 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "initial_setup_completed": "0",
     "update_check_interval": "disabled",
     "auto_update_notifs": "0",
+    "sports_coverage_mode": "local_only",
     "tripadvisor_wishlist_url": "",
     "viator_wishlist_url": "",
     "viator_api_key": "",
@@ -55,10 +56,13 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "ultrawide_mode": "auto",
     "ultrawide_priority": "feature",
     "spotlight_mode": "featured",
-    "youtube_source_url": "",
+    "youtube_source_url": "https://www.youtube.com/playlist?list=PLQ82R4ElALew",
     "youtube_audio_mode": "mute",
     "youtube_aspect_ratio": "4:3",
-    "youtube_shuffle_enabled": "0",
+    "youtube_shuffle_enabled": "1",
+    "commercials_enabled": "0",
+    "commercials_frequency_per_hour": "4",
+    "commercials_source": "youtube",
 }
 
 
@@ -81,6 +85,18 @@ async def seed_initial_data() -> None:
                 "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
                 (key, value),
             )
+        await db.commit()
+
+        # Seed or upgrade default youtube playlist if empty or legacy test link
+        async with db.execute("SELECT value FROM settings WHERE key = 'youtube_source_url'") as cursor:
+            row = await cursor.fetchone()
+            if not row or not row["value"] or "dQw4w9WgXcQ" in row["value"]:
+                await db.execute(
+                    "INSERT OR REPLACE INTO settings (key, value) VALUES ('youtube_source_url', 'https://www.youtube.com/playlist?list=PLQ82R4ElALew')"
+                )
+                await db.execute(
+                    "INSERT OR REPLACE INTO settings (key, value) VALUES ('youtube_shuffle_enabled', '1')"
+                )
         await db.commit()
 
         # Check existing events count

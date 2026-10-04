@@ -147,6 +147,14 @@ class IngestionService:
                 wishlist_urls.append(settings_map["viator_wishlist_url"].strip())
             travel_prov.target_urls = [u for u in wishlist_urls if u]
 
+        sports_mode = settings_map.get("sports_coverage_mode", "local_only")
+        sports_prov = provider_registry.get("sports_leagues")
+        if sports_prov and hasattr(sports_prov, "coverage_mode"):
+            sports_prov.coverage_mode = sports_mode
+
+        # Purge out-of-market or disabled sports events before syncing
+        await self.purge_out_of_market_sports(center, radius, sports_mode)
+
         total_inserted = 0
         total_updated = 0
         for provider in provider_registry.get_all():
@@ -159,6 +167,63 @@ class IngestionService:
             "events_inserted": total_inserted,
             "events_updated": total_updated,
         }
+
+    async def purge_out_of_market_sports(
+        self,
+        center: GeoPoint,
+        radius_miles: float,
+        coverage_mode: str = "local_only",
+    ) -> int:
+        """Purge sports league events that fall outside the configured local radius or when disabled."""
+        if coverage_mode == "national_broadcasts":
+            return 0
+
+        purged_count = 0
+        async with get_db() as db:
+            if coverage_mode == "disabled":
+                cursor = await db.execute("DELETE FROM events WHERE source = 'sports_leagues'")
+                purged_count = cursor.rowcount
+            else:
+                # local_only: find sports_leagues events outside radius or without coordinates
+                async with db.execute(
+                    """
+                    SELECT e.id, v.latitude, v.longitude
+                    FROM events e
+                    JOIN venues v ON e.venue_id = v.id
+                    WHERE e.source = 'sports_leagues'
+                    """
+                ) as cursor:
+                    rows = await cursor.fetchall()
+
+                delete_ids = []
+                for row in rows:
+                    lat, lon = row["latitude"], row["longitude"]
+                    if lat is None or lon is None:
+                        delete_ids.append(row["id"])
+                    else:
+                        d = calculate_haversine_distance(center.latitude, center.longitude, lat, lon)
+                        if d > radius_miles:
+                            delete_ids.append(row["id"])
+
+                if delete_ids:
+                    placeholders = ",".join("?" for _ in delete_ids)
+                    await db.execute(f"DELETE FROM events WHERE id IN ({placeholders})", delete_ids)
+                    purged_count = len(delete_ids)
+
+            # Clean up orphaned venues
+            await db.execute(
+                """
+                DELETE FROM venues
+                WHERE id NOT IN (SELECT DISTINCT venue_id FROM events)
+                  AND id NOT LIKE 'custom-%'
+                  AND id NOT LIKE 'mock-%'
+                """
+            )
+            await db.commit()
+
+        if purged_count > 0:
+            logger.info("Purged %d out-of-market or disabled sports league events.", purged_count)
+        return purged_count
 
     async def sync_provider(
         self,
@@ -202,14 +267,22 @@ class IngestionService:
             async with get_db() as db:
                 for raw in raw_events:
                     # Geo-filter if coordinates are provided (exempt custom travel wishlists which are explicitly curated trips)
-                    if provider.provider_name != "travel_wishlist" and raw.venue_latitude is not None and raw.venue_longitude is not None:
-                        dist = calculate_haversine_distance(
-                            center.latitude,
-                            center.longitude,
-                            raw.venue_latitude,
-                            raw.venue_longitude,
-                        )
-                        if dist > radius_miles:
+                    if provider.provider_name != "travel_wishlist":
+                        if raw.venue_latitude is not None and raw.venue_longitude is not None:
+                            dist = calculate_haversine_distance(
+                                center.latitude,
+                                center.longitude,
+                                raw.venue_latitude,
+                                raw.venue_longitude,
+                            )
+                            is_national_mode = (
+                                provider.provider_name == "sports_leagues"
+                                and getattr(provider, "coverage_mode", "local_only") == "national_broadcasts"
+                            )
+                            if dist > radius_miles and not is_national_mode:
+                                events_skipped += 1
+                                continue
+                        elif provider.provider_name == "sports_leagues" and getattr(provider, "coverage_mode", "local_only") == "local_only":
                             events_skipped += 1
                             continue
 

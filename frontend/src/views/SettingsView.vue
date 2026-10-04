@@ -211,6 +211,67 @@
         <div v-if="locationResolutionMsg" class="p-2 border text-xs" :class="locationResolutionIsError ? 'bg-[#330000] border-[#FF4444] text-[#FF8888]' : 'bg-[#003300] border-[#00FF00] text-[#00FF00] font-bold'">
           {{ locationResolutionMsg }}
         </div>
+
+        <!-- Major League Sports Coverage & Localization Mode -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase">
+              Major League Sports Coverage &amp; Localization
+            </h3>
+            <span class="text-xs text-[#FFFF00] font-bold">
+              ACTIVE: {{ form.sports_coverage_mode === 'disabled' ? 'DISABLED (NO SPORTS)' : (form.sports_coverage_mode === 'national_broadcasts' ? 'NATIONWIDE BROADCASTS (ALL MARKETS)' : 'LOCAL VENUES ONLY (WITHIN ' + form.radius_miles + ' MI)') }}
+            </span>
+          </div>
+          <p class="text-xs text-[#8888AA]">
+            Controls whether professional sports feeds (NFL, NBA, MLB, MLS, and Motorsport) are strictly localized to stadiums within your search radius, expanded to include nationwide television broadcasts, or suppressed entirely.
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <!-- Local Venues Only (Recommended) -->
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.sports_coverage_mode === 'local_only' || !form.sports_coverage_mode
+                ? 'bg-[#000066] border-[#00FF00] text-[#00FF00] shadow-[0_0_10px_rgba(0,255,0,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.sports_coverage_mode = 'local_only'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ LOCAL VENUES ONLY // RADIAL ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">
+                Strict Local Mode: Only home games physically played at venues within your {{ form.radius_miles }}-mile search radius appear. Out-of-market games across the country are suppressed.
+              </div>
+            </button>
+
+            <!-- Nationwide Broadcasts -->
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.sports_coverage_mode === 'national_broadcasts'
+                ? 'bg-[#000066] border-[#FFFF00] text-[#FFFF00] shadow-[0_0_10px_rgba(255,255,0,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.sports_coverage_mode = 'national_broadcasts'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ NATIONWIDE BROADCASTS // ALL MARKETS ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">
+                National Broadcast Mode: Ingests major televised games, primetime showdowns, and motorsport broadcasts regardless of stadium distance.
+              </div>
+            </button>
+
+            <!-- Disabled -->
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.sports_coverage_mode === 'disabled'
+                ? 'bg-[#000066] border-[#FF4444] text-[#FF8888] shadow-[0_0_10px_rgba(255,68,68,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.sports_coverage_mode = 'disabled'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ DISABLED // HIDE SPORTS ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">
+                Suppressed Mode: Hides and disables all professional sports fixtures from the schedule timeline and feature spotlight.
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Tab 2: Display & Scan Speed -->
@@ -479,18 +540,28 @@
           <div v-if="form.spotlight_mode === 'youtube'" class="pt-3 border-t border-[#333366] space-y-4">
             <!-- URL Input & Verification -->
             <div class="space-y-1.5">
-              <div class="flex items-center justify-between">
+              <div class="flex items-center justify-between flex-wrap gap-1">
                 <label class="text-xs text-[#FFFF00] font-black uppercase tracking-wider block">
                   YouTube Playlist URL, Video URL, or Resource ID:
                 </label>
-                <button
-                  type="button"
-                  class="text-[11px] font-black text-[#00FFFF] hover:text-white border border-[#00FFFF] px-2 py-0.5 uppercase cursor-pointer"
-                  :disabled="isValidatingYouTube"
-                  @click="handleValidateYouTube"
-                >
-                  {{ isValidatingYouTube ? '[ PROBING... ]' : '[ TEST / VERIFY URL ]' }}
-                </button>
+                <div class="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    class="text-[11px] font-black text-[#FFFF00] hover:text-white border border-[#FFFF00] bg-[#000044] hover:bg-[#000066] px-2 py-0.5 uppercase cursor-pointer transition-colors"
+                    @click="restoreDefaultYouTubePlaylist"
+                    title="Reset to default curated OpenPrevue playlist"
+                  >
+                    [ RESTORE DEFAULT PLAYLIST ]
+                  </button>
+                  <button
+                    type="button"
+                    class="text-[11px] font-black text-[#00FFFF] hover:text-white border border-[#00FFFF] px-2 py-0.5 uppercase cursor-pointer"
+                    :disabled="isValidatingYouTube"
+                    @click="handleValidateYouTube"
+                  >
+                    {{ isValidatingYouTube ? '[ PROBING... ]' : '[ TEST / VERIFY URL ]' }}
+                  </button>
+                </div>
               </div>
               <input
                 v-model="form.youtube_source_url"
@@ -499,9 +570,19 @@
                 class="w-full bg-[#000022] border border-[#00FFFF] text-white text-xs p-2 font-mono focus:outline-none"
                 @blur="handleValidateYouTube"
               />
-              <span class="text-[10px] text-[#8888AA] block">
-                Accepts YouTube playlists, individual videos (auto-loops), and raw IDs. Automatically falls back to featured events if offline or restricted.
-              </span>
+              <div class="flex items-center justify-between flex-wrap gap-1 text-[10px] text-[#8888AA]">
+                <span>Accepts YouTube playlists, individual videos (auto-loops), and raw IDs. Defaults to curated 90s television commercials.</span>
+                <button
+                  type="button"
+                  class="text-[#00FFFF] hover:underline cursor-pointer font-bold"
+                  @click="restoreDefaultYouTubePlaylist"
+                >
+                  Load Curated Default (PLQ82R4ElALew)
+                </button>
+              </div>
+              <div class="bg-[#000022] p-2 border border-[#333366] text-[10px] text-[#A0A0C0]">
+                <strong class="text-[#FFFF00]">RETRO TV COMMERCIALS PLAYLIST:</strong> This curated playlist contains authentic vintage 1990s television commercials. You can stream it continuously here in Spotlight mode, or set Spotlight to "Featured Events" and enable periodic commercial breaks in <strong class="text-[#00FFFF]">Tab 4 [ RETRO COMMERCIALS ]</strong> to air commercials at scheduled intervals throughout the hour.
+              </div>
 
               <!-- Live Validation Feedback Banner -->
               <div v-if="youtubeValidation" class="p-2.5 border text-xs font-mono" :class="youtubeValidation.valid ? 'bg-[#002200] border-[#00FF00] text-[#00FF00]' : 'bg-[#330000] border-[#FF4444] text-[#FF8888]'">
@@ -641,13 +722,13 @@
                     : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
                   @click="form.youtube_shuffle_enabled = '0'"
                 >
-                  <div class="font-black text-xs uppercase">[ SEQUENTIAL ORDER (DEFAULT) ]</div>
+                  <div class="font-black text-xs uppercase">[ SEQUENTIAL ORDER ]</div>
                   <div class="text-[10px] text-[#E0E0E0] mt-0.5">
                     Plays playlist videos in their original chronological order from beginning to end.
                   </div>
                 </button>
 
-                <!-- Shuffle / Randomize Order -->
+                <!-- Shuffle / Randomize Order (Recommended) -->
                 <button
                   type="button"
                   class="p-2.5 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
@@ -656,7 +737,7 @@
                     : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
                   @click="form.youtube_shuffle_enabled = '1'"
                 >
-                  <div class="font-black text-xs uppercase">[ SHUFFLE / RANDOMIZE ORDER ]</div>
+                  <div class="font-black text-xs uppercase">[ SHUFFLE / RANDOMIZE (RECOMMENDED DEFAULT) ]</div>
                   <div class="text-[10px] text-[#E0E0E0] mt-0.5">
                     Randomizes playlist playback order on initial boot and transitions. Prevents playlists from always starting on clip #1.
                   </div>
@@ -1187,6 +1268,59 @@
               >
                 [ TEST PLAY COMMERCIAL CLIP ]
               </button>
+            </div>
+          </div>
+
+          <!-- Commercial Video Source Selector -->
+          <div class="space-y-2 pt-2 border-t border-[#333366]">
+            <label class="text-xs text-[#00FFFF] font-bold block uppercase">
+              Commercial Video Source
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <button
+                type="button"
+                class="p-2.5 border-2 text-left cursor-pointer transition-all"
+                :class="commercialsSource === 'youtube'
+                  ? 'bg-[#000066] border-[#FFFF00] text-[#FFFF00] shadow-[0_0_8px_rgba(255,255,0,0.5)]'
+                  : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#00FFFF]'"
+                @click="setCommercialsSource('youtube')"
+              >
+                <div class="text-xs font-bold uppercase">[ CURATED 90s YOUTUBE ]</div>
+                <div class="text-[10px] text-[#8888AA] mt-1 leading-snug">
+                  Streams from the curated 90s commercials YouTube playlist. Zero local storage required.
+                </div>
+              </button>
+
+              <button
+                type="button"
+                class="p-2.5 border-2 text-left cursor-pointer transition-all"
+                :class="commercialsSource === 'local'
+                  ? 'bg-[#000066] border-[#FFFF00] text-[#FFFF00] shadow-[0_0_8px_rgba(255,255,0,0.5)]'
+                  : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#00FFFF]'"
+                @click="setCommercialsSource('local')"
+              >
+                <div class="text-xs font-bold uppercase">[ LOCAL DROPZONE ]</div>
+                <div class="text-[10px] text-[#8888AA] mt-1 leading-snug">
+                  Plays .mp4 and .webm files placed in ./data/commercials/ on your host machine.
+                </div>
+              </button>
+
+              <button
+                type="button"
+                class="p-2.5 border-2 text-left cursor-pointer transition-all"
+                :class="commercialsSource === 'combined'
+                  ? 'bg-[#000066] border-[#FFFF00] text-[#FFFF00] shadow-[0_0_8px_rgba(255,255,0,0.5)]'
+                  : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#00FFFF]'"
+                @click="setCommercialsSource('combined')"
+              >
+                <div class="text-xs font-bold uppercase">[ COMBINED ROTATION ]</div>
+                <div class="text-[10px] text-[#8888AA] mt-1 leading-snug">
+                  Randomly alternates between curated YouTube 90s commercials and local video files.
+                </div>
+              </button>
+            </div>
+            <div v-if="commercialsSource === 'youtube' || commercialsSource === 'combined'" class="text-[10px] text-[#FFFF00] font-mono bg-[#000022] p-2 border border-[#333366]">
+              LINKED PLAYLIST: {{ form.youtube_source_url || 'https://www.youtube.com/playlist?list=PLQ82R4ElALew' }} (Auto-shuffled on boot)
             </div>
           </div>
 
@@ -3526,6 +3660,7 @@ const locationResolutionIsError = ref(false)
 // Commercials Engine UI State
 const commercialsEnabled = ref(commercialsEngine.isEnabled.value)
 const commercialsFrequency = ref(commercialsEngine.frequencyPerHour.value)
+const commercialsSource = ref<'youtube' | 'local' | 'combined'>(commercialsEngine.commercialSource.value)
 const videoFileInputRef = ref<HTMLInputElement | null>(null)
 const videoUploadMessage = ref('')
 const videoUploadIsError = ref(false)
@@ -3737,6 +3872,7 @@ const form = reactive<SystemSettings>({
   autoscroll_speed: '30',
   grid_density: 'balanced',
   grid_filter_mode: 'active_only',
+  sports_coverage_mode: 'local_only',
   scroll_pause_duration: '4',
   scroll_page_interval: '6',
   marquee_rotation_seconds: '20',
@@ -3764,10 +3900,10 @@ const form = reactive<SystemSettings>({
   ultrawide_mode: 'auto',
   ultrawide_priority: 'feature',
   spotlight_mode: 'featured',
-  youtube_source_url: '',
+  youtube_source_url: 'https://www.youtube.com/playlist?list=PLQ82R4ElALew',
   youtube_audio_mode: 'mute',
   youtube_aspect_ratio: '4:3',
-  youtube_shuffle_enabled: '0',
+  youtube_shuffle_enabled: '1',
   eas_enabled: '1',
   eas_sound_enabled: '1',
   eas_min_severity: 'Moderate',
@@ -3788,6 +3924,7 @@ const form = reactive<SystemSettings>({
   auto_update_notifs: '0',
   commercials_enabled: '0',
   commercials_frequency_per_hour: '4',
+  commercials_source: 'youtube',
   tripadvisor_wishlist_url: '',
   viator_wishlist_url: '',
   viator_api_key: '',
@@ -3967,6 +4104,15 @@ async function handleSettingsGeocode(query?: string) {
   }
 }
 
+const DEFAULT_YOUTUBE_PLAYLIST_URL = 'https://www.youtube.com/playlist?list=PLQ82R4ElALew'
+
+function restoreDefaultYouTubePlaylist() {
+  form.youtube_source_url = DEFAULT_YOUTUBE_PLAYLIST_URL
+  form.youtube_shuffle_enabled = '1'
+  savePendingChanges().catch(() => {})
+  handleValidateYouTube()
+}
+
 async function handleValidateYouTube() {
   const url = form.youtube_source_url?.trim()
   if (!url) {
@@ -4023,10 +4169,16 @@ function handleSpotifyAutoplayToggle() {
 }
 
 function handleCommercialsConfigChange() {
-  commercialsEngine.updateConfig(commercialsEnabled.value, commercialsFrequency.value)
+  commercialsEngine.updateConfig(commercialsEnabled.value, commercialsFrequency.value, commercialsSource.value)
   form.commercials_enabled = commercialsEnabled.value ? '1' : '0'
   form.commercials_frequency_per_hour = commercialsFrequency.value.toString()
+  form.commercials_source = commercialsSource.value
   savePendingChanges().catch(() => {})
+}
+
+function setCommercialsSource(source: 'youtube' | 'local' | 'combined') {
+  commercialsSource.value = source
+  handleCommercialsConfigChange()
 }
 
 function triggerCommercialTest() {
@@ -4206,6 +4358,10 @@ async function loadAll() {
     if (s.commercials_frequency_per_hour) {
       commercialsFrequency.value = parseInt(s.commercials_frequency_per_hour, 10)
       commercialsEngine.frequencyPerHour.value = commercialsFrequency.value
+    }
+    if (s.commercials_source && ['youtube', 'local', 'combined'].includes(s.commercials_source)) {
+      commercialsSource.value = s.commercials_source as any
+      commercialsEngine.commercialSource.value = s.commercials_source as any
     }
 
     // Sync server-side commercials

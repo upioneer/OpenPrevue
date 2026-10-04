@@ -11,16 +11,29 @@
       <!-- A. FEATURE PRIORITY: Primarily featured events/video with ONE row scrolling below -->
       <template v-if="ultrawidePriority === 'feature'">
         <!-- Top: Video or SpotlightPane fills primary display height -->
-        <div class="flex-1 w-full min-h-0 overflow-hidden">
+        <div class="flex-1 w-full min-h-0 overflow-hidden relative">
           <YouTubePane
             v-if="shouldShowYouTube"
-            :source-url="settings?.youtube_source_url || ''"
-            :audio-mode="youtubeAudioMode"
+            :source-url="activeYouTubeUrl"
+            :audio-mode="isCommercialActive ? 'audio' : youtubeAudioMode"
             :aspect-ratio="youtubeAspectRatio"
-            :shuffle-enabled="settings?.youtube_shuffle_enabled || '0'"
+            :shuffle-enabled="isCommercialActive ? '1' : (settings?.youtube_shuffle_enabled || '0')"
             :is-ultrawide="true"
+            :is-commercial-break="isCommercialActive"
             @error="handleYouTubeError"
+            @commercial-finished="commercialsEngine.onCommercialFinished()"
           />
+          <div
+            v-else-if="isCommercialActive && commercialsEngine.currentClip.value?.type === 'local'"
+            class="w-full h-full bg-black flex items-center justify-center relative"
+          >
+            <video
+              :src="commercialsEngine.currentClip.value.url"
+              autoplay
+              class="max-w-full max-h-full"
+              @ended="commercialsEngine.onCommercialFinished()"
+            />
+          </div>
           <SpotlightPane
             v-else
             :events="events"
@@ -61,16 +74,29 @@
           />
         </div>
         <div class="flex-1 flex flex-row w-full min-h-0 overflow-hidden">
-          <div class="w-1/2 h-full shrink-0 overflow-hidden">
+          <div class="w-1/2 h-full shrink-0 overflow-hidden relative">
             <YouTubePane
               v-if="shouldShowYouTube"
-              :source-url="settings?.youtube_source_url || ''"
-              :audio-mode="youtubeAudioMode"
+              :source-url="activeYouTubeUrl"
+              :audio-mode="isCommercialActive ? 'audio' : youtubeAudioMode"
               :aspect-ratio="youtubeAspectRatio"
-              :shuffle-enabled="settings?.youtube_shuffle_enabled || '0'"
+              :shuffle-enabled="isCommercialActive ? '1' : (settings?.youtube_shuffle_enabled || '0')"
               :is-ultrawide="true"
+              :is-commercial-break="isCommercialActive"
               @error="handleYouTubeError"
+              @commercial-finished="commercialsEngine.onCommercialFinished()"
             />
+            <div
+              v-else-if="isCommercialActive && commercialsEngine.currentClip.value?.type === 'local'"
+              class="w-full h-full bg-black flex items-center justify-center relative"
+            >
+              <video
+                :src="commercialsEngine.currentClip.value.url"
+                autoplay
+                class="max-w-full max-h-full"
+                @ended="commercialsEngine.onCommercialFinished()"
+              />
+            </div>
             <SpotlightPane
               v-else
               :events="events"
@@ -124,19 +150,32 @@
     <template v-else>
       <!-- Top Pane: Video Stream or Spotlight Promo (Expands to flex-1 if single_row, otherwise 45% Landscape / 34% Portrait) -->
       <div
-        class="w-full shrink-0 overflow-hidden"
+        class="w-full shrink-0 overflow-hidden relative"
         :class="gridDensity === 'single_row'
           ? 'flex-1 min-h-0'
           : 'h-[45%] portrait-spotlight-height'"
       >
         <YouTubePane
           v-if="shouldShowYouTube"
-          :source-url="settings?.youtube_source_url || ''"
-          :audio-mode="youtubeAudioMode"
+          :source-url="activeYouTubeUrl"
+          :audio-mode="isCommercialActive ? 'audio' : youtubeAudioMode"
           :aspect-ratio="youtubeAspectRatio"
-          :shuffle-enabled="settings?.youtube_shuffle_enabled || '0'"
+          :shuffle-enabled="isCommercialActive ? '1' : (settings?.youtube_shuffle_enabled || '0')"
+          :is-commercial-break="isCommercialActive"
           @error="handleYouTubeError"
+          @commercial-finished="commercialsEngine.onCommercialFinished()"
         />
+        <div
+          v-else-if="isCommercialActive && commercialsEngine.currentClip.value?.type === 'local'"
+          class="w-full h-full bg-black flex items-center justify-center relative"
+        >
+          <video
+            :src="commercialsEngine.currentClip.value.url"
+            autoplay
+            class="max-w-full max-h-full"
+            @ended="commercialsEngine.onCommercialFinished()"
+          />
+        </div>
         <SpotlightPane
           v-else
           :events="events"
@@ -183,6 +222,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { audioSynth } from '../services/audioSynth'
+import { commercialsEngine } from '../services/commercialsEngine'
 import SpotlightPane from '../components/SpotlightPane.vue'
 import YouTubePane from '../components/YouTubePane.vue'
 import DividerRibbon from '../components/DividerRibbon.vue'
@@ -304,11 +344,27 @@ const pageIntervalSeconds = computed(() => {
   return parseInt(settings.value.scroll_page_interval, 10) || 6
 })
 
+const isCommercialActive = computed(() => {
+  return commercialsEngine.isPlayingCommercial.value && commercialsEngine.currentClip.value !== null
+})
+
+const activeYouTubeUrl = computed(() => {
+  if (isCommercialActive.value && commercialsEngine.currentClip.value?.type === 'youtube') {
+    return commercialsEngine.currentClip.value.url
+  }
+  return settings.value?.youtube_source_url || ''
+})
+
 const shouldShowYouTube = computed(() => {
   const queryVideo = route.query.video
   if (queryVideo === '0' || queryVideo === 'off' || queryVideo === 'spotlight') return false
   if (queryVideo === '1' || queryVideo === 'youtube') {
     return !!settings.value?.youtube_source_url?.trim() && !youtubeError.value
+  }
+
+  // Commercial break interruption using YouTube commercial source
+  if (isCommercialActive.value && commercialsEngine.currentClip.value?.type === 'youtube') {
+    return true
   }
 
   return (
@@ -367,6 +423,13 @@ async function loadData() {
     if (fetchedSettings.screen_wake_lock_enabled !== '0') {
       wakeLockService.requestWakeLock()
     }
+
+    commercialsEngine.updateSettingsFromSystem(fetchedSettings)
+    if (fetchedSettings.spotlight_mode !== 'youtube' && fetchedSettings.commercials_enabled === '1') {
+      commercialsEngine.startTimer()
+    } else {
+      commercialsEngine.stopTimer()
+    }
   } catch (err) {
     console.error('Failed to load dashboard data:', err)
   }
@@ -417,7 +480,16 @@ onMounted(() => {
   })
 
   unsubscribeSettingsWs = wsService.on('settings_updated', () => {
-    loadData()
+    loadData().then(() => {
+      if (settings.value) {
+        commercialsEngine.updateSettingsFromSystem(settings.value)
+        if (settings.value.spotlight_mode !== 'youtube' && settings.value.commercials_enabled === '1') {
+          commercialsEngine.startTimer()
+        } else {
+          commercialsEngine.stopTimer()
+        }
+      }
+    })
   })
 
   // Trigger onboarding welcome modal on startup if setup already completed and not dismissed
@@ -434,5 +506,6 @@ onUnmounted(() => {
   if (refreshInterval) clearInterval(refreshInterval)
   if (unsubscribeEventsWs) unsubscribeEventsWs()
   if (unsubscribeSettingsWs) unsubscribeSettingsWs()
+  commercialsEngine.stopTimer()
 })
 </script>

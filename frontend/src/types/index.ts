@@ -182,6 +182,7 @@ export interface SystemSettings {
   autoscroll_speed: string
   grid_density?: 'classic_tv' | 'balanced' | 'dense' | 'single_row' | string
   grid_filter_mode?: 'active_only' | 'all' | string
+  sports_coverage_mode?: 'local_only' | 'national_broadcasts' | 'disabled' | string
   scroll_pause_duration?: string
   scroll_page_interval?: string
   marquee_rotation_seconds: string
@@ -219,5 +220,8 @@ export interface SystemSettings {
   youtube_audio_mode?: 'mute' | 'audio' | string
   youtube_aspect_ratio?: 'auto' | '4:3' | '16:9' | 'stretch' | string
   youtube_shuffle_enabled?: string
+  commercials_enabled?: string
+  commercials_frequency_per_hour?: string
+  commercials_source?: 'youtube' | 'local' | 'combined' | string
   [key: string]: string | undefined
 }
