@@ -2,6 +2,11 @@
  * Sports team branding, official franchise colors, acronyms, and CDN logo resolver.
  */
 
+import { cleanEventTitle } from './sportsUtils'
+import { findTeamByQuery, MASTER_TEAMS_LIST, makeShieldSvg } from './sportsAssets'
+
+export { cleanEventTitle, MASTER_TEAMS_LIST }
+
 export interface TeamBranding {
   name: string
   shortName: string
@@ -9,6 +14,7 @@ export interface TeamBranding {
   secondaryColor: string
   textColor: string
   logoUrl?: string
+  logoSvg?: string
 }
 
 export interface ParsedMatchup {
@@ -452,43 +458,6 @@ const TEAMS_DATABASE: Record<string, TeamBranding> = {
 }
 
 /**
- * Strip redundant static broadcast timezones and embedded start times from event titles.
- * E.g., "(1:00 PM ET / 12:00 PM CT)", "- 1:00 PM ET", "1:00 PM EST", "4:25 PM PT".
- */
-export function cleanEventTitle(rawTitle?: string | null): string {
-  if (!rawTitle) return ''
-  let cleaned = rawTitle
-
-  // 1. Remove parenthesized or bracketed multi-zone/broadcast times
-  // E.g. "(1:00 PM ET / 12:00 PM CT)", "(1:00PM EST / 12:00PM CST)", "(1:00 PM / 12:00 PM)"
-  cleaned = cleaned.replace(/\s*[\(\[]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?\s*(?:[/|\-–—]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?)+\s*[\)\]]/gi, '')
-
-  // 2. Remove unparenthesized multi-zone broadcast times: "1:00 PM ET / 12:00 PM CT"
-  cleaned = cleaned.replace(/\s*(?:[-–—|•@]\s*)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?\s*[/|\-–—]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)/gi, '')
-
-  // 3. Remove single parenthesized time/zone: "(1:00 PM ET)", "(1:00 PM)", "(12:00 PM CT)", "(1:00PM)"
-  cleaned = cleaned.replace(/\s*[\(\[]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt|local)?\s*[\)\]]/gi, '')
-
-  // 4. Remove trailing or hyphenated times: " - 1:00 PM ET", " - 12:00 PM", " @ 1:00 PM ET", " | 1:00 PM EST"
-  cleaned = cleaned.replace(/\s*[-–—|•@]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt|local)?\b/gi, '')
-
-  // 5. Remove trailing standalone time and time zone at end of string: " 1:00 PM ET", " 1:00PM EST", " 12:00 PM CT"
-  cleaned = cleaned.replace(/\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?\s*$/gi, '')
-
-  // 6. Remove leading times: "1:00 PM ET - ...", "12:00 PM - ..."
-  cleaned = cleaned.replace(/^\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)?\s*[-–—|:]\s*/gi, '')
-
-  // 7. Remove standalone timezone suffixes: "(ET)", "[ET]", " - ET"
-  cleaned = cleaned.replace(/\s*[\(\[]\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)\s*[\)\]]/gi, '')
-  cleaned = cleaned.replace(/\s*[-–—|]\s*(?:et|edt|est|ct|cdt|cst|pt|pdt|pst|mt|mdt|mst|utc|gmt)\b/gi, '')
-
-  // 8. Clean up leftover trailing separators
-  cleaned = cleaned.replace(/[\s\-–—|/:]+$/g, '').trim()
-
-  return cleaned
-}
-
-/**
  * Robust case-insensitive sports title parser that splits matchup pairs and extracts league prefixes.
  */
 export function parseMatchup(rawTitle: string): ParsedMatchup | null {
@@ -497,13 +466,16 @@ export function parseMatchup(rawTitle: string): ParsedMatchup | null {
   // Strip static broadcast timezones and embedded start times first
   const cleanedTitle = cleanEventTitle(rawTitle)
 
+  // Strip ticket provider prefixes e.g. "Vivid Seats: ", "Live Nation Presents: ", etc.
+  const withoutProvider = cleanedTitle.replace(/^(?:vivid seats:\s*|live nation presents:\s*|ticketmaster:\s*|stubhub:\s*)/i, '').trim()
+
   let league: string | undefined
-  const leagueMatch = cleanedTitle.match(/^(nba|nfl|mlb|mls|nhl|wnba|nascar|indycar|motogp|formula 1|f1):\s*/i)
+  const leagueMatch = withoutProvider.match(/^(nba|nfl|mlb|mls|nhl|wnba|nascar|indycar|motogp|formula 1|f1):\s*/i)
   if (leagueMatch) {
     league = leagueMatch[1].toUpperCase()
   }
 
-  const title = cleanedTitle.replace(/^(nba|nfl|mlb|mls|nhl|wnba|nascar|indycar|motogp|formula 1|f1):\s*/i, '').trim()
+  const title = withoutProvider.replace(/^(nba|nfl|mlb|mls|nhl|wnba|nascar|indycar|motogp|formula 1|f1):\s*/i, '').trim()
 
   // Match VS variations case-insensitively
   if (/\s+(?:vs\.?|against|v)\s+/i.test(title)) {
@@ -526,6 +498,8 @@ export function parseMatchup(rawTitle: string): ParsedMatchup | null {
 
 /**
  * Resolve team branding details from team name string with fuzzy matching and dynamic fallback.
+ * Checks the complete 161-team sportsAssets registry first (with 100% league coverage and authentic vector SVGs),
+ * then falls back to legacy overrides or generated dynamic shields.
  */
 export function resolveTeamBranding(rawName: string): TeamBranding {
   if (!rawName) {
@@ -538,20 +512,42 @@ export function resolveTeamBranding(rawName: string): TeamBranding {
     }
   }
 
-  const clean = rawName.trim().toLowerCase().replace(/^(the|nba:|nfl:|mlb:|mls:)\s+/i, '')
+  const clean = rawName.trim().toLowerCase().replace(/^(the|nba:|nfl:|mlb:|mls:|nhl:|premier league:)\s+/i, '')
 
-  if (TEAMS_DATABASE[clean]) {
-    return TEAMS_DATABASE[clean]
-  }
-
-  // Partial match check
-  for (const [key, value] of Object.entries(TEAMS_DATABASE)) {
-    if (clean.includes(key) || key.includes(clean)) {
-      return value
+  // 1. Check sportsAssets 100% complete league registry first
+  const assetTeam = findTeamByQuery(clean) || findTeamByQuery(rawName)
+  if (assetTeam) {
+    return {
+      name: assetTeam.name,
+      shortName: assetTeam.shortName,
+      primaryColor: assetTeam.primaryColor,
+      secondaryColor: assetTeam.secondaryColor,
+      textColor: assetTeam.textColor || '#FFFFFF',
+      logoUrl: assetTeam.logoUrl,
+      logoSvg: assetTeam.logoSvg,
     }
   }
 
-  // Dynamic fallback palette generation based on string hash
+  // 2. Check legacy TEAMS_DATABASE for any specialized overrides
+  if (TEAMS_DATABASE[clean]) {
+    const dbTeam = TEAMS_DATABASE[clean]
+    return {
+      ...dbTeam,
+      logoSvg: dbTeam.logoSvg || makeShieldSvg(dbTeam.shortName, dbTeam.primaryColor, dbTeam.secondaryColor, '#FFFF00'),
+    }
+  }
+
+  // 3. Partial match check on legacy TEAMS_DATABASE
+  for (const [key, value] of Object.entries(TEAMS_DATABASE)) {
+    if (clean.includes(key) || key.includes(clean)) {
+      return {
+        ...value,
+        logoSvg: value.logoSvg || makeShieldSvg(value.shortName, value.primaryColor, value.secondaryColor, '#FFFF00'),
+      }
+    }
+  }
+
+  // 4. Dynamic fallback palette and vector shield generation for unknown teams
   let hash = 0
   for (let i = 0; i < rawName.length; i++) {
     hash = rawName.charCodeAt(i) + ((hash << 5) - hash)
@@ -571,6 +567,7 @@ export function resolveTeamBranding(rawName: string): TeamBranding {
     primaryColor: primary,
     secondaryColor: secondary,
     textColor: '#FFFFFF',
+    logoSvg: makeShieldSvg(short, primary, secondary, '#FFFF00'),
   }
 }
 

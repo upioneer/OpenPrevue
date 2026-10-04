@@ -42,14 +42,20 @@
                   boxShadow: `0 0 20px ${teamABranding?.secondaryColor || 'rgba(255,255,0,0.6)'}`
                 }"
               >
-                <!-- Large Logo Image with High-Res Acronym Fallback -->
+                <!-- Large Logo Image with Vector SVG Fallback & High-Res Acronym Fallback -->
                 <img
                   v-if="teamABranding?.logoUrl && !teamALogoError"
                   :src="teamABranding.logoUrl"
                   :alt="teamABranding.name"
+                  referrerpolicy="no-referrer"
                   class="w-full h-full object-contain drop-shadow-lg"
                   @error="teamALogoError = true"
                 />
+                <div
+                  v-else-if="teamABranding?.logoSvg"
+                  class="w-full h-full flex items-center justify-center p-1.5"
+                  v-html="teamABranding.logoSvg"
+                ></div>
                 <span
                   v-else
                   class="font-black text-xl sm:text-2xl md:text-3xl lg:text-4xl tracking-wider"
@@ -81,14 +87,20 @@
                   boxShadow: `0 0 20px ${teamBBranding?.secondaryColor || 'rgba(0,255,255,0.6)'}`
                 }"
               >
-                <!-- Large Logo Image with High-Res Acronym Fallback -->
+                <!-- Large Logo Image with Vector SVG Fallback & High-Res Acronym Fallback -->
                 <img
                   v-if="teamBBranding?.logoUrl && !teamBLogoError"
                   :src="teamBBranding.logoUrl"
                   :alt="teamBBranding.name"
+                  referrerpolicy="no-referrer"
                   class="w-full h-full object-contain drop-shadow-lg"
                   @error="teamBLogoError = true"
                 />
+                <div
+                  v-else-if="teamBBranding?.logoSvg"
+                  class="w-full h-full flex items-center justify-center p-1.5"
+                  v-html="teamBBranding.logoSvg"
+                ></div>
                 <span
                   v-else
                   class="font-black text-xl sm:text-2xl md:text-3xl lg:text-4xl tracking-wider"
@@ -327,7 +339,7 @@
                 }"
                 :title="leagueBranding.name"
               >
-                <img v-if="leagueBranding.logoUrl" :src="leagueBranding.logoUrl" :alt="leagueBranding.shortName" class="h-3.5 w-auto object-contain" />
+                <img v-if="leagueBranding.logoUrl" :src="leagueBranding.logoUrl" :alt="leagueBranding.shortName" referrerpolicy="no-referrer" class="h-3.5 w-auto object-contain" />
                 <span>{{ leagueBranding.shortName }}</span>
               </span>
 
@@ -825,11 +837,15 @@ async function generateQrCode() {
 }
 
 function setIndex(idx: number) {
+  teamALogoError.value = false
+  teamBLogoError.value = false
   currentIndex.value = idx
 }
 
 function nextSlide() {
   if (featuredEvents.value.length <= 1) return
+  teamALogoError.value = false
+  teamBLogoError.value = false
   currentIndex.value = (currentIndex.value + 1) % featuredEvents.value.length
 }
 

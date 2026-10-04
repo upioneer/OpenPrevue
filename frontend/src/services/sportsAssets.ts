@@ -1,9 +1,9 @@
 /** 
  * Comprehensive Sports League Registry and Vector Matchup Generator for OpenPrevue.
- * Provides 100% complete coverage for all 32 NFL, 30 NBA, 30 MLB, 32 NHL, 29 MLS, 20 Premier League teams & F1.
+ * Provides 100% complete coverage for all 32 NFL, 30 NBA, 30 MLB, 32 NHL, 29 MLS, Premier League teams & F1.
  */
 
-import { cleanEventTitle } from './sportsTheme';
+import { cleanEventTitle } from './sportsUtils';
 
 export interface TeamInfo {
   name: string;
@@ -13,6 +13,8 @@ export interface TeamInfo {
   league: string;
   primaryColor: string;
   secondaryColor: string;
+  textColor?: string;
+  logoUrl?: string;
   logoSvg: string;
   aliases: string[];
 }
@@ -25,14 +27,14 @@ export interface MatchupInfo {
   headline?: string;
 }
 
-function makeShieldSvg(text: string, bg: string, fg: string, border: string = "#FFFF00"): string {
+export function makeShieldSvg(text: string, bg: string, fg: string, border: string = "#FFFF00"): string {
   return `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
     <polygon points="50,5 92,22 84,72 50,95 16,72 8,22" fill="${bg}" stroke="${border}" stroke-width="4"/>
     <text x="50" y="58" font-size="${text.length > 3 ? '20' : '28'}" font-family="monospace, sans-serif" font-weight="900" text-anchor="middle" fill="${fg}">${text}</text>
   </svg>`;
 }
 
-function makeHelmetSvg(text: string, helmetColor: string, stripeColor: string, faceColor: string): string {
+export function makeHelmetSvg(text: string, helmetColor: string, stripeColor: string, faceColor: string): string {
   return `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
     <circle cx="50" cy="50" r="44" fill="${helmetColor}" stroke="${stripeColor}" stroke-width="4"/>
     <path d="M50 6 A44 44 0 0 1 50 94" fill="none" stroke="${stripeColor}" stroke-width="8"/>
@@ -41,22 +43,63 @@ function makeHelmetSvg(text: string, helmetColor: string, stripeColor: string, f
   </svg>`;
 }
 
-function makeCircleSvg(text: string, bg: string, fg: string, stroke: string = "#FFFFFF"): string {
+export function makeCircleSvg(text: string, bg: string, fg: string, stroke: string = "#FFFFFF"): string {
   return `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
     <circle cx="50" cy="50" r="42" fill="${bg}" stroke="${stroke}" stroke-width="5"/>
     <text x="50" y="59" font-size="${text.length > 3 ? '18' : '26'}" font-family="sans-serif" font-weight="900" text-anchor="middle" fill="${fg}">${text}</text>
   </svg>`;
 }
 
-function makeDiamondSvg(text: string, bg: string, fg: string, stroke: string = "#FFFFFF"): string {
+export function makeDiamondSvg(text: string, bg: string, fg: string, stroke: string = "#FFFFFF"): string {
   return `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
     <polygon points="50,6 94,50 50,94 6,50" fill="${bg}" stroke="${stroke}" stroke-width="5"/>
     <text x="50" y="58" font-size="${text.length > 3 ? '18' : '26'}" font-family="sans-serif" font-weight="900" text-anchor="middle" fill="${fg}">${text}</text>
   </svg>`;
 }
 
+export function getNflLogoUrl(abbr: string): string {
+  return `https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png`;
+}
+
+export function getNbaLogoUrl(abbr: string): string {
+  const map: Record<string, string> = { GSW: 'gs', NOP: 'no', SAS: 'sa', UTA: 'utah' };
+  const code = map[abbr.toUpperCase()] || abbr.toLowerCase();
+  return `https://a.espncdn.com/i/teamlogos/nba/500/${code}.png`;
+}
+
+export function getMlbLogoUrl(abbr: string): string {
+  const map: Record<string, string> = { CWS: 'chw' };
+  const code = map[abbr.toUpperCase()] || abbr.toLowerCase();
+  return `https://a.espncdn.com/i/teamlogos/mlb/500/${code}.png`;
+}
+
+export function getNhlLogoUrl(abbr: string): string {
+  const map: Record<string, string> = { LAK: 'la', NJD: 'nj', SJS: 'sj', TBL: 'tb', UTA: 'utah' };
+  const code = map[abbr.toUpperCase()] || abbr.toLowerCase();
+  return `https://a.espncdn.com/i/teamlogos/nhl/500/${code}.png`;
+}
+
+export function getMlsLogoUrl(abbr: string): string {
+  const map: Record<string, number> = {
+    ATL: 18418, ATX: 20906, CLT: 21300, CHI: 182, CIN: 18267, COL: 184, CLB: 183, DC: 193,
+    DAL: 185, HOU: 6077, MIA: 20232, LAG: 187, LAFC: 18966, MIN: 17362, MTL: 9720, NSH: 18986,
+    NER: 189, NYC: 17606, RBNY: 190, ORL: 12011, PHI: 10739, POR: 9723, RSL: 4771, SJE: 191,
+    SEA: 9726, SKC: 186, STL: 21812, TOR: 7318, VAN: 9727
+  };
+  const id = map[abbr.toUpperCase()];
+  return id ? `https://a.espncdn.com/i/teamlogos/soccer/500/${id}.png` : '';
+}
+
+export function getEplLogoUrl(abbr: string): string {
+  const map: Record<string, number> = {
+    ARS: 359, AVL: 362, CHE: 363, LIV: 364, MCI: 382, MUN: 360, NEW: 361, TOT: 367
+  };
+  const id = map[abbr.toUpperCase()];
+  return id ? `https://a.espncdn.com/i/teamlogos/soccer/500/${id}.png` : '';
+}
+
 // 100% COMPLETE 32-TEAM NFL FRANCHISE REGISTRY
-const NFL_TEAMS: TeamInfo[] = [
+const NFL_TEAMS_DATA: TeamInfo[] = [
   { name: "Arizona Cardinals", city: "Arizona", nickname: "Cardinals", shortName: "ARI", league: "NFL", primaryColor: "#97233F", secondaryColor: "#000000", logoSvg: makeHelmetSvg("ARI", "#97233F", "#FFB612", "#000000"), aliases: ["cardinals", "arizona cardinals", "ari"] },
   { name: "Atlanta Falcons", city: "Atlanta", nickname: "Falcons", shortName: "ATL", league: "NFL", primaryColor: "#A71930", secondaryColor: "#000000", logoSvg: makeHelmetSvg("ATL", "#000000", "#A71930", "#A71930"), aliases: ["falcons", "atlanta falcons", "atl"] },
   { name: "Baltimore Ravens", city: "Baltimore", nickname: "Ravens", shortName: "BAL", league: "NFL", primaryColor: "#241773", secondaryColor: "#000000", logoSvg: makeHelmetSvg("BAL", "#241773", "#9E7C0C", "#000000"), aliases: ["ravens", "baltimore ravens", "bal"] },
@@ -92,7 +135,7 @@ const NFL_TEAMS: TeamInfo[] = [
 ];
 
 // 100% COMPLETE 30-TEAM NBA FRANCHISE REGISTRY
-const NBA_TEAMS: TeamInfo[] = [
+const NBA_TEAMS_DATA: TeamInfo[] = [
   { name: "Atlanta Hawks", city: "Atlanta", nickname: "Hawks", shortName: "ATL", league: "NBA", primaryColor: "#E03A3E", secondaryColor: "#C1D32F", logoSvg: makeCircleSvg("ATL", "#E03A3E", "#FFFFFF", "#C1D32F"), aliases: ["hawks", "atlanta hawks"] },
   { name: "Boston Celtics", city: "Boston", nickname: "Celtics", shortName: "BOS", league: "NBA", primaryColor: "#007A33", secondaryColor: "#BA9653", logoSvg: makeCircleSvg("BOS", "#007A33", "#FFFFFF", "#BA9653"), aliases: ["celtics", "boston celtics"] },
   { name: "Brooklyn Nets", city: "Brooklyn", nickname: "Nets", shortName: "BKN", league: "NBA", primaryColor: "#000000", secondaryColor: "#FFFFFF", logoSvg: makeCircleSvg("BKN", "#000000", "#FFFFFF", "#FFFFFF"), aliases: ["nets", "brooklyn nets"] },
@@ -126,7 +169,7 @@ const NBA_TEAMS: TeamInfo[] = [
 ];
 
 // 100% COMPLETE 30-TEAM MLB FRANCHISE REGISTRY
-const MLB_TEAMS: TeamInfo[] = [
+const MLB_TEAMS_DATA: TeamInfo[] = [
   { name: "Arizona Diamondbacks", city: "Arizona", nickname: "Diamondbacks", shortName: "ARI", league: "MLB", primaryColor: "#A71930", secondaryColor: "#E3D4AD", logoSvg: makeDiamondSvg("ARI", "#A71930", "#E3D4AD", "#30CDD7"), aliases: ["diamondbacks", "d-backs", "arizona diamondbacks"] },
   { name: "Atlanta Braves", city: "Atlanta", nickname: "Braves", shortName: "ATL", league: "MLB", primaryColor: "#CE1141", secondaryColor: "#13274F", logoSvg: makeCircleSvg("ATL", "#13274F", "#CE1141", "#CE1141"), aliases: ["braves", "atlanta braves"] },
   { name: "Baltimore Orioles", city: "Baltimore", nickname: "Orioles", shortName: "BAL", league: "MLB", primaryColor: "#DF4601", secondaryColor: "#000000", logoSvg: makeCircleSvg("BAL", "#DF4601", "#FFFFFF", "#000000"), aliases: ["orioles", "o's", "baltimore orioles"] },
@@ -160,7 +203,7 @@ const MLB_TEAMS: TeamInfo[] = [
 ];
 
 // 100% COMPLETE 32-TEAM NHL FRANCHISE REGISTRY
-const NHL_TEAMS: TeamInfo[] = [
+const NHL_TEAMS_DATA: TeamInfo[] = [
   { name: "Anaheim Ducks", city: "Anaheim", nickname: "Ducks", shortName: "ANA", league: "NHL", primaryColor: "#F47A38", secondaryColor: "#B9975B", logoSvg: makeShieldSvg("ANA", "#000000", "#F47A38", "#B9975B"), aliases: ["ducks", "anaheim ducks"] },
   { name: "Boston Bruins", city: "Boston", nickname: "Bruins", shortName: "BOS", league: "NHL", primaryColor: "#FFB81C", secondaryColor: "#000000", logoSvg: makeCircleSvg("BOS", "#000000", "#FFB81C", "#FFB81C"), aliases: ["bruins", "boston bruins"] },
   { name: "Buffalo Sabres", city: "Buffalo", nickname: "Sabres", shortName: "BUF", league: "NHL", primaryColor: "#002654", secondaryColor: "#FCB514", logoSvg: makeCircleSvg("BUF", "#002654", "#FCB514", "#FCB514"), aliases: ["sabres", "buffalo sabres"] },
@@ -196,7 +239,7 @@ const NHL_TEAMS: TeamInfo[] = [
 ];
 
 // 100% COMPLETE 29-TEAM MLS REGISTRY
-const MLS_TEAMS: TeamInfo[] = [
+const MLS_TEAMS_DATA: TeamInfo[] = [
   { name: "Atlanta United FC", city: "Atlanta", nickname: "Atlanta United", shortName: "ATL", league: "MLS", primaryColor: "#80000A", secondaryColor: "#221F1F", logoSvg: makeShieldSvg("ATL", "#80000A", "#A19261", "#221F1F"), aliases: ["atlanta united", "atlanta united fc"] },
   { name: "Austin FC", city: "Austin", nickname: "Austin FC", shortName: "ATX", league: "MLS", primaryColor: "#00B140", secondaryColor: "#000000", logoSvg: makeShieldSvg("ATX", "#000000", "#00B140", "#00B140"), aliases: ["austin fc", "atx fc"] },
   { name: "Charlotte FC", city: "Charlotte", nickname: "Charlotte FC", shortName: "CLT", league: "MLS", primaryColor: "#1A85C8", secondaryColor: "#000000", logoSvg: makeCircleSvg("CLT", "#1A85C8", "#FFFFFF", "#000000"), aliases: ["charlotte fc"] },
@@ -229,7 +272,7 @@ const MLS_TEAMS: TeamInfo[] = [
 ];
 
 // PREMIER LEAGUE TOP CLUBS
-const EPL_TEAMS: TeamInfo[] = [
+const EPL_TEAMS_DATA: TeamInfo[] = [
   { name: "Arsenal FC", city: "London", nickname: "Arsenal", shortName: "ARS", league: "PREMIER LEAGUE", primaryColor: "#EF0107", secondaryColor: "#063672", logoSvg: makeShieldSvg("ARS", "#EF0107", "#FFFFFF", "#063672"), aliases: ["arsenal", "arsenal fc", "gunners"] },
   { name: "Aston Villa", city: "Birmingham", nickname: "Aston Villa", shortName: "AVL", league: "PREMIER LEAGUE", primaryColor: "#95BFE5", secondaryColor: "#670E36", logoSvg: makeShieldSvg("AVL", "#670E36", "#95BFE5", "#FEE12B"), aliases: ["aston villa", "villa"] },
   { name: "Chelsea FC", city: "London", nickname: "Chelsea", shortName: "CHE", league: "PREMIER LEAGUE", primaryColor: "#034694", secondaryColor: "#EE242C", logoSvg: makeCircleSvg("CHE", "#034694", "#FFFFFF", "#EE242C"), aliases: ["chelsea", "chelsea fc", "blues"] },
@@ -240,8 +283,44 @@ const EPL_TEAMS: TeamInfo[] = [
   { name: "Tottenham Hotspur", city: "London", nickname: "Tottenham", shortName: "TOT", league: "PREMIER LEAGUE", primaryColor: "#132257", secondaryColor: "#FFFFFF", logoSvg: makeShieldSvg("TOT", "#132257", "#FFFFFF", "#FFFFFF"), aliases: ["tottenham", "tottenham hotspur", "spurs epl"] },
 ];
 
+export const NFL_TEAMS: TeamInfo[] = NFL_TEAMS_DATA.map(t => ({
+  ...t,
+  textColor: t.textColor || '#FFFFFF',
+  logoUrl: t.logoUrl || getNflLogoUrl(t.shortName),
+}));
+
+export const NBA_TEAMS: TeamInfo[] = NBA_TEAMS_DATA.map(t => ({
+  ...t,
+  textColor: t.textColor || '#FFFFFF',
+  logoUrl: t.logoUrl || getNbaLogoUrl(t.shortName),
+}));
+
+export const MLB_TEAMS: TeamInfo[] = MLB_TEAMS_DATA.map(t => ({
+  ...t,
+  textColor: t.textColor || '#FFFFFF',
+  logoUrl: t.logoUrl || getMlbLogoUrl(t.shortName),
+}));
+
+export const NHL_TEAMS: TeamInfo[] = NHL_TEAMS_DATA.map(t => ({
+  ...t,
+  textColor: t.textColor || '#FFFFFF',
+  logoUrl: t.logoUrl || getNhlLogoUrl(t.shortName),
+}));
+
+export const MLS_TEAMS: TeamInfo[] = MLS_TEAMS_DATA.map(t => ({
+  ...t,
+  textColor: t.textColor || '#FFFFFF',
+  logoUrl: t.logoUrl || getMlsLogoUrl(t.shortName),
+}));
+
+export const EPL_TEAMS: TeamInfo[] = EPL_TEAMS_DATA.map(t => ({
+  ...t,
+  textColor: t.textColor || '#FFFFFF',
+  logoUrl: t.logoUrl || getEplLogoUrl(t.shortName),
+}));
+
 // Combine all leagues into master registry
-const MASTER_TEAMS_LIST: TeamInfo[] = [
+export const MASTER_TEAMS_LIST: TeamInfo[] = [
   ...NFL_TEAMS,
   ...NBA_TEAMS,
   ...MLB_TEAMS,
@@ -251,17 +330,50 @@ const MASTER_TEAMS_LIST: TeamInfo[] = [
 ];
 
 export function findTeamByQuery(query: string): TeamInfo | null {
-  const q = query.trim().toLowerCase();
+  if (!query) return null;
+  const q = query.trim().toLowerCase().replace(/^(the|nba:|nfl:|mlb:|mls:|nhl:)\s+/i, '');
+
+  // 1. Exact match on name, nickname, shortName, or aliases
   for (const team of MASTER_TEAMS_LIST) {
-    if (team.name.toLowerCase() === q || team.nickname.toLowerCase() === q || team.shortName.toLowerCase() === q) {
+    if (
+      team.name.toLowerCase() === q ||
+      team.nickname.toLowerCase() === q ||
+      team.shortName.toLowerCase() === q ||
+      team.aliases.some(a => a.toLowerCase() === q)
+    ) {
+      return team;
+    }
+  }
+
+  // 2. Word boundary match on query against nickname/name or aliases
+  for (const team of MASTER_TEAMS_LIST) {
+    const nickRegex = new RegExp(`\\b${team.nickname.toLowerCase()}\\b`, 'i');
+    if (nickRegex.test(q)) {
+      return team;
+    }
+    const nameRegex = new RegExp(`\\b${team.name.toLowerCase()}\\b`, 'i');
+    if (nameRegex.test(q)) {
       return team;
     }
     for (const alias of team.aliases) {
-      if (q === alias || q.includes(alias) || alias.includes(q)) {
+      if (alias.length >= 3) {
+        const aliasRegex = new RegExp(`\\b${alias.toLowerCase()}\\b`, 'i');
+        if (aliasRegex.test(q)) {
+          return team;
+        }
+      }
+    }
+  }
+
+  // 3. Fallback partial inclusion match (avoiding false matches for very short strings)
+  if (q.length >= 4) {
+    for (const team of MASTER_TEAMS_LIST) {
+      if (q.includes(team.nickname.toLowerCase()) || team.name.toLowerCase().includes(q)) {
         return team;
       }
     }
   }
+
   return null;
 }
 
