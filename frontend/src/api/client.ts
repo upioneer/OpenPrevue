@@ -243,6 +243,17 @@ export async function uploadCommercialClipFile(file: File): Promise<any> {
   return res.json()
 }
 
+export async function deleteCommercialClipFile(filename: string): Promise<any> {
+  const res = await fetch(`${API_BASE}/commercials/${encodeURIComponent(filename)}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.detail || `Failed to delete clip: ${res.statusText}`)
+  }
+  return res.json()
+}
+
 export async function pingOllamaInstance(ollamaUrl: string, model?: string): Promise<OllamaPingResponse> {
   const res = await fetch(`${API_BASE}/ai/ollama/ping`, {
     method: 'POST',

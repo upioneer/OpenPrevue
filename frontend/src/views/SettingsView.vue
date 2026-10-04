@@ -1260,14 +1260,17 @@
               />
             </div>
 
-            <div class="flex items-center space-x-3 pt-2">
+            <div class="flex flex-wrap items-center gap-3 pt-2">
               <button
                 type="button"
-                class="bg-[#000080] hover:bg-[#0000AA] border border-[#FFFF00] text-[#FFFF00] px-4 py-2 text-xs font-bold tracking-wider cursor-pointer transition-colors shadow"
+                class="whitespace-nowrap shrink-0 bg-[#000080] hover:bg-[#0000AA] border border-[#FFFF00] text-[#FFFF00] px-4 py-2 text-xs font-bold tracking-wider cursor-pointer transition-colors shadow"
                 @click="triggerCommercialTest"
               >
-                [ TEST PLAY COMMERCIAL CLIP ]
+                [ TEST PLAY COMMERCIAL CLIP (ON AIR) ]
               </button>
+              <span class="text-[11px] text-[#A0A0C0]">
+                Airs a retro commercial break immediately in the top preview quadrant on the live guide.
+              </span>
             </div>
           </div>
 
@@ -1397,14 +1400,14 @@
                     <button
                       type="button"
                       class="text-[10px] text-[#00FFFF] hover:underline cursor-pointer"
-                      @click="commercialsEngine.playClip(clip)"
+                      @click="playClipNow(clip)"
                     >
                       [ Play Now ]
                     </button>
                     <button
                       type="button"
                       class="text-[10px] text-[#FF4444] hover:underline cursor-pointer"
-                      @click="commercialsEngine.removeClip(clip.id)"
+                      @click="handleRemoveClip(clip)"
                     >
                       [ Remove ]
                     </button>
@@ -2186,15 +2189,18 @@
             </div>
 
             <div class="space-y-1">
-              <label class="text-xs text-[#A0A0C0] block">Alert Display Duration: {{ form.eas_display_duration_seconds || '30' }}s</label>
-              <input
+              <label class="text-xs text-[#A0A0C0] block">Alert Display Duration (Auto-Dismiss):</label>
+              <select
                 v-model="form.eas_display_duration_seconds"
-                type="range"
-                min="10"
-                max="120"
-                step="5"
-                class="w-full accent-[#FFFF00]"
-              />
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none cursor-pointer font-mono"
+              >
+                <option value="60">1 MINUTE (Quick Inspection)</option>
+                <option value="300">5 MINUTES (Standard Default)</option>
+                <option value="600">10 MINUTES (Extended)</option>
+                <option value="900">15 MINUTES (Short Break)</option>
+                <option value="1800">30 MINUTES (Lunch Break Coverage)</option>
+                <option value="3600">60 MINUTES (1 Hour Maximum Persistence)</option>
+              </select>
             </div>
           </div>
 
@@ -2655,7 +2661,7 @@
             <button
               v-if="updateStatus?.update_available"
               type="button"
-              class="bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-5 py-2 text-xs font-black tracking-wider cursor-pointer shadow-[0_0_12px_rgba(255,255,0,0.8)] transition-all animate-pulse"
+              class="whitespace-nowrap shrink-0 bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-5 py-2 text-xs font-black tracking-wider cursor-pointer shadow-[0_0_12px_rgba(255,255,0,0.8)] transition-all animate-pulse"
               @click="openInPlaceUpgrader()"
             >
               [ UPGRADE TO v{{ updateStatus.latest_version }} NOW ]
@@ -2666,13 +2672,13 @@
               <button
                 type="button"
                 disabled
-                class="bg-[#002200] border border-[#00FF00]/60 text-[#00FF00] px-4 py-2 text-xs font-bold tracking-wider cursor-not-allowed opacity-80"
+                class="whitespace-nowrap shrink-0 bg-[#002200] border border-[#00FF00]/60 text-[#00FF00] px-4 py-2 text-xs font-bold tracking-wider cursor-not-allowed opacity-80"
               >
                 [ FIRMWARE UP TO DATE: v{{ updateStatus?.current_version || '0.25.0' }} ]
               </button>
               <button
                 type="button"
-                class="bg-[#000055] hover:bg-[#000077] border border-[#333366] hover:border-[#00FFFF] text-[#A0A0C0] hover:text-[#00FFFF] px-3 py-2 text-xs font-bold tracking-wider cursor-pointer transition-colors"
+                class="whitespace-nowrap shrink-0 bg-[#000055] hover:bg-[#000077] border border-[#333366] hover:border-[#00FFFF] text-[#A0A0C0] hover:text-[#00FFFF] px-3 py-2 text-xs font-bold tracking-wider cursor-pointer transition-colors"
                 @click="openInPlaceUpgrader(undefined, true)"
                 title="Run safe dry-run simulation of Docker container swap without performing an upgrade"
               >
@@ -3907,7 +3913,7 @@ const form = reactive<SystemSettings>({
   eas_enabled: '1',
   eas_sound_enabled: '1',
   eas_min_severity: 'Moderate',
-  eas_display_duration_seconds: '30',
+  eas_display_duration_seconds: '300',
   ticketmaster_api_key: '',
   seatgeek_client_id: '',
   seatgeek_client_secret: '',
@@ -4183,6 +4189,16 @@ function setCommercialsSource(source: 'youtube' | 'local' | 'combined') {
 
 function triggerCommercialTest() {
   commercialsEngine.playRandomCommercial()
+  router.push('/')
+}
+
+function playClipNow(clip: any) {
+  commercialsEngine.playClip(clip)
+  router.push('/')
+}
+
+async function handleRemoveClip(clip: any) {
+  await commercialsEngine.removeClip(clip.id, clip.filename || clip.name)
 }
 
 function triggerVideoFileInput() {
@@ -4496,7 +4512,7 @@ async function handleDispatchEASTest() {
       severity: 'Severe',
       area_description: `${form.metro_label || 'LOCAL'} RECEPTION AREA`,
       instruction: 'This is a test of the OpenPrevue Emergency Alert System. In a real emergency, official instructions would follow. No action required.',
-      duration_seconds: parseInt(form.eas_display_duration_seconds || '30', 10),
+      duration_seconds: parseInt(form.eas_display_duration_seconds || '300', 10),
     })
     easTestMessage.value = `BROADCAST SENT: ${res.event_type}`
     setTimeout(() => { easTestMessage.value = '' }, 4000)

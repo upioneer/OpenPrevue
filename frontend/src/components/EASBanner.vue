@@ -5,20 +5,26 @@
   >
     <div class="flex items-center justify-between">
       <!-- Left: High-Visibility Emergency Header & Pulsing Beacon -->
-      <div class="flex items-center space-x-2">
-        <span class="bg-[#FFFF00] text-[#000033] font-black px-2 py-0.5 text-xs tracking-wider uppercase">
+      <div class="flex items-center space-x-2 min-w-0">
+        <span class="bg-[#FFFF00] text-[#000033] font-black px-2 py-0.5 text-xs tracking-wider uppercase whitespace-nowrap shrink-0">
           [ EMERGENCY ALERT SYSTEM ]
         </span>
-        <span class="text-xs sm:text-sm font-black tracking-widest text-[#FFFF00] uppercase">
+        <span class="text-xs sm:text-sm font-black tracking-widest text-[#FFFF00] uppercase truncate">
           {{ currentAlert.event_type }}
         </span>
       </div>
 
-      <!-- Right: Direct Dismiss Action Control -->
-      <div class="flex items-center space-x-2">
+      <!-- Right: Direct Dismiss Action Control & Countdown Telemetry -->
+      <div class="flex items-center space-x-2 shrink-0">
+        <span
+          v-if="remainingSeconds > 0"
+          class="text-[10px] font-mono font-bold text-[#FFFF00] hidden sm:inline-block opacity-90 whitespace-nowrap bg-[#000033]/60 px-2 py-0.5 border border-[#FFFF00]/40"
+        >
+          [ AUTO-CLOSES IN {{ formattedTimeRemaining }} ]
+        </span>
         <button
           type="button"
-          class="bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-2 py-0.5 text-xs font-black uppercase cursor-pointer transition-all"
+          class="whitespace-nowrap shrink-0 bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] px-2.5 py-0.5 text-xs font-black uppercase cursor-pointer transition-all shadow-[0_0_8px_rgba(255,255,0,0.6)]"
           @click="dismissAlert"
         >
           [ DISMISS ]
@@ -50,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { wsService } from '../services/websocket'
 import { audioSynth } from '../services/audioSynth'
 
@@ -71,14 +77,24 @@ export interface EmergencyAlertData {
 
 const currentAlert = ref<EmergencyAlertData | null>(null)
 const progressPercent = ref(100)
+const remainingSeconds = ref(0)
 let timerInterval: ReturnType<typeof setInterval> | null = null
 let unsubscribeWs: (() => void) | null = null
 
-function showAlert(alert: EmergencyAlertData, durationSeconds: number = 30) {
+const formattedTimeRemaining = computed(() => {
+  const s = remainingSeconds.value
+  if (s <= 0) return '00:00'
+  const mins = Math.floor(s / 60)
+  const secs = s % 60
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+})
+
+function showAlert(alert: EmergencyAlertData, durationSeconds: number = 300) {
   currentAlert.value = alert
   progressPercent.value = 100
+  remainingSeconds.value = durationSeconds
 
-  // Play one-shot sustained 8-second dual-tone attention signal (853 Hz + 960 Hz) then auto-stop
+  // Play one-shot sustained dual-tone attention signal (853 Hz + 960 Hz) capped between 6 and 10 seconds
   const toneDuration = Math.min(10, Math.max(6, Math.round(durationSeconds / 3)))
   audioSynth.playEASSiren(toneDuration)
 
@@ -89,10 +105,11 @@ function showAlert(alert: EmergencyAlertData, durationSeconds: number = 30) {
 
   timerInterval = setInterval(() => {
     const elapsed = Date.now() - startTime
-    const remaining = Math.max(0, 1 - elapsed / durationMs)
-    progressPercent.value = remaining * 100
+    const remainingFrac = Math.max(0, 1 - elapsed / durationMs)
+    progressPercent.value = remainingFrac * 100
+    remainingSeconds.value = Math.ceil(Math.max(0, (durationMs - elapsed) / 1000))
 
-    if (remaining <= 0) {
+    if (remainingFrac <= 0) {
       dismissAlert()
     }
   }, 100)
@@ -105,12 +122,14 @@ function dismissAlert() {
     timerInterval = null
   }
   currentAlert.value = null
+  remainingSeconds.value = 0
+  progressPercent.value = 0
 }
 
 onMounted(() => {
   unsubscribeWs = wsService.on('emergency_alert', (alert: EmergencyAlertData) => {
     if (alert) {
-      const displayDuration = alert.duration_seconds || 30
+      const displayDuration = alert.duration_seconds || 300
       showAlert(alert, displayDuration)
     }
   })

@@ -28,6 +28,9 @@ async def list_commercial_clips() -> dict[str, Any]:
     for file_path in target_dir.iterdir():
         if file_path.is_file() and file_path.suffix.lower() in ALLOWED_EXTENSIONS:
             stat = file_path.stat()
+            # Ignore empty or corrupt files smaller than 1 KB
+            if stat.st_size < 1024:
+                continue
             clips.append({
                 "id": file_path.stem,
                 "name": file_path.name,
@@ -116,4 +119,25 @@ async def upload_commercial_clip(file: UploadFile = File(...)) -> dict[str, Any]
             "size_bytes": len(content),
             "url": f"/api/v1/commercials/stream/{safe_filename}",
         },
+    }
+
+
+@router.delete("/{filename}", response_model=dict[str, Any])
+async def delete_commercial_clip(filename: str) -> dict[str, Any]:
+    """Delete a commercial clip from the local filesystem dropzone."""
+    target_dir = ensure_commercials_dir()
+    safe_name = Path(filename).name
+    file_path = target_dir / safe_name
+
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="The requested commercial clip was not found.",
+        )
+
+    file_path.unlink()
+    logger.info("Deleted commercial clip: %s", safe_name)
+    return {
+        "status": "success",
+        "message": f"Successfully deleted '{safe_name}'.",
     }

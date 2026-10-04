@@ -205,14 +205,14 @@
           </span>
         </div>
 
-        <div class="flex items-center space-x-2">
+        <div class="flex flex-wrap items-center gap-2">
           <!-- Diagnostic Dry Run Button (Shown when launched in Diagnostic Mode or when up-to-date) -->
           <button
             v-if="diagnosticMode || !isUpgradeAvailable"
             type="button"
             :disabled="isProcessing || isPolling"
             @click="runDryRun"
-            class="bg-[#000066] hover:bg-[#000099] border border-[#00FFFF] text-[#00FFFF] px-3 py-1.5 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            class="whitespace-nowrap shrink-0 bg-[#000066] hover:bg-[#000099] border border-[#00FFFF] text-[#00FFFF] px-3 py-1.5 text-xs font-bold tracking-wider cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {{ isProcessing ? '[ SIMULATING... ]' : '[ RUN DIAGNOSTIC DRY-RUN ]' }}
           </button>
@@ -222,7 +222,7 @@
             type="button"
             :disabled="!isUpgradeAvailable || isProcessing || isPolling || reloadCountdown !== null"
             @click="runApplyUpdate"
-            class="px-5 py-2 text-xs font-black tracking-wider transition-all"
+            class="whitespace-nowrap shrink-0 px-5 py-2 text-xs font-black tracking-wider transition-all"
             :class="isUpgradeAvailable && !isProcessing && !isPolling && reloadCountdown === null
               ? 'bg-[#FFFF00] hover:bg-[#FFFFFF] text-[#000033] cursor-pointer shadow-[0_0_12px_rgba(255,255,0,0.8)]'
               : 'bg-[#001122] border border-[#334466] text-[#6688AA] cursor-not-allowed opacity-60'"

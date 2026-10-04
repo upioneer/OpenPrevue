@@ -6,7 +6,7 @@
 
 import { ref } from "vue";
 import { audioSynth } from "./audioSynth";
-import { fetchCommercialClips, uploadCommercialClipFile } from "../api/client";
+import { deleteCommercialClipFile, fetchCommercialClips, uploadCommercialClipFile } from "../api/client";
 
 export interface CommercialClip {
   id: string;
@@ -34,7 +34,6 @@ class CommercialsEngine {
 
   constructor() {
     this.loadSettings();
-    this.initDefaultClips();
     this.syncWithServerDropzone();
   }
 
@@ -69,27 +68,13 @@ class CommercialsEngine {
     }
   }
 
-  private initDefaultClips(): void {
-    // Initial OEM placeholder slot / retro simulated station ID clips
-    this.clips.value = [
-      {
-        id: "oem_bumper_1",
-        name: "OpenPrevue 1995 Station ID Bumper",
-        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-        durationSeconds: 15,
-        isUserUploaded: false,
-        type: "local",
-      }
-    ];
-  }
-
   public async syncWithServerDropzone(): Promise<void> {
     try {
       const res = await fetchCommercialClips();
       if (res.dropzone_directory) {
         this.dropzoneDirectory.value = res.dropzone_directory;
       }
-      if (res.clips && res.clips.length > 0) {
+      if (res.clips) {
         const serverClips: CommercialClip[] = res.clips.map(c => ({
           id: c.id,
           name: c.name,
@@ -151,8 +136,17 @@ class CommercialsEngine {
     return clip;
   }
 
-  public removeClip(id: string): void {
+  public async removeClip(id: string, filename?: string): Promise<void> {
+    const target = this.clips.value.find(c => c.id === id);
     this.clips.value = this.clips.value.filter(c => c.id !== id);
+    const fname = filename || target?.filename || target?.name;
+    if (fname && target?.isUserUploaded) {
+      try {
+        await deleteCommercialClipFile(fname);
+      } catch {
+        // Fallback silently if offline or already removed
+      }
+    }
   }
 
   public playRandomCommercial(): void {

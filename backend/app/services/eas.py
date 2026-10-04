@@ -26,7 +26,9 @@ class EASService:
                 rows = await cursor.fetchall()
                 return {row["key"]: row["value"] for row in rows}
 
-    async def fetch_nws_alerts(self, latitude: float, longitude: float) -> list[EmergencyAlert]:
+    async def fetch_nws_alerts(
+        self, latitude: float, longitude: float, duration_seconds: int = 300
+    ) -> list[EmergencyAlert]:
         """Fetch active meteorological warnings from National Weather Service (NWS) CAP API."""
         url = f"https://api.weather.gov/alerts/active?point={latitude:.4f},{longitude:.4f}"
         headers = {
@@ -69,7 +71,7 @@ class EASService:
                             effective_at=str(effective),
                             expires_at=str(expires),
                             is_active=True,
-                            duration_seconds=30,
+                            duration_seconds=duration_seconds,
                         )
                         alerts.append(alert)
         except Exception as exc:
@@ -86,8 +88,9 @@ class EASService:
 
             lat = float(cfg.get("latitude", settings.DEFAULT_LATITUDE))
             lon = float(cfg.get("longitude", settings.DEFAULT_LONGITUDE))
+            duration_seconds = int(cfg.get("eas_display_duration_seconds", "300"))
 
-            nws_alerts = await self.fetch_nws_alerts(lat, lon)
+            nws_alerts = await self.fetch_nws_alerts(lat, lon, duration_seconds=duration_seconds)
             current_active: dict[str, EmergencyAlert] = dict(self.active_alerts)
 
             for alert in nws_alerts:
@@ -110,7 +113,7 @@ class EASService:
         severity: str = "Severe",
         area_description: str = "LOCAL RECEPTION AREA",
         instruction: str = "This is a test of the OpenPrevue Emergency Alert System. No action is required.",
-        duration_seconds: int = 30,
+        duration_seconds: int = 300,
     ) -> EmergencyAlert:
         """Generate and broadcast an instant simulated EAS emergency alert."""
         now_iso = datetime.now(timezone.utc).isoformat()

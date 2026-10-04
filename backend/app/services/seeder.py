@@ -63,6 +63,10 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "commercials_enabled": "0",
     "commercials_frequency_per_hour": "4",
     "commercials_source": "youtube",
+    "eas_enabled": "1",
+    "eas_sound_enabled": "1",
+    "eas_min_severity": "Moderate",
+    "eas_display_duration_seconds": "300",
 }
 
 

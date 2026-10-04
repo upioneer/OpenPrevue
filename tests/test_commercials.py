@@ -1,8 +1,25 @@
 """Unit and integration tests for commercial video dropzones and stream endpoints."""
 
+from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
 from backend.app.main import app
+
+COMMERCIALS_DIR = Path("data") / "commercials"
+
+
+@pytest.fixture(autouse=True)
+def cleanup_test_files():
+    """Ensure mock test commercial files are never left on disk after test runs."""
+    yield
+    test_files = ["test_promo.mp4", "stream_test.mp4", "delete_test.mp4"]
+    for fname in test_files:
+        p = COMMERCIALS_DIR / fname
+        if p.exists():
+            try:
+                p.unlink()
+            except Exception:
+                pass
 
 
 @pytest.mark.asyncio
@@ -49,3 +66,21 @@ async def test_stream_commercial_clip():
         # Missing file returns 404
         res_missing = await ac.get("/api/v1/commercials/stream/non_existent.mp4")
         assert res_missing.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_commercial_clip():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        # Upload a clip to delete
+        valid_files = {"file": ("delete_test.mp4", b"to be deleted", "video/mp4")}
+        res_up = await ac.post("/api/v1/commercials/upload", files=valid_files)
+        assert res_up.status_code == 200
+
+        # Delete existing file
+        res_del = await ac.delete("/api/v1/commercials/delete_test.mp4")
+        assert res_del.status_code == 200
+        assert res_del.json()["status"] == "success"
+
+        # Deleting non-existent file returns 404
+        res_del_404 = await ac.delete("/api/v1/commercials/non_existent_clip.mp4")
+        assert res_del_404.status_code == 404

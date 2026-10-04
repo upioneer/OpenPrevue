@@ -1,20 +1,20 @@
 <template>
   <div
     v-if="isVisible"
-    class="fixed bottom-6 right-6 z-50 max-w-sm sm:max-w-md bg-[#000044] border-2 border-[#FFFF00] shadow-[0_0_20px_rgba(255,255,0,0.7)] p-4 font-mono text-xs text-[#E0E0E0] select-none transition-all duration-300"
+    class="fixed bottom-6 right-6 z-50 w-auto max-w-[calc(100vw-3rem)] sm:max-w-lg bg-[#000044] border-2 border-[#FFFF00] shadow-[0_0_20px_rgba(255,255,0,0.7)] p-4 font-mono text-xs text-[#E0E0E0] select-none transition-all duration-300"
   >
     <!-- Header -->
     <div class="flex items-center justify-between border-b border-[#333366] pb-1.5 mb-2">
-      <div class="flex items-center space-x-2">
-        <span class="w-2.5 h-2.5 bg-[#FFFF00] inline-block animate-pulse"></span>
-        <span class="text-[#FFFF00] font-black tracking-wider text-xs">
+      <div class="flex items-center space-x-2 min-w-0">
+        <span class="w-2.5 h-2.5 bg-[#FFFF00] inline-block animate-pulse shrink-0"></span>
+        <span class="text-[#FFFF00] font-black tracking-wider text-xs whitespace-nowrap">
           [ SYSTEM UPDATE AVAILABLE ]
         </span>
       </div>
       <button
         type="button"
         @click="dismiss"
-        class="text-[#8888AA] hover:text-[#FFFF00] font-bold text-xs cursor-pointer px-1"
+        class="text-[#8888AA] hover:text-[#FFFF00] font-bold text-xs cursor-pointer px-1 shrink-0 whitespace-nowrap"
         title="Dismiss Notification"
       >
         [ X ]
@@ -27,18 +27,18 @@
     </p>
 
     <!-- Actions -->
-    <div class="flex items-center space-x-2">
+    <div class="flex flex-wrap items-center gap-2 pt-1">
       <button
         type="button"
         @click="handleUpgradeNow"
-        class="bg-[#FFFF00] text-[#000033] px-3 py-1 text-xs font-black hover:bg-[#FFFFFF] transition-all cursor-pointer shadow-[0_0_8px_rgba(255,255,0,0.8)]"
+        class="whitespace-nowrap shrink-0 bg-[#FFFF00] text-[#000033] px-3 py-1 text-xs font-black hover:bg-[#FFFFFF] transition-all cursor-pointer shadow-[0_0_8px_rgba(255,255,0,0.8)]"
       >
         [ UPGRADE IN-PLACE ]
       </button>
       <router-link
         to="/settings?tab=updates"
         @click="dismiss"
-        class="bg-[#000080] border border-[#FFFF00] text-[#FFFF00] px-3 py-1 text-xs font-bold hover:bg-[#0000AA] cursor-pointer transition-colors"
+        class="whitespace-nowrap shrink-0 bg-[#000080] border border-[#FFFF00] text-[#FFFF00] px-3 py-1 text-xs font-bold hover:bg-[#0000AA] cursor-pointer transition-colors"
       >
         [ SETTINGS ]
       </router-link>
@@ -47,7 +47,7 @@
         :href="updateData.release_url"
         target="_blank"
         rel="noopener noreferrer"
-        class="bg-[#000080] border border-[#00FFFF] text-[#00FFFF] px-3 py-1 text-xs font-bold hover:bg-[#0000AA] cursor-pointer transition-colors"
+        class="whitespace-nowrap shrink-0 bg-[#000080] border border-[#00FFFF] text-[#00FFFF] px-3 py-1 text-xs font-bold hover:bg-[#0000AA] cursor-pointer transition-colors"
       >
         [ GITHUB ]
       </a>
