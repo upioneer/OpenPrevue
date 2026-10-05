@@ -103,8 +103,20 @@
           <span v-if="isGeocodingLocation" class="text-xs text-[#FFFF00] animate-pulse font-bold">[ RESOLVING LOCATION... ]</span>
         </div>
 
-        <!-- Quick Regional Presets -->
-        <div class="bg-[#000033] p-3 border border-[#333366] space-y-2">
+        <!-- Group 1-1: Signal Origin & Search Radius -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase">
+              Signal Origin &amp; Search Radius
+            </h3>
+            <span class="text-xs text-[#FFFF00] font-bold uppercase">
+              {{ form.metro_label || 'NO MARKET SET' }} // {{ form.radius_miles }} MI
+            </span>
+          </div>
+          <p class="text-xs text-[#8888AA]">
+            Pick a regional preset or resolve a metro area manually. All event aggregation radiates from these coordinates.
+          </p>
+
           <label class="text-xs font-bold text-[#FFFF00] block uppercase">Quick Regional Presets:</label>
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
             <button
@@ -120,102 +132,102 @@
               [ {{ preset.label }} ]
             </button>
           </div>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block font-bold">Metro Area / Channel Broadcast Label:</label>
-            <div class="flex space-x-1">
+          <div class="border-t border-[#333366] pt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block font-bold">Metro Area / Channel Broadcast Label:</label>
+              <div class="flex space-x-1">
+                <input
+                  v-model="form.metro_label"
+                  type="text"
+                  class="flex-1 bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+                  placeholder="e.g. AUSTIN, TX or CHICAGO, IL"
+                  @blur="handleSettingsGeocode(form.metro_label)"
+                  @keydown.enter.prevent="handleSettingsGeocode(form.metro_label)"
+                />
+                <button
+                  type="button"
+                  class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-2 py-1 text-[10px] font-bold cursor-pointer transition-colors"
+                  @click="handleSettingsGeocode(form.metro_label)"
+                >
+                  [ RESOLVE ]
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block font-bold">Postal Code (ZIP):</label>
+              <div class="flex space-x-1">
+                <input
+                  v-model="form.postal_code"
+                  type="text"
+                  class="flex-1 bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+                  placeholder="e.g. 78701 or 60601"
+                  @blur="handleSettingsGeocode(form.postal_code)"
+                  @keydown.enter.prevent="handleSettingsGeocode(form.postal_code)"
+                />
+                <button
+                  type="button"
+                  class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-2 py-1 text-[10px] font-bold cursor-pointer transition-colors"
+                  @click="handleSettingsGeocode(form.postal_code)"
+                >
+                  [ RESOLVE ]
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">Search Radius: {{ form.radius_miles }} miles</label>
               <input
-                v-model="form.metro_label"
-                type="text"
-                class="flex-1 bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
-                placeholder="e.g. AUSTIN, TX or CHICAGO, IL"
-                @blur="handleSettingsGeocode(form.metro_label)"
-                @keydown.enter.prevent="handleSettingsGeocode(form.metro_label)"
+                v-model="form.radius_miles"
+                type="range"
+                min="5"
+                max="100"
+                step="5"
+                class="w-full accent-[#FFFF00]"
               />
-              <button
-                type="button"
-                class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-2 py-1 text-[10px] font-bold cursor-pointer transition-colors"
-                @click="handleSettingsGeocode(form.metro_label)"
-              >
-                [ RESOLVE ]
-              </button>
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">Provider Ingestion Interval: {{ form.sync_interval_hours }}h</label>
+              <input
+                v-model="form.sync_interval_hours"
+                type="range"
+                min="1"
+                max="24"
+                step="1"
+                class="w-full accent-[#FFFF00]"
+              />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">Center Latitude:</label>
+              <input
+                v-model="form.latitude"
+                type="text"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
+              />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">Center Longitude:</label>
+              <input
+                v-model="form.longitude"
+                type="text"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
+              />
             </div>
           </div>
 
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block font-bold">Postal Code (ZIP):</label>
-            <div class="flex space-x-1">
-              <input
-                v-model="form.postal_code"
-                type="text"
-                class="flex-1 bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
-                placeholder="e.g. 78701 or 60601"
-                @blur="handleSettingsGeocode(form.postal_code)"
-                @keydown.enter.prevent="handleSettingsGeocode(form.postal_code)"
-              />
-              <button
-                type="button"
-                class="bg-[#000080] hover:bg-[#0000AA] border border-[#00FFFF] text-[#00FFFF] px-2 py-1 text-[10px] font-bold cursor-pointer transition-colors"
-                @click="handleSettingsGeocode(form.postal_code)"
-              >
-                [ RESOLVE ]
-              </button>
-            </div>
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Search Radius: {{ form.radius_miles }} miles</label>
-            <input
-              v-model="form.radius_miles"
-              type="range"
-              min="5"
-              max="100"
-              step="5"
-              class="w-full accent-[#FFFF00]"
-            />
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Provider Ingestion Interval: {{ form.sync_interval_hours }}h</label>
-            <input
-              v-model="form.sync_interval_hours"
-              type="range"
-              min="1"
-              max="24"
-              step="1"
-              class="w-full accent-[#FFFF00]"
-            />
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Center Latitude:</label>
-            <input
-              v-model="form.latitude"
-              type="text"
-              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
-            />
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Center Longitude:</label>
-            <input
-              v-model="form.longitude"
-              type="text"
-              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
-            />
+          <div v-if="locationResolutionMsg" class="p-2 border text-xs" :class="locationResolutionIsError ? 'bg-[#330000] border-[#FF4444] text-[#FF8888]' : 'bg-[#003300] border-[#00FF00] text-[#00FF00] font-bold'">
+            {{ locationResolutionMsg }}
           </div>
         </div>
 
-        <div v-if="locationResolutionMsg" class="p-2 border text-xs" :class="locationResolutionIsError ? 'bg-[#330000] border-[#FF4444] text-[#FF8888]' : 'bg-[#003300] border-[#00FF00] text-[#00FF00] font-bold'">
-          {{ locationResolutionMsg }}
-        </div>
-
-        <!-- Major League Sports Coverage & Localization Mode -->
-        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
+        <!-- Group 1-2: Major League Sports Coverage & Localization Mode -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FF00] space-y-3">
           <div class="flex items-center justify-between flex-wrap gap-2">
-            <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FF00] uppercase">
               Major League Sports Coverage &amp; Localization
             </h3>
             <span class="text-xs text-[#FFFF00] font-bold">
@@ -280,7 +292,7 @@
           Display Controls, Channel Scan Speed & Retro CRT Shaders
         </h2>
 
-        <!-- Channel Schedule Presentation Scale & Density Presets -->
+        <!-- Group 2-1: Channel Schedule Presentation Scale & Density Presets -->
         <div class="bg-[#000033] p-4 border-2 border-[#FFFF00] space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase">
@@ -348,7 +360,47 @@
           </div>
         </div>
 
-        <!-- Channel Schedule Listing Filter: Active Events vs All Channels -->
+        <!-- Group 2-2: Channel Schedule Day Columns: 3-Day vs 2-Day -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase">
+              Schedule Day Columns
+            </h3>
+            <span class="text-xs text-[#FFFF00] font-bold">
+              ACTIVE: {{ form.grid_day_columns === '2day' ? '2 COLUMNS (TODAY + TOMORROW)' : '3 COLUMNS (TODAY + TONIGHT + TOMORROW)' }}
+            </span>
+          </div>
+          <p class="text-xs text-[#8888AA]">
+            Two-column mode merges Tonight into Today and widens every cell so titles, team matchup cards, and ticket actions fit more comfortably.
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.grid_day_columns !== '2day'
+                ? 'bg-[#000066] border-[#00FFFF] text-[#00FFFF] shadow-[0_0_10px_rgba(0,255,255,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.grid_day_columns = '3day'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ 3 DAYS // TODAY + TONIGHT + TOMORROW ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">Default Prevue grid: matinee, primetime, and next-day listings in separate columns.</div>
+            </button>
+
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.grid_day_columns === '2day'
+                ? 'bg-[#000066] border-[#FFFF00] text-[#FFFF00] shadow-[0_0_10px_rgba(255,255,0,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.grid_day_columns = '2day'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ 2 DAYS // TODAY + TOMORROW ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">Wide-cell mode: full-day Today column plus Tomorrow. More breathing room per listing.</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Group 2-3: Channel Schedule Listing Filter: Active Events vs All Channels -->
         <div class="bg-[#000033] p-4 border-2 border-[#00FF00] space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-xs sm:text-sm font-black text-[#00FF00] uppercase">
@@ -394,11 +446,11 @@
           </div>
         </div>
 
-        <!-- Ultrawide & Panoramic Displays (21:9, 32:9 & 6"-12" Rack Displays) -->
-        <div class="bg-[#000033] p-3 sm:p-4 border border-[#00FFFF] space-y-3">
+        <!-- Group 2-4: Ultrawide & Panoramic Displays (21:9, 32:9 & 6"-12" Rack Displays) -->
+        <div class="bg-[#000033] p-4 border-2 border-[#FFFF00] space-y-3">
           <div class="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase tracking-wide">
+              <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase tracking-wide">
                 Ultrawide & Panoramic Display Layout (6"-12" Racks, Bars & Desktop Monitors)
               </h3>
               <p class="text-xs text-[#8888AA]">
@@ -489,8 +541,8 @@
           </div>
         </div>
 
-        <!-- Spotlight Presentation Mode & Video Stream Source -->
-        <div class="bg-[#000033] p-3 sm:p-4 border-2 border-[#00FFFF] space-y-3">
+        <!-- Group 2-5: Spotlight Presentation Mode & Video Stream Source -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
           <div class="flex items-center justify-between flex-wrap gap-2">
             <div>
               <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase tracking-wide">
@@ -501,16 +553,16 @@
               </p>
             </div>
             <span class="text-xs text-[#FFFF00] font-bold">
-              ACTIVE: {{ form.spotlight_mode === 'youtube' ? 'YOUTUBE STREAM' : 'FEATURED EVENTS' }}
+              ACTIVE: {{ form.spotlight_mode === 'youtube' ? 'YOUTUBE STREAM' : (form.spotlight_mode === 'featured_ads' ? 'SHOWCASE + RETRO ADS' : 'FEATURED EVENTS') }}
             </span>
           </div>
 
           <!-- Mode Selector -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
             <button
               type="button"
               class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
-              :class="form.spotlight_mode !== 'youtube'
+              :class="form.spotlight_mode === 'featured'
                 ? 'bg-[#000066] border-[#00FFFF] text-[#00FFFF] shadow-[0_0_10px_rgba(0,255,255,0.6)]'
                 : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
               @click="form.spotlight_mode = 'featured'"
@@ -518,6 +570,20 @@
               <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ FEATURED EVENTS SHOWCASE ]</div>
               <div class="text-[11px] text-[#E0E0E0] mt-1">
                 Default Prevue presentation: Rotating concert headliners, sports matchup VS cards, vinyl spectrum visualizers, and scannable box office QR passes.
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="p-3 border-2 text-left cursor-pointer transition-all flex flex-col justify-between"
+              :class="form.spotlight_mode === 'featured_ads'
+                ? 'bg-[#000066] border-[#00FF00] text-[#00FF00] shadow-[0_0_10px_rgba(0,255,0,0.6)]'
+                : 'bg-[#000022] border-[#333366] text-[#A0A0C0] hover:border-[#8888AA]'"
+              @click="form.spotlight_mode = 'featured_ads'"
+            >
+              <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ SHOWCASE + RETRO ADS ]</div>
+              <div class="text-[11px] text-[#E0E0E0] mt-1">
+                Split spotlight: featured cards keep rolling on one side while periodic retro ad breaks air on the other. Narrow screens fall back to full-takeover breaks.
               </div>
             </button>
 
@@ -536,8 +602,27 @@
             </button>
           </div>
 
+          <!-- Retro Ads Bridge: status summary with jump to Tab 4 -->
+          <div v-if="form.spotlight_mode !== 'youtube'" class="bg-[#000022] p-3 border border-[#333366] space-y-2">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <span class="text-xs font-bold text-[#FFFF00] uppercase">
+                Retro Ads Breaks: {{ commercialsEnabled ? 'ENABLED' : 'DISABLED' }}
+              </span>
+              <button
+                type="button"
+                class="text-[11px] font-black text-[#00FFFF] hover:text-white border border-[#00FFFF] px-2 py-0.5 uppercase cursor-pointer"
+                @click="activeTab = 'commercials'"
+              >
+                [ CONFIGURE IN TAB 4 ]
+              </button>
+            </div>
+            <p class="text-[11px] text-[#A0A0C0]">
+              {{ commercialsFrequency }} breaks per hour from {{ commercialsSource === 'youtube' ? 'the curated 90s YouTube reel' : (commercialsSource === 'local' ? 'local dropzone files' : 'YouTube + local rotation') }}. Queue: {{ commercialsEngine.clips.value.length }} local clips. Full schedule, sources, and uploads live in Tab 4 [ RETRO COMMERCIALS ].
+            </p>
+          </div>
+
           <!-- YouTube Configuration Controls -->
-          <div v-if="form.spotlight_mode === 'youtube'" class="pt-3 border-t border-[#333366] space-y-4">
+          <div v-if="form.spotlight_mode === 'youtube' || form.spotlight_mode === 'featured_ads'" class="pt-3 border-t border-[#333366] space-y-4">
             <!-- URL Input & Verification -->
             <div class="space-y-1.5">
               <div class="flex items-center justify-between flex-wrap gap-1">
@@ -581,7 +666,7 @@
                 </button>
               </div>
               <div class="bg-[#000022] p-2 border border-[#333366] text-[10px] text-[#A0A0C0]">
-                <strong class="text-[#FFFF00]">RETRO TV COMMERCIALS PLAYLIST:</strong> This curated playlist contains authentic vintage 1990s television commercials. You can stream it continuously here in Spotlight mode, or set Spotlight to "Featured Events" and enable periodic commercial breaks in <strong class="text-[#00FFFF]">Tab 4 [ RETRO COMMERCIALS ]</strong> to air commercials at scheduled intervals throughout the hour.
+                <strong class="text-[#FFFF00]">RETRO TV COMMERCIALS PLAYLIST:</strong> This curated playlist contains authentic vintage 1990s television commercials. You can stream it continuously here in Spotlight mode, or set Spotlight to "Featured Events" or "Showcase + Retro Ads" and enable periodic commercial breaks in <strong class="text-[#00FFFF]">Tab 4 [ RETRO COMMERCIALS ]</strong> to air commercials at scheduled intervals throughout the hour.
               </div>
 
               <!-- Live Validation Feedback Banner -->
@@ -747,156 +832,186 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Autoscroll Scan Speed -->
-          <div class="bg-[#000033] p-3 border border-[#FFFF00] space-y-1">
-            <label class="text-xs text-[#FFFF00] font-bold block">
-              Channel Schedule Scroll Speed (Scan Speed): {{ form.autoscroll_speed }} px/sec
-            </label>
-            <input
-              v-model="form.autoscroll_speed"
-              type="range"
-              min="15"
-              max="150"
-              step="5"
-              class="w-full accent-[#FFFF00]"
-            />
-            <span class="text-[10px] text-[#8888AA] block">
-              Controls the autoscroll pace of the bottom TV listings grid (30 px/sec is default smooth broadcast scan speed).
+        <!-- Group 2-6: Broadcast Motion & Scan Cadence -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FF00] space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FF00] uppercase">
+              Broadcast Motion &amp; Scan Cadence
+            </h3>
+            <span class="text-xs text-[#FFFF00] font-bold uppercase">
+              SCAN {{ form.autoscroll_speed }} PX/S // ROTATE {{ form.marquee_rotation_seconds }}S
             </span>
           </div>
-
-          <!-- Spotlight Marquee Rotation -->
-          <div class="bg-[#000033] p-3 border border-[#333366] space-y-1">
-            <label class="text-xs text-[#00FFFF] font-bold block">
-              Spotlight Marquee Rotation Interval: {{ form.marquee_rotation_seconds }}s
-            </label>
-            <input
-              v-model="form.marquee_rotation_seconds"
-              type="range"
-              min="5"
-              max="60"
-              step="5"
-              class="w-full accent-[#FFFF00]"
-            />
-            <span class="text-[10px] text-[#8888AA] block">
-              How long each featured event or sports matchup stays on screen in the top preview quadrant.
-            </span>
-          </div>
-
-          <!-- Periodic Listing Reading Pause -->
-          <div class="bg-[#000033] p-3 border border-[#00FF00] space-y-1">
-            <label class="text-xs text-[#00FF00] font-bold block">
-              Periodic Schedule Reading Pause Duration: {{ form.scroll_pause_duration || '4' }}s
-            </label>
-            <input
-              v-model="form.scroll_pause_duration"
-              type="range"
-              min="0"
-              max="10"
-              step="1"
-              class="w-full accent-[#00FF00]"
-            />
-            <span class="text-[10px] text-[#8888AA] block">
-              Authentic 1990s TV Guide cadence. Holds position for 4s so viewers can comfortably read listings before scrolling (0s = continuous scroll).
-            </span>
-          </div>
-
-          <!-- Scroll Movement Window Duration -->
-          <div class="bg-[#000033] p-3 border border-[#333366] space-y-1">
-            <label class="text-xs text-[#00FFFF] font-bold block">
-              Scroll Active Motion Window: {{ form.scroll_page_interval || '6' }}s
-            </label>
-            <input
-              v-model="form.scroll_page_interval"
-              type="range"
-              min="3"
-              max="15"
-              step="1"
-              class="w-full accent-[#00FFFF]"
-            />
-            <span class="text-[10px] text-[#8888AA] block">
-              How many seconds the schedule scrolls before pausing on the next set of channel rows.
-            </span>
-          </div>
-
-          <!-- Scanline Intensity -->
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Scanline Opacity: {{ shaderForm.scanlineIntensity }}%</label>
-            <input
-              v-model="shaderForm.scanlineIntensity"
-              @input="handleShaderChange"
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              class="w-full accent-[#FFFF00]"
-            />
-          </div>
-
-          <!-- Color Palette Preset -->
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Color Palette Preset:</label>
-            <select
-              v-model="shaderForm.palette"
-              @change="handleShaderChange"
-              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
-            >
-              <option value="default">Standard Prevue Blue (1990s TV Default)</option>
-              <option value="ega16">EGA 16-Color PC Mode</option>
-              <option value="vga256">VGA 256-Color Mode</option>
-              <option value="c64">Commodore 64 Palette</option>
-              <option value="amber_monochrome">Amber Monochrome CRT</option>
-              <option value="green_monochrome">Green Phosphor Terminal</option>
-            </select>
-          </div>
-
-          <!-- Resolution Downsampler -->
-          <div class="space-y-1">
-            <label class="text-xs text-[#A0A0C0] block">Resolution Downsampler Scaling:</label>
-            <select
-              v-model="shaderForm.resolutionScaling"
-              @change="handleShaderChange"
-              class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
-            >
-              <option value="native">Native Display Resolution</option>
-              <option value="640x480">640x480 CRT VGA</option>
-              <option value="480x360">480x360 Vintage NTSC</option>
-              <option value="320x240">320x240 Low-Res Scanline Grid</option>
-            </select>
-          </div>
-
-          <!-- CRT Effects Toggles -->
-          <div class="flex items-center space-x-4 pt-4">
-            <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
+          <p class="text-xs text-[#8888AA]">
+            Autoscroll pace, spotlight rotation, and the authentic 1990s pause-and-roll reading rhythm.
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Autoscroll Scan Speed -->
+            <div class="space-y-1">
+              <label class="text-xs text-[#FFFF00] font-bold block">
+                Channel Schedule Scroll Speed (Scan Speed): {{ form.autoscroll_speed }} px/sec
+              </label>
               <input
-                v-model="shaderForm.phosphorGlow"
-                @change="handleShaderChange"
-                type="checkbox"
-                class="accent-[#00FF00]"
+                v-model="form.autoscroll_speed"
+                type="range"
+                min="15"
+                max="150"
+                step="5"
+                class="w-full accent-[#FFFF00]"
               />
-              <span>Phosphor Text Glow Bloom</span>
-            </label>
+              <span class="text-[10px] text-[#8888AA] block">
+                Controls the autoscroll pace of the bottom TV listings grid (30 px/sec is default smooth broadcast scan speed).
+              </span>
+            </div>
 
-            <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
+            <!-- Spotlight Marquee Rotation -->
+            <div class="space-y-1">
+              <label class="text-xs text-[#00FFFF] font-bold block">
+                Spotlight Marquee Rotation Interval: {{ form.marquee_rotation_seconds }}s
+              </label>
               <input
-                v-model="shaderForm.crtCurvature"
-                @change="handleShaderChange"
-                type="checkbox"
-                class="accent-[#00FF00]"
+                v-model="form.marquee_rotation_seconds"
+                type="range"
+                min="5"
+                max="60"
+                step="5"
+                class="w-full accent-[#FFFF00]"
               />
-              <span>CRT Screen Curvature</span>
-            </label>
+              <span class="text-[10px] text-[#8888AA] block">
+                How long each featured event or sports matchup stays on screen in the top preview quadrant.
+              </span>
+            </div>
+
+            <!-- Periodic Listing Reading Pause -->
+            <div class="space-y-1">
+              <label class="text-xs text-[#00FF00] font-bold block">
+                Periodic Schedule Reading Pause Duration: {{ form.scroll_pause_duration || '4' }}s
+              </label>
+              <input
+                v-model="form.scroll_pause_duration"
+                type="range"
+                min="0"
+                max="10"
+                step="1"
+                class="w-full accent-[#00FF00]"
+              />
+              <span class="text-[10px] text-[#8888AA] block">
+                Authentic 1990s TV Guide cadence. Holds position for 4s so viewers can comfortably read listings before scrolling (0s = continuous scroll).
+              </span>
+            </div>
+
+            <!-- Scroll Movement Window Duration -->
+            <div class="space-y-1">
+              <label class="text-xs text-[#00FFFF] font-bold block">
+                Scroll Active Motion Window: {{ form.scroll_page_interval || '6' }}s
+              </label>
+              <input
+                v-model="form.scroll_page_interval"
+                type="range"
+                min="3"
+                max="15"
+                step="1"
+                class="w-full accent-[#00FFFF]"
+              />
+              <span class="text-[10px] text-[#8888AA] block">
+                How many seconds the schedule scrolls before pausing on the next set of channel rows.
+              </span>
+            </div>
           </div>
         </div>
 
-        <!-- Kiosk Screen Wake Lock & Physical Display Power Management -->
-        <div class="bg-[#000033] border border-[#00FFFF] p-4 space-y-4">
+        <!-- Group 2-7: Retro CRT Shaders & Color Science -->
+        <div class="bg-[#000033] p-4 border-2 border-[#FFFF00] space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase">
+              Retro CRT Shaders &amp; Color Science
+            </h3>
+            <span class="text-xs text-[#00FFFF] font-bold uppercase">
+              {{ (shaderForm.palette || 'default').toUpperCase().replace('_', ' ') }} // {{ shaderForm.scanlineIntensity }}% SCANLINES
+            </span>
+          </div>
+          <p class="text-xs text-[#8888AA]">
+            Scanlines, era-correct color palettes, resolution downsampling, and phosphor tube effects. Applied live.
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Scanline Intensity -->
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">Scanline Opacity: {{ shaderForm.scanlineIntensity }}%</label>
+              <input
+                v-model="shaderForm.scanlineIntensity"
+                @input="handleShaderChange"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                class="w-full accent-[#FFFF00]"
+              />
+            </div>
+
+            <!-- Color Palette Preset -->
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">Color Palette Preset:</label>
+              <select
+                v-model="shaderForm.palette"
+                @change="handleShaderChange"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+              >
+                <option value="default">Standard Prevue Blue (1990s TV Default)</option>
+                <option value="ega16">EGA 16-Color PC Mode</option>
+                <option value="vga256">VGA 256-Color Mode</option>
+                <option value="c64">Commodore 64 Palette</option>
+                <option value="amber_monochrome">Amber Monochrome CRT</option>
+                <option value="green_monochrome">Green Phosphor Terminal</option>
+              </select>
+            </div>
+
+            <!-- Resolution Downsampler -->
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">Resolution Downsampler Scaling:</label>
+              <select
+                v-model="shaderForm.resolutionScaling"
+                @change="handleShaderChange"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
+              >
+                <option value="native">Native Display Resolution</option>
+                <option value="640x480">640x480 CRT VGA</option>
+                <option value="480x360">480x360 Vintage NTSC</option>
+                <option value="320x240">320x240 Low-Res Scanline Grid</option>
+              </select>
+            </div>
+
+            <!-- CRT Effects Toggles -->
+            <div class="flex items-center space-x-4 pt-4">
+              <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
+                <input
+                  v-model="shaderForm.phosphorGlow"
+                  @change="handleShaderChange"
+                  type="checkbox"
+                  class="accent-[#00FF00]"
+                />
+                <span>Phosphor Text Glow Bloom</span>
+              </label>
+
+              <label class="flex items-center space-x-2 text-xs text-[#E0E0E0] cursor-pointer">
+                <input
+                  v-model="shaderForm.crtCurvature"
+                  @change="handleShaderChange"
+                  type="checkbox"
+                  class="accent-[#00FF00]"
+                />
+                <span>CRT Screen Curvature</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Group 2-8: Kiosk Screen Wake Lock & Physical Display Power Management -->
+        <div class="bg-[#000033] border-2 border-[#00FFFF] p-4 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
             <div>
-              <span class="text-xs font-bold text-[#00FFFF] block uppercase">
+              <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase">
                 Kiosk Screen Wake Lock & Display Power Management
-              </span>
+              </h3>
               <span class="text-[11px] text-[#8888AA]">
                 Keep wall screens awake and trigger hardware display sleep/wake commands via CEC / Raspberry Pi.
               </span>
@@ -969,18 +1084,18 @@
       </div>
 
       <!-- Tab 3: Audio Stream Source & Spotify -->
-      <div v-if="activeTab === 'audio'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
+      <div v-if="activeTab === 'audio'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
           Background Audio Stream Source & Vintage Audio Filter
         </h2>
 
-        <!-- Stream Source Selector Card -->
-        <div class="bg-[#000033] border border-[#00FFFF] p-4 space-y-4">
+        <!-- Group 3-1: Background Audio Stream Source -->
+        <div class="bg-[#000033] border-2 border-[#00FFFF] p-4 space-y-4">
           <div class="flex items-center justify-between border-b border-[#00FFFF]/40 pb-2">
             <div>
-              <span class="text-xs font-bold text-[#00FFFF] block uppercase">
+              <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase">
                 Background Audio Stream Source
-              </span>
+              </h3>
               <span class="text-[11px] text-[#8888AA]">
                 Select between the curated Spotify retro playlist (default), live 1990s weather jazz radio, ambient downtempo, or synth chimes.
               </span>
@@ -1015,37 +1130,37 @@
               />
             </div>
           </div>
-        </div>
 
-        <!-- Live Radio Stream Preview Player (Shown when radio streams are selected) -->
-        <div v-if="form.audio_source !== 'spotify' && form.audio_source !== 'synth' && form.audio_source !== 'muted'" class="bg-[#000033] border border-[#00FFFF] p-4 space-y-3">
-          <div class="flex items-center justify-between border-b border-[#00FFFF]/40 pb-2">
-            <div class="flex items-center space-x-2">
-              <span class="w-2.5 h-2.5 bg-[#00FFFF] inline-block animate-pulse"></span>
-              <h3 class="text-xs font-bold text-[#00FFFF] uppercase tracking-wider">
-                Live Internet Radio Stream Player
-              </h3>
+          <!-- Live Radio Stream Preview Player (Shown when radio streams are selected) -->
+          <div v-if="form.audio_source !== 'spotify' && form.audio_source !== 'synth' && form.audio_source !== 'muted'" class="pt-3 border-t border-[#333366] space-y-3">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 bg-[#00FFFF] inline-block animate-pulse"></span>
+                <span class="text-xs font-bold text-[#00FFFF] uppercase tracking-wider">
+                  Live Internet Radio Stream Player
+                </span>
+              </div>
+              <span class="text-[11px] text-[#00FF00] font-bold">[ DIRECT MP3/ICECAST STREAM ]</span>
             </div>
-            <span class="text-[11px] text-[#00FF00] font-bold">[ DIRECT MP3/ICECAST STREAM ]</span>
+            <div class="flex items-center gap-3">
+              <audio
+                controls
+                :src="computedRadioStreamUrl"
+                class="w-full bg-[#000022] rounded"
+              ></audio>
+            </div>
+            <span class="text-[10px] text-[#8888AA] block">
+              Streams live background jazz/ambient music directly into your CRT guide.
+            </span>
           </div>
-          <div class="flex items-center gap-3">
-            <audio
-              controls
-              :src="computedRadioStreamUrl"
-              class="w-full bg-[#000022] rounded"
-            ></audio>
-          </div>
-          <span class="text-[10px] text-[#8888AA] block">
-            Streams live background jazz/ambient music directly into your CRT guide.
-          </span>
         </div>
 
-        <!-- Spotify Playlist Configuration Card -->
-        <div v-if="form.audio_source === 'spotify' || !form.audio_source" class="bg-[#000033] border border-[#1DB954] p-4 space-y-4">
+        <!-- Group 3-2: Curated Spotify Playlist & Player Controls -->
+        <div v-if="form.audio_source === 'spotify' || !form.audio_source" class="bg-[#000033] border-2 border-[#1DB954] p-4 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1DB954]/40 pb-2">
             <div class="flex items-center space-x-2">
               <span class="w-2.5 h-2.5 bg-[#1DB954] inline-block animate-pulse"></span>
-              <h3 class="text-xs font-bold text-[#1DB954] uppercase tracking-wider">
+              <h3 class="text-xs sm:text-sm font-black text-[#1DB954] uppercase tracking-wider">
                 Curated Spotify Playlist & Player Controls
               </h3>
             </div>
@@ -1101,13 +1216,13 @@
           </div>
         </div>
 
-        <!-- 1990s RF / Composite Baseband Audio Filter Control Panel -->
-        <div class="bg-[#000033] border border-[#333366] p-4 space-y-4">
+        <!-- Group 3-3: 1990s RF / Composite Baseband Audio Filter Control Panel -->
+        <div class="bg-[#000033] border-2 border-[#FFFF00] p-4 space-y-4">
           <div class="flex items-center justify-between border-b border-[#333366] pb-2">
             <div>
-              <span class="text-xs font-bold text-[#00FFFF] block uppercase">
+              <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase">
                 1990s RF / Composite Baseband Audio Filter (DSP Pipeline)
-              </span>
+              </h3>
               <span class="text-[11px] text-[#8888AA]">
                 Simulates cable headend modulator frequency response and analog television speakers.
               </span>
@@ -1171,12 +1286,12 @@
           </div>
         </div>
 
-        <!-- Analog Tape Hiss & 60Hz Transformer Hum Controls -->
-        <div class="bg-[#000033] border border-[#333366] p-4 space-y-4">
+        <!-- Group 3-4: Analog Tape Hiss & 60Hz Transformer Hum Controls -->
+        <div class="bg-[#000033] border-2 border-[#00FFFF] p-4 space-y-4">
           <div class="flex items-center justify-between border-b border-[#333366] pb-2">
-            <span class="text-xs font-bold text-[#FFFF00] uppercase">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase">
               Analog Headend Atmosphere (Tape Hiss & 60Hz Hum)
-            </span>
+            </h3>
             <button
               type="button"
               class="px-3 py-1 border text-xs font-bold transition-all cursor-pointer"
@@ -1207,7 +1322,7 @@
       </div>
 
       <!-- Tab 4: Retro Commercials & Station Bumpers -->
-      <div v-if="activeTab === 'commercials'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
+      <div v-if="activeTab === 'commercials'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
         <div class="flex items-center justify-between border-b border-[#333366] pb-2">
           <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
             1990s Television Commercials & Station Bumpers Engine
@@ -1220,12 +1335,13 @@
           </span>
         </div>
 
-        <div class="bg-[#000033] border border-[#FFFF00] p-4 space-y-4">
+        <!-- Group 4-1: Automatic Commercial Interruption Scheduling -->
+        <div class="bg-[#000033] border-2 border-[#FFFF00] p-4 space-y-4">
           <div class="flex items-center justify-between border-b border-[#333366] pb-2">
             <div>
-              <span class="text-xs font-bold text-[#FFFF00] block uppercase">
+              <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase">
                 Automatic Commercial Interruption Scheduling
-              </span>
+              </h3>
               <span class="text-[11px] text-[#8888AA]">
                 Periodically plays retro commercial breaks and station IDs in the top preview quadrant.
               </span>
@@ -1326,6 +1442,21 @@
               LINKED PLAYLIST: {{ form.youtube_source_url || 'https://www.youtube.com/playlist?list=PLQ82R4ElALew' }} (Auto-shuffled on boot)
             </div>
           </div>
+        </div>
+
+        <!-- Group 4-2: Local Clip Dropzone & Rotation Queue -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase">
+              Local Clip Dropzone &amp; Rotation Queue
+            </h3>
+            <span class="text-xs text-[#FFFF00] font-bold uppercase">
+              {{ commercialsEngine.clips.value.length }} CLIP{{ commercialsEngine.clips.value.length === 1 ? '' : 'S' }} QUEUED
+            </span>
+          </div>
+          <p class="text-xs text-[#8888AA]">
+            Drop .mp4 / .webm files below or straight into ./data/commercials/ on the host. Files join the rotation instantly.
+          </p>
 
           <!-- Video Dropzone & Directory Guidance -->
           <div class="pt-1 space-y-3">
@@ -1420,15 +1551,15 @@
       </div>
 
       <!-- Tab 5: Ticket Ingestion & AI -->
-      <div v-if="activeTab === 'ingestion'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
+      <div v-if="activeTab === 'ingestion'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
           Multi-Format Reservation Ingestion & Local / Cloud AI Models
         </h2>
 
-        <!-- Ingestion Matrix Banner -->
-        <div class="bg-[#000033] border border-[#333366] p-4 space-y-3">
+        <!-- Group 5-1: Drag & Drop Ticket Ingestion Dropzone -->
+        <div class="bg-[#000033] border-2 border-[#FFFF00] p-4 space-y-3">
           <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
+            <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase">
               Drag & Drop Ticket Ingestion Dropzone
             </h3>
             <span class="text-[10px] text-[#00FFFF]">SUPPORTED: .ICS | .EML | .MSG</span>
@@ -1458,13 +1589,13 @@
           </div>
         </div>
 
-        <!-- TripAdvisor & Viator Public Trip / Wishlist Sync Card -->
-        <div class="bg-[#000033] border border-[#00FFFF] p-4 space-y-4">
+        <!-- Group 5-2: TripAdvisor & Viator Public Trip / Wishlist Sync Card -->
+        <div class="bg-[#000033] border-2 border-[#00FFFF] p-4 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
             <div>
-              <span class="text-xs font-black text-[#00FFFF] block uppercase tracking-wider">
+              <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase tracking-wider">
                 TripAdvisor & Viator Public Wishlists / Trips Sync
-              </span>
+              </h3>
               <span class="text-[11px] text-[#8888AA]">
                 Paste public TripAdvisor Trip or Viator Wishlist URLs to automatically sync your saved tours, attractions, and activities.
               </span>
@@ -1539,13 +1670,13 @@
           </div>
         </div>
 
-        <!-- 1-Click Instant URL Ingestion Dropzone -->
-        <div class="bg-[#000033] border border-[#FFFF00] p-4 space-y-3">
+        <!-- Group 5-3: 1-Click Instant URL Ingestion Dropzone -->
+        <div class="bg-[#000033] border-2 border-[#FFFF00] p-4 space-y-3">
           <div class="flex items-center justify-between border-b border-[#FFFF00]/40 pb-2">
             <div>
-              <span class="text-xs font-black text-[#FFFF00] block uppercase tracking-wider">
+              <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase tracking-wider">
                 1-Click Web Link Ingest
-              </span>
+              </h3>
               <span class="text-[11px] text-[#8888AA]">
                 Paste ANY event, tour, or ticket link (TripAdvisor, Viator, Ticketmaster, Eventbrite, Venue site) to immediately scrape and add it to your channel guide.
               </span>
@@ -1575,13 +1706,13 @@
           </div>
         </div>
 
-        <!-- Local AI Support (Ollama Instance) -->
-        <div class="bg-[#000033] border border-[#00FFFF] p-4 space-y-4">
+        <!-- Group 5-4: Local AI Support (Ollama Instance) -->
+        <div class="bg-[#000033] border-2 border-[#00FFFF] p-4 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
             <div>
-              <span class="text-xs font-black text-[#00FFFF] block uppercase tracking-wider">
+              <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase tracking-wider">
                 Local AI Engine Support (Self-Hosted Ollama)
-              </span>
+              </h3>
               <span class="text-[11px] text-[#8888AA]">
                 Run private, offline AI extraction for indie event flyers and unstructured reservation emails.
               </span>
@@ -1658,10 +1789,10 @@
           </div>
         </div>
 
-        <!-- Optional Cloud AI Keys -->
-        <div class="bg-[#000033] border border-[#333366] p-4 space-y-3">
+        <!-- Group 5-5: Optional Cloud AI Keys -->
+        <div class="bg-[#000033] border-2 border-[#00FF00] p-4 space-y-3">
           <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FF00] uppercase">
               Optional Cloud AI Enhancements (Groq / OpenAI / Anthropic)
             </h3>
             <span class="text-[10px] text-[#8888AA]">OPTIONAL CLOUD ASSIST</span>
@@ -1704,14 +1835,18 @@
       </div>
 
       <!-- Tab 6: Calendar Feeds & Home Assistant Smart Home Integration -->
-      <div v-if="activeTab === 'integrations'" class="bg-[#000044] p-5 border border-[#333366] space-y-6">
-        <!-- Section 1: Outbound RFC 5545 iCalendar Feeds -->
-        <div class="space-y-4">
+      <div v-if="activeTab === 'integrations'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
+        <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
+          Calendar Feeds & Smart Home Integration
+        </h2>
+
+        <!-- Group 6-1: Outbound RFC 5545 iCalendar Feeds -->
+        <div class="bg-[#000033] p-4 border-2 border-[#FFFF00] space-y-3">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#333366] pb-2">
             <div>
-              <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
+              <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase">
                 Outbound Calendar Subscriptions (RFC 5545 iCal / .ics)
-              </h2>
+              </h3>
               <span class="text-[11px] text-[#8888AA]">
                 Subscribe directly on your phone or desktop (Apple Calendar, Google Calendar, Outlook) to auto-sync events.
               </span>
@@ -1838,13 +1973,13 @@
           </div>
         </div>
 
-        <!-- Section 2: Home Assistant Smart Home Integration -->
-        <div class="space-y-4 pt-4 border-t border-[#333366]">
+        <!-- Group 6-2: Home Assistant Smart Home Integration -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#333366] pb-2">
             <div>
-              <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
+              <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase">
                 Home Assistant Smart Home Integration
-              </h2>
+              </h3>
               <span class="text-[11px] text-[#8888AA]">
                 Expose today's events, active spotlight cards, and EAS alerts directly to Home Assistant dashboards & automations.
               </span>
@@ -1875,7 +2010,7 @@
           </div>
 
           <!-- 1-Click Home Assistant configuration.yaml Snippet -->
-          <div class="bg-[#000033] p-4 border border-[#333366] space-y-2">
+          <div class="pt-3 border-t border-[#333366] space-y-2">
             <div class="flex items-center justify-between">
               <h4 class="text-xs font-bold text-[#FFFF00] uppercase">
                 Home Assistant configuration.yaml Snippet
@@ -1895,7 +2030,7 @@
           </div>
 
           <!-- MQTT Broker Configuration (Optional) -->
-          <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+          <div class="pt-3 border-t border-[#333366] space-y-3">
             <div class="flex items-center justify-between border-b border-[#333366] pb-1">
               <h4 class="text-xs font-bold text-[#00FFFF] uppercase">
                 MQTT Auto-Discovery Settings (Optional)
@@ -1946,15 +2081,15 @@
       </div>
 
       <!-- Tab 7: Telegram Bot & Voice Speech -->
-      <div v-if="activeTab === 'telegram'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
+      <div v-if="activeTab === 'telegram'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
           Telegram Bot Assistant & Spoken Voice Announcer
         </h2>
 
-        <!-- Step-by-Step Interactive Telegram Bot Creation Guide -->
-        <div class="bg-[#000033] p-4 border border-[#FFFF00] space-y-3">
+        <!-- Group 7-1: Step-by-Step Interactive Telegram Bot Creation Guide -->
+        <div class="bg-[#000033] p-4 border-2 border-[#FFFF00] space-y-3">
           <div class="flex items-center justify-between border-b border-[#333366] pb-2">
-            <h3 class="text-xs font-black text-[#FFFF00] uppercase tracking-wider">
+            <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase tracking-wider">
               Step-by-Step Guide: How to Create and Connect Your Telegram Bot
             </h3>
             <span
@@ -2061,10 +2196,10 @@
           </div>
         </div>
 
-        <!-- Speech Engine Diagnostics -->
-        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+        <!-- Group 7-2: Speech Engine Diagnostics -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
           <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase">
               Speech Synthesizer & Voice Router Diagnostics
             </h3>
             <span
@@ -2107,10 +2242,10 @@
           </div>
 
           <!-- Optional Cloud Enhancement Keys -->
-          <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
-            <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
+          <div class="pt-3 border-t border-[#333366] space-y-3">
+            <span class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider block">
               Improve Voice Capabilities (Optional Cloud Upgrade)
-            </h3>
+            </span>
             <p class="text-[11px] text-[#8888AA]">
               Leave empty to use turn-key local offline voice processing. Adding API keys upgrades to ultra-fast neural cloud models with automatic local fallback.
             </p>
@@ -2138,8 +2273,8 @@
         </div>
       </div>
 
-      <!-- Tab 7: Emergency Alerts (EAS) -->
-      <div v-if="activeTab === 'eas'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
+      <!-- Tab 8: Emergency Alerts (EAS) -->
+      <div v-if="activeTab === 'eas'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
         <div class="flex items-center justify-between border-b border-[#333366] pb-2">
           <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
             Emergency Alert System (EAS) & Public Safety
@@ -2147,7 +2282,19 @@
           <span class="text-[11px] text-[#FFFF00]">NOAA / NWS CAP FEED INGESTION</span>
         </div>
 
-        <div class="space-y-4">
+        <!-- Group 8-1: Alert Reception & Broadcast -->
+        <div class="bg-[#000033] p-4 border-2 border-[#FF4444] space-y-4">
+          <div class="flex items-center justify-between border-b border-[#333366] pb-2">
+            <h3 class="text-xs sm:text-sm font-black text-[#FF4444] uppercase">
+              Alert Reception & Broadcast
+            </h3>
+            <span
+              class="text-[11px] px-2 py-0.5 border"
+              :class="form.eas_enabled === '1' ? 'bg-[#003300] text-[#00FF00] border-[#00FF00]' : 'bg-[#330000] text-[#FF4444] border-[#FF4444]'"
+            >
+              {{ form.eas_enabled === '1' ? '[ EAS ARMED ]' : '[ EAS STANDBY ]' }}
+            </span>
+          </div>
           <div class="flex items-center justify-between bg-[#000033] p-3 border border-[#333366]">
             <div>
               <span class="text-xs font-bold text-[#FFFF00] block">Enable Emergency Alert System Banner:</span>
@@ -2219,12 +2366,21 @@
         </div>
       </div>
 
-      <!-- Tab 8: Provider API Keys -->
+      <!-- Tab 9: Provider API Keys -->
       <div v-if="activeTab === 'providers'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
         <h2 class="text-sm font-bold text-[#00FFFF] border-b border-[#333366] pb-1 uppercase">
           External Ticketing & Event Provider APIs
         </h2>
-        <div class="space-y-3">
+
+        <!-- Group 9-1: Provider Credentials & Validation -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
+          <div class="flex items-center justify-between border-b border-[#333366] pb-2">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase">
+              Provider Credentials & Validation
+            </h3>
+            <span class="text-[11px] text-[#8888AA] font-bold uppercase">4 PROVIDERS</span>
+          </div>
+          <div class="space-y-3">
           <div class="space-y-1">
             <label class="text-xs text-[#A0A0C0] block">Ticketmaster Discovery API Key:</label>
             <input
@@ -2289,11 +2445,12 @@
               {{ isSyncing ? '[ QUERYING PROVIDERS... ]' : '[ TEST KEYS & REFRESH LISTINGS ]' }}
             </button>
           </div>
+          </div>
         </div>
       </div>
 
       <!-- Tab 10: System Health & Advanced Diagnostics -->
-      <div v-if="activeTab === 'updates'" class="bg-[#000044] p-5 border border-[#333366] space-y-5">
+      <div v-if="activeTab === 'updates'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
         <div class="flex items-center justify-between border-b border-[#333366] pb-2">
           <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
             System Health, Diagnostics & Release Management
@@ -2306,13 +2463,13 @@
           </span>
         </div>
 
-        <!-- Real-Time System Health Checklist & Connectivity Ledger -->
-        <div class="bg-[#000033] p-4 border border-[#00FFFF] space-y-3">
+        <!-- Group 10-1: Real-Time System Health Checklist & Connectivity Ledger -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
             <div>
-              <span class="text-xs font-black text-[#00FFFF] block uppercase tracking-wider">
+              <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase tracking-wider">
                 [ REAL-TIME SYSTEM HEALTH & CONNECTIVITY LEDGER ]
-              </span>
+              </h3>
               <span class="text-[11px] text-[#8888AA]">
                 Composite operational observability across database, ingestion engine, circuit breakers, and peripheral bridges.
               </span>
@@ -2421,13 +2578,13 @@
           </div>
         </div>
 
-        <!-- Activity Log & Event Viewer Terminal -->
-        <div class="bg-[#000033] p-4 border border-[#00FFFF] space-y-3">
+        <!-- Group 10-2: Activity Log & Event Viewer Terminal -->
+        <div class="bg-[#000033] p-4 border-2 border-[#FFFF00] space-y-3">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
             <div>
-              <span class="text-xs font-black text-[#00FFFF] block uppercase tracking-wider">
+              <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase tracking-wider">
                 [ SYSTEM ACTIVITY & AUDIT EVENT VIEWER ]
-              </span>
+              </h3>
               <span class="text-[11px] text-[#8888AA]">
                 Real-time operational journal recording ingestion runs, AI queries, custom listings, and system updates.
               </span>
@@ -2508,46 +2665,58 @@
           </div>
         </div>
 
-        <!-- Rate Limit Friendly Banner if active -->
-        <div v-if="updateStatus?.is_rate_limited" class="p-3 bg-[#332200] border-2 border-[#FFAA00] text-[#FFCC00] text-xs leading-relaxed space-y-1">
-          <div class="font-black tracking-wider text-[#FFFF00] uppercase">[ GITHUB CHECK LIMIT REACHED ]</div>
-          <p>{{ updateStatus.user_message || 'You have checked for updates frequently. Requests are temporarily paused and will resume shortly.' }}</p>
-        </div>
-
-        <!-- Version Telemetry Card -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
-          <div class="bg-[#000022] p-2 border border-[#333366]">
-            <span class="text-[#8888AA] block text-[10px]">CURRENT VERSION:</span>
-            <span class="text-[#FFFF00] font-bold">v{{ updateStatus?.current_version || '0.21.0' }}</span>
-          </div>
-          <div class="bg-[#000022] p-2 border border-[#333366]">
-            <span class="text-[#8888AA] block text-[10px]">LATEST RELEASE:</span>
-            <span class="text-[#00FFFF] font-bold">v{{ updateStatus?.latest_version || updateStatus?.current_version || '0.21.0' }}</span>
-          </div>
-          <div class="bg-[#000022] p-2 border border-[#333366]">
-            <span class="text-[#8888AA] block text-[10px]">LAST CHECKED:</span>
-            <span class="text-[#E0E0E0] font-bold">{{ updateStatus?.last_checked ? new Date(updateStatus.last_checked).toLocaleTimeString() : 'Never' }}</span>
-          </div>
-          <div class="bg-[#000022] p-2 border border-[#333366]">
-            <span class="text-[#8888AA] block text-[10px]">CHECK STATUS:</span>
-            <span class="font-bold" :class="updateStatus?.is_rate_limited ? 'text-[#FFAA00]' : 'text-[#00FF00]'">
-              {{ updateStatus?.is_rate_limited
-                ? `Waiting ~${updateStatus.rate_limit_reset_minutes || 60}m`
-                : (updateStatus?.rate_limit_remaining !== undefined && updateStatus.rate_limit_remaining !== null
-                    ? `${updateStatus.rate_limit_remaining} / 60 remaining`
-                    : 'Normal')
-              }}
+        <!-- Group 10-3: Release Telemetry & Version Status -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
+          <div class="flex items-center justify-between border-b border-[#333366] pb-2">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase">
+              Release Telemetry & Version Status
+            </h3>
+            <span class="text-[11px] text-[#FFFF00] font-bold uppercase">
+              v{{ updateStatus?.current_version || '0.21.0' }} INSTALLED
             </span>
           </div>
+
+          <!-- Rate Limit Friendly Banner if active -->
+          <div v-if="updateStatus?.is_rate_limited" class="p-3 bg-[#332200] border-2 border-[#FFAA00] text-[#FFCC00] text-xs leading-relaxed space-y-1">
+            <div class="font-black tracking-wider text-[#FFFF00] uppercase">[ GITHUB CHECK LIMIT REACHED ]</div>
+            <p>{{ updateStatus.user_message || 'You have checked for updates frequently. Requests are temporarily paused and will resume shortly.' }}</p>
+          </div>
+
+          <!-- Version Telemetry Card -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+            <div class="bg-[#000022] p-2 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px]">CURRENT VERSION:</span>
+              <span class="text-[#FFFF00] font-bold">v{{ updateStatus?.current_version || '0.21.0' }}</span>
+            </div>
+            <div class="bg-[#000022] p-2 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px]">LATEST RELEASE:</span>
+              <span class="text-[#00FFFF] font-bold">v{{ updateStatus?.latest_version || updateStatus?.current_version || '0.21.0' }}</span>
+            </div>
+            <div class="bg-[#000022] p-2 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px]">LAST CHECKED:</span>
+              <span class="text-[#E0E0E0] font-bold">{{ updateStatus?.last_checked ? new Date(updateStatus.last_checked).toLocaleTimeString() : 'Never' }}</span>
+            </div>
+            <div class="bg-[#000022] p-2 border border-[#333366]">
+              <span class="text-[#8888AA] block text-[10px]">CHECK STATUS:</span>
+              <span class="font-bold" :class="updateStatus?.is_rate_limited ? 'text-[#FFAA00]' : 'text-[#00FF00]'">
+                {{ updateStatus?.is_rate_limited
+                  ? `Waiting ~${updateStatus.rate_limit_reset_minutes || 60}m`
+                  : (updateStatus?.rate_limit_remaining !== undefined && updateStatus.rate_limit_remaining !== null
+                      ? `${updateStatus.rate_limit_remaining} / 60 remaining`
+                      : 'Normal')
+                }}
+              </span>
+            </div>
+          </div>
         </div>
 
-        <!-- Configuration Backup, Persistence & Disk Recovery Card -->
-        <div class="bg-[#000033] p-4 border border-[#00FFFF] space-y-3">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
+        <!-- Group 10-4: Configuration Backup, Persistence & Disk Recovery Card -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FF00] space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FF00]/40 pb-2">
             <div>
-              <span class="text-xs font-black text-[#00FFFF] block uppercase tracking-wider">
+              <h3 class="text-xs sm:text-sm font-black text-[#00FF00] uppercase tracking-wider">
                 [ CONFIGURATION PERSISTENCE, BACKUP & DISK RECOVERY ]
-              </span>
+              </h3>
               <span class="text-[11px] text-[#8888AA]">
                 Automatic disk-backed configuration persistence protecting AI endpoints, metro settings, and venues across Docker upgrades and container restarts.
               </span>
@@ -2633,13 +2802,23 @@
           </div>
         </div>
 
-        <!-- Independent In-Place Firmware Upgrade Engine Card -->
-        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
+        <!-- Group 10-5: Upgrade Engine & Update Cadence -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-4">
+          <div class="flex items-center justify-between border-b border-[#333366] pb-2">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase">
+              Upgrade Engine & Update Cadence
+            </h3>
+            <span class="text-[11px] text-[#FFFF00] font-bold uppercase">
+              {{ updateStatus?.update_available ? `[ v${updateStatus.latest_version} READY ]` : '[ CURRENT ]' }}
+            </span>
+          </div>
+
+          <!-- Independent In-Place Firmware Upgrade Engine -->
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#333366] pb-2">
             <div>
-              <h3 class="text-xs font-black text-[#00FFFF] uppercase tracking-wider">
+              <span class="text-xs font-black text-[#00FFFF] uppercase tracking-wider">
                 [ INDEPENDENT IN-PLACE FIRMWARE UPGRADE ENGINE ]
-              </h3>
+              </span>
               <p class="text-[11px] text-[#8888AA] mt-0.5">
                 Zero-touch live upgrades directly from the UI with zero reliance on deprecated third-party containers.
               </p>
@@ -2690,10 +2869,9 @@
               Companion watcher: <code class="text-[#00FF00]">openprevue-host-updater.sh</code>
             </span>
           </div>
-        </div>
 
         <!-- Advanced Diagnostics & Dry-Run Accordion -->
-        <div class="bg-[#000022] border border-[#333366] p-3 space-y-3">
+        <div class="pt-3 border-t border-[#333366] space-y-3">
           <button
             type="button"
             class="w-full flex items-center justify-between text-left cursor-pointer text-xs font-bold text-[#A0A0C0] hover:text-[#00FFFF] transition-colors"
@@ -2734,10 +2912,10 @@
         </div>
 
         <!-- Auto-Update Cadence Settings -->
-        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
-          <h3 class="text-xs font-bold text-[#FFFF00] uppercase">
+        <div class="pt-3 border-t border-[#333366] space-y-3">
+          <span class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider block">
             Auto-Update Notification Cadence & Network Policy
-          </h3>
+          </span>
           <p class="text-[11px] text-[#8888AA] leading-relaxed">
             GitHub unauthenticated requests are limited to 60 per hour for your network. OpenPrevue defaults to <strong class="text-[#FFFF00]">Disabled</strong> (zero outbound calls). When turned on, checks are cached for 6 hours so your network never exceeds the limit.
           </p>
@@ -2772,7 +2950,7 @@
         </div>
 
         <!-- Release Notes Section if available -->
-        <div v-if="updateStatus?.update_available" class="bg-[#000033] p-4 border border-[#FFFF00] space-y-2">
+        <div v-if="updateStatus?.update_available" class="pt-3 border-t border-[#333366] space-y-2">
           <div class="flex items-center justify-between">
             <h4 class="text-xs font-bold text-[#FFFF00] uppercase">
               {{ updateStatus.release_title || `Release v${updateStatus.latest_version}` }}
@@ -2790,7 +2968,7 @@
         </div>
 
         <!-- 1-Click Homelab Docker Upgrade Snippet -->
-        <div class="bg-[#000033] p-4 border border-[#333366] space-y-2">
+        <div class="pt-3 border-t border-[#333366] space-y-2">
           <div class="flex items-center justify-between">
             <h4 class="text-xs font-bold text-[#00FFFF] uppercase">
               Homelab Docker Container Upgrade Command
@@ -2806,10 +2984,11 @@
             docker pull ghcr.io/upioneer/openprevue:latest && docker compose up -d
           </code>
         </div>
+        </div>
       </div>
 
       <!-- Tab 11: User Onboarding & Deployment Guide -->
-      <div v-if="activeTab === 'guide'" class="bg-[#000044] p-5 border border-[#333366] space-y-6">
+      <div v-if="activeTab === 'guide'" class="bg-[#000044] p-5 border border-[#333366] space-y-4">
         <div class="flex items-center justify-between border-b border-[#333366] pb-2">
           <div>
             <h2 class="text-sm font-bold text-[#00FFFF] uppercase">
@@ -2824,11 +3003,11 @@
           </span>
         </div>
 
-        <!-- 1. Welcome & Bells and Whistles Feature Tour -->
-        <div class="bg-[#000033] p-4 border border-[#00FFFF] space-y-4">
+        <!-- Group 11-1: Welcome & Bells and Whistles Feature Tour -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#00FFFF]/40 pb-2">
             <div>
-              <h3 class="text-xs font-black text-[#00FFFF] uppercase tracking-wider">
+              <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase tracking-wider">
                 // 1. WELCOME & USER ONBOARDING: BELLS & WHISTLES TOUR
               </h3>
               <p class="text-[11px] text-[#8888AA]">
@@ -3003,9 +3182,9 @@
           </div>
         </div>
 
-        <!-- 2. Multi-Screen Architecture -->
-        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
-          <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
+        <!-- Group 11-2: Multi-Screen Architecture -->
+        <div class="bg-[#000033] p-4 border-2 border-[#FFFF00] space-y-3">
+          <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase tracking-wider">
             // 2. MULTI-SCREEN & NON-STANDARD DISPLAY ARCHITECTURE
           </h3>
           <p class="text-xs text-[#E0E0E0] leading-relaxed">
@@ -3051,10 +3230,10 @@
           </div>
         </div>
 
-        <!-- 3. Kiosk URL Query Overrides Cheat Sheet -->
-        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
+        <!-- Group 11-3: Kiosk URL Query Overrides Cheat Sheet -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
           <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
+            <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase tracking-wider">
               // 3. KIOSK URL QUERY PARAMETER OVERRIDES
             </h3>
             <span class="text-[10px] text-[#00FFFF] font-mono">PER-DISPLAY INDEPENDENT CONTROL</span>
@@ -3133,9 +3312,9 @@
           </div>
         </div>
 
-        <!-- 4. One-Click Copy Deployment Profiles -->
-        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
-          <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
+        <!-- Group 11-4: One-Click Copy Deployment Profiles -->
+        <div class="bg-[#000033] p-4 border-2 border-[#FFFF00] space-y-3">
+          <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase tracking-wider">
             // 4. READY-TO-USE KIOSK BOOKMARK PROFILES
           </h3>
           <p class="text-xs text-[#E0E0E0] leading-relaxed">
@@ -3235,9 +3414,9 @@
           </div>
         </div>
 
-        <!-- 5. Turnkey Raspberry Pi & Linux Autostart -->
-        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
-          <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
+        <!-- Group 11-5: Turnkey Raspberry Pi & Linux Autostart -->
+        <div class="bg-[#000033] p-4 border-2 border-[#00FFFF] space-y-3">
+          <h3 class="text-xs sm:text-sm font-black text-[#00FFFF] uppercase tracking-wider">
             // 5. RASPBERRY PI & LINUX KIOSK AUTOSTART RECIPE
           </h3>
           <p class="text-xs text-[#E0E0E0] leading-relaxed">
@@ -3261,10 +3440,10 @@
           </p>
         </div>
 
-        <!-- 5. Live Updates & Docker Socket -->
-        <div class="bg-[#000033] p-4 border border-[#333366] space-y-3">
-          <h3 class="text-xs font-bold text-[#FFFF00] uppercase tracking-wider">
-            // 5. 1-CLICK IN-PLACE CONTAINER UPGRADES
+        <!-- Group 11-6: Live Updates & Docker Socket -->
+        <div class="bg-[#000033] p-4 border-2 border-[#FFFF00] space-y-3">
+          <h3 class="text-xs sm:text-sm font-black text-[#FFFF00] uppercase tracking-wider">
+            // 6. 1-CLICK IN-PLACE CONTAINER UPGRADES
           </h3>
           <p class="text-xs text-[#E0E0E0] leading-relaxed">
             OpenPrevue includes an automated firmware upgrade engine directly in the browser (Tab 10: System & Updates). When the Docker socket (<code class="text-[#00FF00]">/var/run/docker.sock</code>) is mounted in your compose file, the headend pulls the new container image from GitHub Packages, creates the replacement container with identical volume and port configuration, gracefully terminates the old instance, and reloads your browser automatically with zero host CLI commands.
@@ -3878,6 +4057,7 @@ const form = reactive<SystemSettings>({
   autoscroll_speed: '30',
   grid_density: 'balanced',
   grid_filter_mode: 'active_only',
+  grid_day_columns: '3day',
   sports_coverage_mode: 'local_only',
   scroll_pause_duration: '4',
   scroll_page_interval: '6',
@@ -3886,6 +4066,7 @@ const form = reactive<SystemSettings>({
   phosphor_glow: '1',
   crt_curvature: '0',
   vhs_tracking_noise: '0',
+  color_palette: 'default',
   time_format: '12h',
   sync_interval_hours: '6',
   audio_source: 'spotify',
@@ -4144,6 +4325,7 @@ function handleShaderChange() {
   form.scanline_intensity = String(shaderForm.scanlineIntensity)
   form.phosphor_glow = shaderForm.phosphorGlow ? '1' : '0'
   form.crt_curvature = shaderForm.crtCurvature ? '1' : '0'
+  form.color_palette = shaderForm.palette
 }
 
 function handleFilterChange() {
@@ -4390,6 +4572,9 @@ async function loadAll() {
 
     // Init retro shaders
     retroShader.init()
+    if (s.color_palette) {
+      retroShader.updateConfig({ palette: s.color_palette as any })
+    }
     Object.assign(shaderForm, retroShader.getConfig())
 
     // Initialize auto-save baseline

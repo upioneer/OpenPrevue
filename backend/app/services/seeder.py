@@ -17,6 +17,7 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "autoscroll_speed": "30",
     "grid_density": "balanced",
     "grid_filter_mode": "active_only",
+    "grid_day_columns": "3day",
     "scroll_pause_duration": "4",
     "scroll_page_interval": "6",
     "marquee_rotation_seconds": "20",
@@ -24,6 +25,7 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "phosphor_glow": "1",
     "crt_curvature": "0",
     "vhs_tracking_noise": "0",
+    "color_palette": "default",
     "time_format": "12h",
     "sync_interval_hours": "6",
     "initial_setup_completed": "0",
@@ -116,6 +118,35 @@ async def seed_initial_data() -> None:
                 cleaned = clean_event_title(r["title"])
                 if cleaned != r["title"]:
                     await db.execute("UPDATE events SET title = ? WHERE id = ?", (cleaned, r["id"]))
+
+        # Sanitize legacy ticket URLs (replace openprevue.tv with authentic venue/vendor links)
+        venue_url_map = {
+            "Caesars Superdome": "https://www.neworleanssaints.com/tickets",
+            "The Fillmore New Orleans": "https://www.fillmorenola.com/events",
+            "Tipitina's": "https://www.tipitinas.com",
+            "Saenger Theatre": "https://www.saengernola.com/events",
+            "Preservation Hall": "https://www.preservationhall.com",
+            "Joy Theater": "https://thejoytheater.com",
+            "Madison Square Garden": "https://www.msg.com/madison-square-garden",
+            "Radio City Music Hall": "https://www.msg.com/radio-city-music-hall",
+            "Brooklyn Steel": "https://www.bowerypresents.com/brooklyn-steel",
+            "Beacon Theatre": "https://www.msg.com/beacon-theatre",
+            "Gershwin Theatre": "https://wickedthemusical.com",
+            "Blue Note Jazz Club": "https://www.bluenotejazz.com/nyc",
+            "Comedy Cellar": "https://www.comedycellar.com",
+            "CU Events Center": "https://www.nba.com/nuggets/tickets",
+            "Stan Sheriff Center": "https://www.nba.com/clippers/tickets",
+            "Smoothie King Center": "https://www.nba.com/pelicans/schedule",
+            "Barclays Center": "https://www.nba.com/nets/schedule",
+        }
+        for v_name, v_url in venue_url_map.items():
+            await db.execute(
+                "UPDATE events SET ticket_url = ? WHERE (ticket_url LIKE '%openprevue%' OR ticket_url = '') AND venue_id IN (SELECT id FROM venues WHERE name = ?)",
+                (v_url, v_name),
+            )
+        await db.execute(
+            "UPDATE events SET ticket_url = 'https://openprevue.com' WHERE ticket_url LIKE '%openprevue.tv%'"
+        )
         await db.commit()
 
     # Ensure disk backup reflects current state

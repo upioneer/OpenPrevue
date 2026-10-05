@@ -12,8 +12,20 @@
       <template v-if="ultrawidePriority === 'feature'">
         <!-- Top: Video or SpotlightPane fills primary display height -->
         <div class="flex-1 w-full min-h-0 overflow-hidden relative">
+          <SpotlightSplitPane
+            v-if="isSplitAdBreak"
+            :events="events"
+            :rotation-seconds="marqueeRotationSeconds"
+            :is-ultrawide="true"
+            :source-url="activeYouTubeUrl"
+            :aspect-ratio="youtubeAspectRatio"
+            :commercial-type="commercialsEngine.currentClip.value?.type || 'youtube'"
+            :commercial-url="commercialsEngine.currentClip.value?.url || ''"
+            @error="handleYouTubeError"
+            @commercial-finished="commercialsEngine.onCommercialFinished()"
+          />
           <YouTubePane
-            v-if="shouldShowYouTube"
+            v-else-if="shouldShowYouTube"
             :source-url="activeYouTubeUrl"
             :audio-mode="isCommercialActive ? 'audio' : youtubeAudioMode"
             :aspect-ratio="youtubeAspectRatio"
@@ -58,6 +70,7 @@
             :scroll-speed="scrollSpeed"
             grid-density="single_row"
             :grid-filter-mode="gridFilterMode"
+            :day-columns="gridDayColumns"
             :pause-duration-seconds="pauseDurationSeconds"
             :page-interval-seconds="pageIntervalSeconds"
             @ticket-toggled="handleTicketToggled"
@@ -75,8 +88,20 @@
         </div>
         <div class="flex-1 flex flex-row w-full min-h-0 overflow-hidden">
           <div class="w-1/2 h-full shrink-0 overflow-hidden relative">
+            <SpotlightSplitPane
+              v-if="isSplitAdBreak"
+              :events="events"
+              :rotation-seconds="marqueeRotationSeconds"
+              :is-ultrawide="true"
+              :source-url="activeYouTubeUrl"
+              :aspect-ratio="youtubeAspectRatio"
+              :commercial-type="commercialsEngine.currentClip.value?.type || 'youtube'"
+              :commercial-url="commercialsEngine.currentClip.value?.url || ''"
+              @error="handleYouTubeError"
+              @commercial-finished="commercialsEngine.onCommercialFinished()"
+            />
             <YouTubePane
-              v-if="shouldShowYouTube"
+              v-else-if="shouldShowYouTube"
               :source-url="activeYouTubeUrl"
               :audio-mode="isCommercialActive ? 'audio' : youtubeAudioMode"
               :aspect-ratio="youtubeAspectRatio"
@@ -112,6 +137,7 @@
               :scroll-speed="scrollSpeed"
               :grid-density="gridDensity"
               :grid-filter-mode="gridFilterMode"
+              :day-columns="gridDayColumns"
               :pause-duration-seconds="pauseDurationSeconds"
               :page-interval-seconds="pageIntervalSeconds"
               @ticket-toggled="handleTicketToggled"
@@ -138,6 +164,7 @@
             :scroll-speed="scrollSpeed"
             :grid-density="gridDensity"
             :grid-filter-mode="gridFilterMode"
+            :day-columns="gridDayColumns"
             :pause-duration-seconds="pauseDurationSeconds"
             :page-interval-seconds="pageIntervalSeconds"
             @ticket-toggled="handleTicketToggled"
@@ -155,8 +182,19 @@
           ? 'flex-1 min-h-0'
           : 'h-[45%] portrait-spotlight-height'"
       >
+        <SpotlightSplitPane
+          v-if="isSplitAdBreak"
+          :events="events"
+          :rotation-seconds="marqueeRotationSeconds"
+          :source-url="activeYouTubeUrl"
+          :aspect-ratio="youtubeAspectRatio"
+          :commercial-type="commercialsEngine.currentClip.value?.type || 'youtube'"
+          :commercial-url="commercialsEngine.currentClip.value?.url || ''"
+          @error="handleYouTubeError"
+          @commercial-finished="commercialsEngine.onCommercialFinished()"
+        />
         <YouTubePane
-          v-if="shouldShowYouTube"
+          v-else-if="shouldShowYouTube"
           :source-url="activeYouTubeUrl"
           :audio-mode="isCommercialActive ? 'audio' : youtubeAudioMode"
           :aspect-ratio="youtubeAspectRatio"
@@ -209,6 +247,7 @@
           :scroll-speed="scrollSpeed"
           :grid-density="gridDensity"
           :grid-filter-mode="gridFilterMode"
+          :day-columns="gridDayColumns"
           :pause-duration-seconds="pauseDurationSeconds"
           :page-interval-seconds="pageIntervalSeconds"
           @ticket-toggled="handleTicketToggled"
@@ -224,6 +263,7 @@ import { useRoute } from 'vue-router'
 import { audioSynth } from '../services/audioSynth'
 import { commercialsEngine } from '../services/commercialsEngine'
 import SpotlightPane from '../components/SpotlightPane.vue'
+import SpotlightSplitPane from '../components/SpotlightSplitPane.vue'
 import YouTubePane from '../components/YouTubePane.vue'
 import DividerRibbon from '../components/DividerRibbon.vue'
 import TimelineGrid from '../components/TimelineGrid.vue'
@@ -243,6 +283,10 @@ const venues = ref<VenueItem[]>([])
 const settings = ref<SystemSettings | null>(null)
 const isUltrawideDetected = ref(false)
 const youtubeError = ref(false)
+// Split spotlight (showcase + retro ad side by side) requires this viewport
+// width; narrower screens fall back to full-takeover commercial breaks.
+const SPLIT_MIN_WIDTH_PX = 1024
+const isSplitWideEnough = ref(false)
 let refreshInterval: ReturnType<typeof setInterval> | null = null
 let unsubscribeEventsWs: (() => void) | null = null
 let unsubscribeSettingsWs: (() => void) | null = null
@@ -266,6 +310,17 @@ function checkUltrawideRatio() {
       isUltrawideDetected.value = screenRatio >= 2.2 || viewportRatio >= 2.35
     }
   }
+}
+
+function checkSplitWidth() {
+  if (typeof window !== 'undefined') {
+    isSplitWideEnough.value = window.innerWidth >= SPLIT_MIN_WIDTH_PX
+  }
+}
+
+function handleViewportResize() {
+  checkUltrawideRatio()
+  checkSplitWidth()
 }
 
 const isUltrawideActive = computed(() => {
@@ -329,6 +384,16 @@ const gridFilterMode = computed(() => {
   return settings.value?.grid_filter_mode || 'active_only'
 })
 
+const gridDayColumns = computed(() => {
+  const queryColumns = route.query.columns
+  if (typeof queryColumns === 'string') {
+    const c = queryColumns.toLowerCase()
+    if (['2', '2day', 'two'].includes(c)) return '2day'
+    if (['3', '3day', 'three'].includes(c)) return '3day'
+  }
+  return settings.value?.grid_day_columns || '3day'
+})
+
 const pauseDurationSeconds = computed(() => {
   const queryPause = route.query.pause
   if (typeof queryPause === 'string') {
@@ -348,6 +413,12 @@ const isCommercialActive = computed(() => {
   return commercialsEngine.isPlayingCommercial.value && commercialsEngine.currentClip.value !== null
 })
 
+const isSplitAdBreak = computed(() => {
+  return isCommercialActive.value &&
+    settings.value?.spotlight_mode === 'featured_ads' &&
+    isSplitWideEnough.value
+})
+
 const activeYouTubeUrl = computed(() => {
   if (isCommercialActive.value && commercialsEngine.currentClip.value?.type === 'youtube') {
     return commercialsEngine.currentClip.value.url
@@ -358,6 +429,13 @@ const activeYouTubeUrl = computed(() => {
 const shouldShowYouTube = computed(() => {
   const queryVideo = route.query.video
   if (queryVideo === '0' || queryVideo === 'off' || queryVideo === 'spotlight') return false
+
+  // Local-file commercial break takes over the top pane exclusively so the
+  // local <video> branch renders instead of the YouTube player.
+  if (isCommercialActive.value && commercialsEngine.currentClip.value?.type === 'local') {
+    return false
+  }
+
   if (queryVideo === '1' || queryVideo === 'youtube') {
     return !!settings.value?.youtube_source_url?.trim() && !youtubeError.value
   }
@@ -451,8 +529,9 @@ function handleSetupCompleted() {
 
 onMounted(() => {
   checkUltrawideRatio()
+  checkSplitWidth()
   if (typeof window !== 'undefined') {
-    window.addEventListener('resize', checkUltrawideRatio)
+    window.addEventListener('resize', handleViewportResize)
   }
 
   // Process URL query overrides for client-specific volume and mute
@@ -501,7 +580,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (typeof window !== 'undefined') {
-    window.removeEventListener('resize', checkUltrawideRatio)
+    window.removeEventListener('resize', handleViewportResize)
   }
   if (refreshInterval) clearInterval(refreshInterval)
   if (unsubscribeEventsWs) unsubscribeEventsWs()

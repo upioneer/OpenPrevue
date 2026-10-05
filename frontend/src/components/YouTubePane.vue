@@ -26,12 +26,12 @@
         <span class="text-[8px] sm:text-[9px] text-[#00FFFF] font-mono">PREVUE</span>
       </div>
 
-      <!-- Video Player Frame with Sized Aspect Box -->
+      <!-- Video Player Frame with Sized Aspect Box (non-interactive: no click/hover chrome) -->
       <div
-        class="h-full relative overflow-hidden transition-all duration-300"
+        class="h-full relative overflow-hidden transition-all duration-300 pointer-events-none"
         :class="frameAspectClass"
       >
-        <div :id="playerId" class="w-full h-full pointer-events-auto"></div>
+        <div :id="playerId" class="w-full h-full pointer-events-none"></div>
       </div>
     </div>
 
@@ -279,6 +279,7 @@ async function mountPlayer() {
     rel: 0,
     fs: 0,
     iv_load_policy: 3,
+    cc_load_policy: 0,
     disablekb: 1,
     playsinline: 1,
     enablejsapi: 1,
@@ -294,10 +295,13 @@ async function mountPlayer() {
     playerVars.loop = 1
   }
 
+  // NOTE: the videoId key must be omitted entirely for playlist players.
+  // The YouTube IFrame API rejects an explicit undefined/null videoId with
+  // "Invalid video id" and no player is created.
   playerInstance = new (window as any).YT.Player(playerId, {
     height: '100%',
     width: '100%',
-    videoId: isPlaylist ? undefined : parsedResource.value.id,
+    ...(isPlaylist ? {} : { videoId: parsedResource.value.id }),
     playerVars,
     events: {
       onReady: (e: any) => {
@@ -352,9 +356,21 @@ function updateTitle() {
   }
 }
 
-// Pause video during active EAS emergency sirens
+// Silence video during active EAS emergency sirens. Commercial breaks mute
+// instead of pausing so YouTube never flashes pause chrome over the ad.
 watch(() => audioSynth.isEASSirenPlaying.value, (isSiren) => {
   if (!playerInstance) return
+  if (props.isCommercialBreak) {
+    if (isSiren) {
+      if (typeof playerInstance.mute === 'function') playerInstance.mute()
+    } else if (isAudioAudible.value) {
+      if (typeof playerInstance.unMute === 'function') playerInstance.unMute()
+      if (typeof playerInstance.setVolume === 'function') {
+        playerInstance.setVolume(audioSynth.masterVolume.value)
+      }
+    }
+    return
+  }
   if (isSiren) {
     playerInstance.pauseVideo()
   } else {

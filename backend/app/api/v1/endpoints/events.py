@@ -1,6 +1,7 @@
 """Event management and retrieval API endpoints with geographic radius enforcement."""
 
 from datetime import datetime, timezone
+from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 import aiosqlite
 
@@ -182,6 +183,44 @@ async def update_event(event_id: str, payload: EventUpdate) -> EventResponse:
             await db.commit()
 
     return await get_event(event_id)
+
+
+@router.delete("/events/{event_id}")
+async def delete_event(event_id: str) -> dict[str, Any]:
+    """Delete an event and its associated ticket links from the database."""
+    async with get_db() as db:
+        async with db.execute("SELECT id, title FROM events WHERE id = ?", (event_id,)) as cursor:
+            existing = await cursor.fetchone()
+            if not existing:
+                raise HTTPException(status_code=404, detail="Event not found")
+            event_title = existing["title"]
+
+        await db.execute("DELETE FROM ticket_links WHERE event_id = ?", (event_id,))
+        await db.execute("DELETE FROM events WHERE id = ?", (event_id,))
+        await db.commit()
+
+    # Broadcast real-time schedule update to all connected CRT clients
+    from backend.app.services.websocket import connection_manager
+    from backend.app.services.activity import log_activity
+
+    await connection_manager.broadcast("events_updated", {
+        "action": "delete",
+        "event_id": event_id,
+        "title": event_title,
+    })
+
+    await log_activity(
+        component="SCHEDULE",
+        action="delete_event",
+        status="success",
+        details=f"Deleted event '{event_title}' ({event_id})",
+    )
+
+    return {
+        "status": "success",
+        "message": f"Event '{event_title}' deleted successfully",
+        "event_id": event_id,
+    }
 
 
 class UrlIngestRequest(EventUpdate):

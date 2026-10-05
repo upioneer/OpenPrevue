@@ -4,15 +4,15 @@
     @mouseenter="isHoverPaused = true"
     @mouseleave="isHoverPaused = false"
   >
-    <!-- Fixed Column Headers (Balanced 3x3x3x3 12-Column Grid) -->
+    <!-- Fixed Column Headers (3-day 3x3x3x3 or 2-day 4x4x4 12-Column Grid) -->
     <div
       class="bg-[#000066] border-b-2 border-[#333366] grid grid-cols-12 font-black tracking-wider text-[#FFFF00] px-3 sm:px-4 items-center z-10 shadow shrink-0"
       :class="headerClasses"
     >
-      <div class="col-span-3 uppercase border-r-2 border-[#333366] pr-2 truncate">VENUE / CHANNEL</div>
-      <div class="col-span-3 uppercase border-r-2 border-[#333366] px-2 text-[#00FFFF] truncate">TODAY</div>
-      <div class="col-span-3 uppercase border-r-2 border-[#333366] px-2 text-[#00FFFF] truncate">TONIGHT</div>
-      <div class="col-span-3 uppercase pl-2 text-[#00FFFF] truncate">TOMORROW</div>
+      <div :class="[venueSpanClass, 'uppercase border-r-2 border-[#333366] pr-2 truncate']">VENUE / CHANNEL</div>
+      <div :class="[daySpanClass, 'uppercase border-r-2 border-[#333366] px-2 text-[#00FFFF] truncate']">TODAY</div>
+      <div v-if="showTonightColumn" :class="[daySpanClass, 'uppercase border-r-2 border-[#333366] px-2 text-[#00FFFF] truncate']">TONIGHT</div>
+      <div :class="[daySpanClass, 'uppercase pl-2 text-[#00FFFF] truncate']">TOMORROW</div>
     </div>
 
     <!-- Scrolling Grid Area -->
@@ -31,8 +31,8 @@
             rowDensityClasses
           ]"
         >
-          <!-- Venue Name & Channel Number (col-span-3) -->
-          <div class="col-span-3 font-black text-[#E0E0E0] truncate border-r-2 border-[#333366] pr-2 min-w-0">
+          <!-- Venue Name & Channel Number -->
+          <div :class="[venueSpanClass, 'font-black text-[#E0E0E0] truncate border-r-2 border-[#333366] pr-2 min-w-0']">
             <!-- Multiline Mode: Channel Number & City on Line 1, Venue Name on Line 2 -->
             <div v-if="isMultilineMode" class="flex flex-col justify-center min-w-0 overflow-hidden">
               <div class="flex items-center space-x-1.5 shrink-0 text-[#8888AA] font-bold" :class="channelNumClasses">
@@ -59,14 +59,15 @@
             </div>
           </div>
 
-          <!-- Today Events (< 5 PM) (col-span-3) -->
-          <div class="col-span-3 border-r-2 border-[#333366] px-2 min-w-0 overflow-hidden">
+          <!-- Today Events (< 5 PM, or full day in 2-day mode) -->
+          <div :class="[daySpanClass, 'border-r-2 border-[#333366] px-2 min-w-0 overflow-hidden']">
             <template v-if="getVenueSlotEvents(venue.id, 'today').length > 0">
               <template v-if="isMultilineMode">
                 <div
                   v-for="evt in getVenueSlotEvents(venue.id, 'today')"
                   :key="evt.id"
-                  class="flex flex-col justify-center min-w-0 py-0.5 group"
+                  class="flex flex-col justify-center min-w-0 py-0.5 group cursor-pointer hover:bg-[#000088]/40 px-1 rounded-xs transition-colors"
+                  @click="openEventModal(evt)"
                 >
                   <!-- Line 1: Meta badges on left, Time & Ticket Action on right -->
                   <div class="flex items-center justify-between space-x-1.5 min-w-0 w-full">
@@ -160,7 +161,7 @@
                       :title="formatDisplayTitle(evt)"
                       :has-ticket="evt.has_ticket === 1"
                       :custom-classes="eventTitleClasses"
-                      @click="toggleTicketStatus(evt)"
+                      @click="openEventModal(evt)"
                     />
                   </div>
                 </div>
@@ -171,7 +172,8 @@
                 <div
                   v-for="evt in getVenueSlotEvents(venue.id, 'today')"
                   :key="evt.id"
-                  class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group"
+                  class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group cursor-pointer hover:bg-[#000088]/40 px-1 rounded-xs transition-colors"
+                  @click="openEventModal(evt)"
                 >
                   <span
                     class="rounded-full inline-block shrink-0 shadow-[0_0_4px_currentColor]"
@@ -253,7 +255,7 @@
                       evt.has_ticket === 1 ? 'text-[#00FF00]' : ''
                     ]"
                     :title="formatDisplayTitle(evt)"
-                    @click.stop="toggleTicketStatus(evt)"
+                    @click.stop="openEventModal(evt)"
                   >
                     {{ formatDisplayTitle(evt) }}
                   </span>
@@ -267,14 +269,15 @@
             <span v-else class="text-[#555577] italic" :class="emptySlotClasses">[ Box Office Open ]</span>
           </div>
 
-          <!-- Tonight Events (>= 5 PM) (col-span-3) -->
-          <div class="col-span-3 border-r-2 border-[#333366] px-2 min-w-0 overflow-hidden">
+          <!-- Tonight Events (>= 5 PM, hidden in 2-day mode) -->
+          <div v-if="showTonightColumn" :class="[daySpanClass, 'border-r-2 border-[#333366] px-2 min-w-0 overflow-hidden']">
             <template v-if="getVenueSlotEvents(venue.id, 'tonight').length > 0">
               <template v-if="isMultilineMode">
                 <div
                   v-for="evt in getVenueSlotEvents(venue.id, 'tonight')"
                   :key="evt.id"
-                  class="flex flex-col justify-center min-w-0 py-0.5 group"
+                  class="flex flex-col justify-center min-w-0 py-0.5 group cursor-pointer hover:bg-[#000088]/40 px-1 rounded-xs transition-colors"
+                  @click="openEventModal(evt)"
                 >
                   <!-- Line 1: Meta badges on left, Time & Ticket Action on right -->
                   <div class="flex items-center justify-between space-x-1.5 min-w-0 w-full">
@@ -368,7 +371,7 @@
                       :title="formatDisplayTitle(evt)"
                       :has-ticket="evt.has_ticket === 1"
                       :custom-classes="eventTitleClasses"
-                      @click="toggleTicketStatus(evt)"
+                      @click="openEventModal(evt)"
                     />
                   </div>
                 </div>
@@ -379,7 +382,8 @@
                 <div
                   v-for="evt in getVenueSlotEvents(venue.id, 'tonight')"
                   :key="evt.id"
-                  class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group"
+                  class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group cursor-pointer hover:bg-[#000088]/40 px-1 rounded-xs transition-colors"
+                  @click="openEventModal(evt)"
                 >
                   <span
                     class="rounded-full inline-block shrink-0 shadow-[0_0_4px_currentColor]"
@@ -461,7 +465,7 @@
                       evt.has_ticket === 1 ? 'text-[#00FF00]' : ''
                     ]"
                     :title="formatDisplayTitle(evt)"
-                    @click.stop="toggleTicketStatus(evt)"
+                    @click.stop="openEventModal(evt)"
                   >
                     {{ formatDisplayTitle(evt) }}
                   </span>
@@ -475,14 +479,15 @@
             <span v-else class="text-[#555577] italic" :class="emptySlotClasses">[ Box Office Open ]</span>
           </div>
 
-          <!-- Tomorrow Events (col-span-3) -->
-          <div class="col-span-3 pl-2 min-w-0 overflow-hidden">
+          <!-- Tomorrow Events -->
+          <div :class="[daySpanClass, 'pl-2 min-w-0 overflow-hidden']">
             <template v-if="getVenueSlotEvents(venue.id, 'tomorrow').length > 0">
               <template v-if="isMultilineMode">
                 <div
                   v-for="evt in getVenueSlotEvents(venue.id, 'tomorrow')"
                   :key="evt.id"
-                  class="flex flex-col justify-center min-w-0 py-0.5 group"
+                  class="flex flex-col justify-center min-w-0 py-0.5 group cursor-pointer hover:bg-[#000088]/40 px-1 rounded-xs transition-colors"
+                  @click="openEventModal(evt)"
                 >
                   <!-- Line 1: Meta badges on left, Time & Ticket Action on right -->
                   <div class="flex items-center justify-between space-x-1.5 min-w-0 w-full">
@@ -576,7 +581,7 @@
                       :title="formatDisplayTitle(evt)"
                       :has-ticket="evt.has_ticket === 1"
                       :custom-classes="eventTitleClasses"
-                      @click="toggleTicketStatus(evt)"
+                      @click="openEventModal(evt)"
                     />
                   </div>
                 </div>
@@ -587,7 +592,8 @@
                 <div
                   v-for="evt in getVenueSlotEvents(venue.id, 'tomorrow')"
                   :key="evt.id"
-                  class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group"
+                  class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group cursor-pointer hover:bg-[#000088]/40 px-1 rounded-xs transition-colors"
+                  @click="openEventModal(evt)"
                 >
                   <span
                     class="rounded-full inline-block shrink-0 shadow-[0_0_4px_currentColor]"
@@ -669,7 +675,7 @@
                       evt.has_ticket === 1 ? 'text-[#00FF00]' : ''
                     ]"
                     :title="formatDisplayTitle(evt)"
-                    @click.stop="toggleTicketStatus(evt)"
+                    @click.stop="openEventModal(evt)"
                   >
                     {{ formatDisplayTitle(evt) }}
                   </span>
@@ -693,6 +699,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { updateEvent } from '../api/client'
 import HeadlineMarquee from './HeadlineMarquee.vue'
 import { cleanEventTitle, parseMatchup, resolveTeamBranding, type TeamBranding } from '../services/sportsTheme'
+import { openEventModal } from '../services/eventDetailModalState'
 import type { EventItem, VenueItem } from '../types'
 
 const props = withDefaults(
@@ -702,6 +709,7 @@ const props = withDefaults(
     scrollSpeed?: number
     gridDensity?: 'classic_tv' | 'balanced' | 'dense' | 'single_row' | string
     gridFilterMode?: 'active_only' | 'all' | string
+    dayColumns?: '3day' | '2day' | string
     pauseDurationSeconds?: number
     pageIntervalSeconds?: number
   }>(),
@@ -709,6 +717,7 @@ const props = withDefaults(
     scrollSpeed: 30,
     gridDensity: 'balanced',
     gridFilterMode: 'active_only',
+    dayColumns: '3day',
     pauseDurationSeconds: 4,
     pageIntervalSeconds: 6,
   }
@@ -732,6 +741,24 @@ let targetRowIndex = 0
 // Density Computed Classes for 1 Row (Rack Bar / Ultrawide), 4 Rows (Classic TV), 7 Rows (Balanced), 12 Rows (Dense)
 const isMultilineMode = computed(() => {
   return props.gridDensity !== 'single_row'
+})
+
+// Day-column layout: 3-day uses 3x3x3x3 spans (venue/today/tonight/tomorrow),
+// 2-day merges tonight into today and widens every cell to 4x4x4 spans.
+const isTwoDayColumns = computed(() => {
+  return props.dayColumns === '2day'
+})
+
+const showTonightColumn = computed(() => {
+  return !isTwoDayColumns.value
+})
+
+const venueSpanClass = computed(() => {
+  return isTwoDayColumns.value ? 'col-span-4' : 'col-span-3'
+})
+
+const daySpanClass = computed(() => {
+  return isTwoDayColumns.value ? 'col-span-4' : 'col-span-3'
 })
 
 const headerClasses = computed(() => {
@@ -942,7 +969,7 @@ function getVenueSlotEvents(venueId: string, slot: 'today' | 'tonight' | 'tomorr
   const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
   const tomorrowDateStr = getLocalDateKey(tomorrow)
 
-  return props.events.filter(e => {
+  const matches = props.events.filter(e => {
     if (e.venue_id !== venueId) return false
     const eventDate = new Date(e.start_time)
     if (isNaN(eventDate.getTime())) return false
@@ -951,6 +978,8 @@ function getVenueSlotEvents(venueId: string, slot: 'today' | 'tonight' | 'tomorr
     const eventHour = eventDate.getHours()
 
     if (slot === 'today') {
+      // 2-day mode merges tonight into today for wider cells
+      if (isTwoDayColumns.value) return eventDateStr === todayDateStr
       return eventDateStr === todayDateStr && eventHour < 17
     } else if (slot === 'tonight') {
       return eventDateStr === todayDateStr && eventHour >= 17
@@ -959,6 +988,11 @@ function getVenueSlotEvents(venueId: string, slot: 'today' | 'tonight' | 'tomorr
     }
     return false
   })
+
+  if (slot === 'today' && isTwoDayColumns.value) {
+    matches.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+  }
+  return matches
 }
 
 async function toggleTicketStatus(evt: EventItem) {

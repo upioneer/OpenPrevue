@@ -31,6 +31,11 @@
       :version="activeChangelogVersion"
       @close="closeChangelogModal"
     />
+    <EventDetailModal
+      :is-open="isEventModalOpen"
+      :event="selectedEvent"
+      @close="closeEventModal"
+    />
   </div>
 </template>
 
@@ -44,6 +49,7 @@ import UpdateModal from './components/UpdateModal.vue'
 import SpotifyPlayerModal from './components/SpotifyPlayerModal.vue'
 import OnboardingModal from './components/OnboardingModal.vue'
 import ChangelogModal from './components/ChangelogModal.vue'
+import EventDetailModal from './components/EventDetailModal.vue'
 import { fetchHealth, fetchSettings } from './api/client'
 import { wsService } from './services/websocket'
 import { audioSynth } from './services/audioSynth'
@@ -51,6 +57,8 @@ import { isSpotifyModalOpen, openSpotifyModal, closeSpotifyModal } from './servi
 import { isUpdateModalOpen, updateModalTargetVersion, updateModalDiagnosticMode, closeUpdateModal } from './services/updateModalState'
 import { isOnboardingModalOpen, isDismissedOnStartup, openOnboardingModal, closeOnboardingModal } from './services/onboardingModalState'
 import { isChangelogModalOpen, activeChangelogVersion, checkShouldShowChangelog, closeChangelogModal, openChangelogModal } from './services/changelogModalState'
+import { isEventModalOpen, selectedEvent, closeEventModal } from './services/eventDetailModalState'
+import { retroShader } from './services/retroShader'
 
 const route = useRoute()
 const isKioskMode = computed(() => {
@@ -74,6 +82,9 @@ async function loadDisplaySettings() {
       isCrtCurvatureEnabled.value = true
     } else {
       isCrtCurvatureEnabled.value = false
+    }
+    if (s.color_palette) {
+      retroShader.updateConfig({ palette: s.color_palette as any })
     }
     if (s.spotify_playlist_url) {
       customPlaylistUrl.value = s.spotify_playlist_url

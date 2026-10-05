@@ -182,6 +182,7 @@ export interface SystemSettings {
   autoscroll_speed: string
   grid_density?: 'classic_tv' | 'balanced' | 'dense' | 'single_row' | string
   grid_filter_mode?: 'active_only' | 'all' | string
+  grid_day_columns?: '3day' | '2day' | string
   sports_coverage_mode?: 'local_only' | 'national_broadcasts' | 'disabled' | string
   scroll_pause_duration?: string
   scroll_page_interval?: string
@@ -190,6 +191,7 @@ export interface SystemSettings {
   phosphor_glow: string
   crt_curvature: string
   vhs_tracking_noise: string
+  color_palette?: string
   time_format: string
   sync_interval_hours: string
   update_check_interval?: string
@@ -215,7 +217,7 @@ export interface SystemSettings {
   ha_mqtt_topic_prefix?: string
   ultrawide_mode?: 'auto' | 'always' | 'disabled' | string
   ultrawide_priority?: 'feature' | 'calendar' | 'side_by_side' | string
-  spotlight_mode?: 'featured' | 'youtube' | string
+  spotlight_mode?: 'featured' | 'featured_ads' | 'youtube' | string
   youtube_source_url?: string
   youtube_audio_mode?: 'mute' | 'audio' | string
   youtube_aspect_ratio?: 'auto' | '4:3' | '16:9' | 'stretch' | string

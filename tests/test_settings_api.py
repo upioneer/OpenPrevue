@@ -12,7 +12,7 @@ async def setup_database():
     """Initialize database and default settings."""
     await init_db()
     async with get_db() as db:
-        await db.execute("DELETE FROM settings WHERE key LIKE 'test_%' OR key LIKE 'ultrawide_%' OR key LIKE 'spotlight_%' OR key LIKE 'youtube_%'")
+        await db.execute("DELETE FROM settings WHERE key LIKE 'test_%' OR key LIKE 'ultrawide_%' OR key LIKE 'spotlight_%' OR key LIKE 'youtube_%' OR key LIKE 'grid_%'")
         await db.commit()
     await seed_initial_data()
 
@@ -84,6 +84,26 @@ async def test_ultrawide_settings_defaults_and_updates():
         get_res = await client.get("/api/v1/settings")
         assert get_res.json()["ultrawide_priority"] == "calendar"
         assert get_res.json()["ultrawide_mode"] == "always"
+
+
+@pytest.mark.asyncio
+async def test_grid_day_columns_default_and_update():
+    """Verify schedule day-column layout defaults to 3-day and accepts 2-day."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.get("/api/v1/settings")
+        assert res.status_code == 200
+        assert res.json().get("grid_day_columns") == "3day"
+
+        update_res = await client.put(
+            "/api/v1/settings/grid_day_columns",
+            json={"value": "2day"},
+        )
+        assert update_res.status_code == 200
+        assert update_res.json()["value"] == "2day"
+
+        get_res = await client.get("/api/v1/settings")
+        assert get_res.json()["grid_day_columns"] == "2day"
 
 
 @pytest.mark.asyncio

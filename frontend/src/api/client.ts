@@ -39,6 +39,17 @@ export async function updateEvent(eventId: string, data: Partial<EventItem>): Pr
   return res.json()
 }
 
+export async function deleteEvent(eventId: string): Promise<{ status: string; message: string; event_id: string }> {
+  const res = await fetch(`${API_BASE}/events/${encodeURIComponent(eventId)}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || `Failed to delete event: ${res.statusText}`)
+  }
+  return res.json()
+}
+
 export async function ingestUrl(url: string, isFeatured: number = 1, hasTicket: number = 0): Promise<any> {
   const res = await fetch(`${API_BASE}/events/ingest-url`, {
     method: 'POST',

@@ -5,8 +5,8 @@
   >
     <!-- TOP 2-COLUMN SPLIT PREVIEW BODY (CLASSIC 1990S PREVUE CABLE LAYOUT) -->
     <div class="flex-1 w-full flex flex-row items-stretch min-h-0 overflow-hidden px-2 pt-1.5 gap-3">
-      <!-- LEFT COLUMN (48% on desktop / 45% mobile): FEATURED EVENT ARTWORK / CRT GRAPHICS / SPORTS MATCHUP VS CARD -->
-      <div class="w-[48%] h-full flex flex-col justify-between border-2 border-[#00FFFF] bg-[#000022] overflow-hidden relative shadow-inner">
+      <!-- ARTWORK COLUMN (48%, rendered right): FEATURED EVENT ARTWORK / CRT GRAPHICS / SPORTS MATCHUP VS CARD -->
+      <div data-testid="showcase-art" class="w-[48%] h-full flex flex-col justify-between border-2 border-[#00FFFF] bg-[#000022] overflow-hidden relative shadow-inner order-2">
         <!-- 1. Live Sports Matchup Graphic Card (When Category is Sports and teams are parsed) -->
         <div
           v-if="isSportsCategory && matchupTeams"
@@ -30,8 +30,115 @@
             </span>
           </div>
 
-          <!-- Extra Large Team VS Badges & Official Franchise Colors -->
-          <div class="flex items-center justify-around py-1 text-center my-auto w-full px-1">
+          <!-- Vertical Layout Format (Stacked Vertically on Portrait / Vertical Screens) -->
+          <div class="matchup-vertical-layout hidden flex-col items-center justify-between my-auto w-full px-1.5 py-1 space-y-1.5 flex-1 min-h-0">
+            <!-- Home Team Card -->
+            <div
+              class="flex items-center space-x-2.5 sm:space-x-3 w-full bg-[#000033]/90 border-2 px-2.5 py-1.5 rounded-xs shadow-md transition-transform hover:scale-[1.02]"
+              :style="{
+                borderColor: teamABranding?.secondaryColor || '#FFFF00',
+                boxShadow: `0 0 14px ${teamABranding?.secondaryColor || 'rgba(255,255,0,0.4)'}`
+              }"
+            >
+              <div
+                class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-2 p-1.5 flex items-center justify-center font-black relative overflow-hidden shadow-lg shrink-0"
+                :style="{
+                  borderColor: teamABranding?.secondaryColor || '#FFFF00',
+                  backgroundColor: teamABranding?.primaryColor || '#000044'
+                }"
+              >
+                <img
+                  v-if="teamABranding?.logoUrl && !teamALogoError"
+                  :src="teamABranding.logoUrl"
+                  :alt="teamABranding.name"
+                  referrerpolicy="no-referrer"
+                  class="w-full h-full object-contain drop-shadow"
+                  @error="teamALogoError = true"
+                />
+                <div
+                  v-else-if="teamABranding?.logoSvg"
+                  class="w-full h-full flex items-center justify-center p-0.5"
+                  v-html="teamABranding.logoSvg"
+                ></div>
+                <span
+                  v-else
+                  class="font-black text-sm sm:text-base tracking-wider"
+                  :style="{ color: teamABranding?.textColor || '#FFFFFF' }"
+                >
+                  {{ teamABranding?.shortName || matchupTeams.teamA.slice(0, 3).toUpperCase() }}
+                </span>
+              </div>
+              <div class="flex-1 min-w-0 text-left">
+                <span class="text-xs sm:text-sm md:text-base font-black text-[#FFFFFF] block truncate uppercase drop-shadow">
+                  {{ teamABranding?.name || matchupTeams.teamA }}
+                </span>
+                <span class="text-[10px] sm:text-xs text-[#FFFF00] font-black uppercase tracking-wider block">
+                  HOME FRANCHISE
+                </span>
+              </div>
+            </div>
+
+            <!-- Prominent VS Lightning Divider Badge -->
+            <div class="flex items-center justify-center space-x-2 w-full shrink-0 py-0.5">
+              <div class="h-0.5 flex-1 bg-gradient-to-r from-transparent via-[#FF4444] to-[#FF4444]"></div>
+              <div class="flex items-center space-x-1.5 px-3 py-0.5 bg-[#FF0000]/20 border border-[#FF4444] rounded-xs shadow-[0_0_10px_rgba(255,68,68,0.5)]">
+                <span class="font-black text-sm sm:text-base md:text-lg text-[#FF4444] animate-pulse drop-shadow-[0_0_8px_rgba(255,68,68,0.9)]">
+                  VS
+                </span>
+                <span class="text-[9px] sm:text-[10px] text-[#00FFFF] font-black tracking-widest uppercase">MATCHUP</span>
+              </div>
+              <div class="h-0.5 flex-1 bg-gradient-to-l from-transparent via-[#FF4444] to-[#FF4444]"></div>
+            </div>
+
+            <!-- Away Team Card -->
+            <div
+              class="flex items-center space-x-2.5 sm:space-x-3 w-full bg-[#000033]/90 border-2 px-2.5 py-1.5 rounded-xs shadow-md transition-transform hover:scale-[1.02]"
+              :style="{
+                borderColor: teamBBranding?.secondaryColor || '#00FFFF',
+                boxShadow: `0 0 14px ${teamBBranding?.secondaryColor || 'rgba(0,255,255,0.4)'}`
+              }"
+            >
+              <div
+                class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-2 p-1.5 flex items-center justify-center font-black relative overflow-hidden shadow-lg shrink-0"
+                :style="{
+                  borderColor: teamBBranding?.secondaryColor || '#00FFFF',
+                  backgroundColor: teamBBranding?.primaryColor || '#000044'
+                }"
+              >
+                <img
+                  v-if="teamBBranding?.logoUrl && !teamBLogoError"
+                  :src="teamBBranding.logoUrl"
+                  :alt="teamBBranding.name"
+                  referrerpolicy="no-referrer"
+                  class="w-full h-full object-contain drop-shadow"
+                  @error="teamBLogoError = true"
+                />
+                <div
+                  v-else-if="teamBBranding?.logoSvg"
+                  class="w-full h-full flex items-center justify-center p-0.5"
+                  v-html="teamBBranding.logoSvg"
+                ></div>
+                <span
+                  v-else
+                  class="font-black text-sm sm:text-base tracking-wider"
+                  :style="{ color: teamBBranding?.textColor || '#FFFFFF' }"
+                >
+                  {{ teamBBranding?.shortName || matchupTeams.teamB.slice(0, 3).toUpperCase() }}
+                </span>
+              </div>
+              <div class="flex-1 min-w-0 text-left">
+                <span class="text-xs sm:text-sm md:text-base font-black text-[#FFFFFF] block truncate uppercase drop-shadow">
+                  {{ teamBBranding?.name || matchupTeams.teamB }}
+                </span>
+                <span class="text-[10px] sm:text-xs text-[#00FFFF] font-black uppercase tracking-wider block">
+                  AWAY FRANCHISE
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Horizontal Layout Format (Side-by-Side on Landscape & Desktop) -->
+          <div class="matchup-horizontal-layout flex items-center justify-around py-1 text-center my-auto w-full px-1">
             <!-- Home Team Card -->
             <div class="flex flex-col items-center space-y-1.5 sm:space-y-2 w-[44%]">
               <div
@@ -318,8 +425,8 @@
         </div>
       </div>
 
-      <!-- RIGHT COLUMN (52%): RETRO CABLE BULLETIN TEXT, DETAILS & TICKET PASS -->
-      <div class="w-[52%] h-full flex flex-col justify-between py-1 pr-1 font-mono min-h-0 overflow-hidden">
+      <!-- COPY COLUMN (52%, rendered left): RETRO CABLE BULLETIN TEXT, DETAILS & TICKET PASS -->
+      <div data-testid="showcase-copy" class="w-[52%] h-full flex flex-col justify-between py-1 pr-1 font-mono min-h-0 overflow-hidden order-1">
         <div class="space-y-1.5 overflow-hidden">
           <!-- Top Meta Tag with League and Provider Badges -->
           <div class="flex items-center justify-between text-xs sm:text-sm border-b border-[#333366] pb-1 shrink-0">
@@ -872,13 +979,24 @@ watch(() => props.rotationSeconds, () => {
   startTimer()
 })
 
+const isVerticalLayout = ref(false)
+
+function checkOrientation() {
+  if (typeof window !== 'undefined') {
+    isVerticalLayout.value = window.matchMedia('(orientation: portrait), (max-aspect-ratio: 1/1)').matches
+  }
+}
+
 onMounted(() => {
   generateQrCode()
   startTimer()
   loadSpotifyMeta()
+  checkOrientation()
+  window.addEventListener('resize', checkOrientation)
 })
 
 onUnmounted(() => {
   stopTimer()
+  window.removeEventListener('resize', checkOrientation)
 })
 </script>

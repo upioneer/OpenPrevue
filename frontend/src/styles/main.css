@@ -34,6 +34,7 @@
 
 /* Color Palette Themes */
 body.palette-amber {
+  background-color: #1a0f00 !important;
   --bg-deep: #1a0f00 !important;
   --bg-surface: #2b1800 !important;
   --text-heading: #ffb000 !important;
@@ -43,7 +44,12 @@ body.palette-amber {
   --border-grid: #4d2600 !important;
 }
 
+body.palette-amber #app {
+  filter: grayscale(100%) brightness(1.05) sepia(100%) hue-rotate(355deg) saturate(650%) contrast(1.1) !important;
+}
+
 body.palette-green {
+  background-color: #001400 !important;
   --bg-deep: #001400 !important;
   --bg-surface: #002900 !important;
   --text-heading: #33ff33 !important;
@@ -53,7 +59,12 @@ body.palette-green {
   --border-grid: #004d00 !important;
 }
 
+body.palette-green #app {
+  filter: grayscale(100%) brightness(1.08) sepia(100%) hue-rotate(85deg) saturate(600%) contrast(1.15) !important;
+}
+
 body.palette-c64 {
+  background-color: #40318d !important;
   --bg-deep: #40318d !important;
   --bg-surface: #6854b7 !important;
   --text-heading: #ffff77 !important;
@@ -63,7 +74,49 @@ body.palette-c64 {
   --border-grid: #5b46a0 !important;
 }
 
+body.palette-c64 [class*="bg-\[\#000033\]"],
+body.palette-c64 [class*="bg-\[\#000022\]"],
+body.palette-c64 [class*="bg-\[\#000044\]"],
+body.palette-c64 [class*="bg-\[\#000011\]"],
+body.palette-c64 [class*="bg-\[\#000028\]"] {
+  background-color: #40318d !important;
+}
+
+body.palette-c64 [class*="bg-\[\#000055\]"],
+body.palette-c64 [class*="bg-\[\#000066\]"],
+body.palette-c64 [class*="bg-\[\#000088\]"],
+body.palette-c64 [class*="bg-\[\#0000AA\]"],
+body.palette-c64 [class*="bg-\[\#000080\]"] {
+  background-color: #6854b7 !important;
+}
+
+body.palette-c64 [class*="text-\[\#FFFF00\]"] {
+  color: #ffff77 !important;
+}
+
+body.palette-c64 [class*="text-\[\#00FFFF\]"] {
+  color: #70a4b2 !important;
+}
+
+body.palette-c64 [class*="text-\[\#00FF00\]"] {
+  color: #6cb96a !important;
+}
+
+body.palette-c64 [class*="border-\[\#333366\]"],
+body.palette-c64 [class*="border-\[\#444466\]"] {
+  border-color: #5b46a0 !important;
+}
+
+body.palette-c64 [class*="border-\[\#00FFFF\]"] {
+  border-color: #70a4b2 !important;
+}
+
+body.palette-c64 [class*="border-\[\#FFFF00\]"] {
+  border-color: #ffff77 !important;
+}
+
 body.palette-ega16 {
+  background-color: #0000aa !important;
   --bg-deep: #0000aa !important;
   --bg-surface: #000055 !important;
   --text-heading: #ffff55 !important;
@@ -71,6 +124,95 @@ body.palette-ega16 {
   --text-accent: #55ffff !important;
   --text-price: #55ff55 !important;
   --border-grid: #5555ff !important;
+}
+
+body.palette-ega16 [class*="bg-\[\#000033\]"],
+body.palette-ega16 [class*="bg-\[\#000022\]"],
+body.palette-ega16 [class*="bg-\[\#000044\]"],
+body.palette-ega16 [class*="bg-\[\#000011\]"] {
+  background-color: #0000aa !important;
+}
+
+body.palette-ega16 [class*="bg-\[\#000055\]"],
+body.palette-ega16 [class*="bg-\[\#000066\]"],
+body.palette-ega16 [class*="bg-\[\#000088\]"],
+body.palette-ega16 [class*="bg-\[\#0000AA\]"],
+body.palette-ega16 [class*="bg-\[\#000080\]"] {
+  background-color: #000055 !important;
+}
+
+body.palette-ega16 [class*="text-\[\#FFFF00\]"] {
+  color: #ffff55 !important;
+}
+
+body.palette-ega16 [class*="text-\[\#00FFFF\]"] {
+  color: #55ffff !important;
+}
+
+body.palette-ega16 [class*="text-\[\#00FF00\]"] {
+  color: #55ff55 !important;
+}
+
+body.palette-ega16 [class*="border-\[\#333366\]"],
+body.palette-ega16 [class*="border-\[\#444466\]"] {
+  border-color: #5555ff !important;
+}
+
+body.palette-ega16 [class*="border-\[\#00FFFF\]"] {
+  border-color: #55ffff !important;
+}
+
+body.palette-ega16 [class*="border-\[\#FFFF00\]"] {
+  border-color: #ffff55 !important;
+}
+
+body.palette-vga256 {
+  background-color: #0c0824 !important;
+  --bg-deep: #0c0824 !important;
+  --bg-surface: #1a1640 !important;
+  --text-heading: #ffe033 !important;
+  --text-body: #ffffff !important;
+  --text-accent: #33e6ff !important;
+  --text-price: #33ff66 !important;
+  --border-grid: #403b70 !important;
+}
+
+body.palette-vga256 [class*="bg-\[\#000033\]"],
+body.palette-vga256 [class*="bg-\[\#000022\]"],
+body.palette-vga256 [class*="bg-\[\#000044\]"] {
+  background-color: #0c0824 !important;
+}
+
+body.palette-vga256 [class*="bg-\[\#000055\]"],
+body.palette-vga256 [class*="bg-\[\#000066\]"],
+body.palette-vga256 [class*="bg-\[\#000088\]"],
+body.palette-vga256 [class*="bg-\[\#0000AA\]"] {
+  background-color: #1a1640 !important;
+}
+
+body.palette-vga256 [class*="text-\[\#FFFF00\]"] {
+  color: #ffe033 !important;
+}
+
+body.palette-vga256 [class*="text-\[\#00FFFF\]"] {
+  color: #33e6ff !important;
+}
+
+body.palette-vga256 [class*="text-\[\#00FF00\]"] {
+  color: #33ff66 !important;
+}
+
+body.palette-vga256 [class*="border-\[\#333366\]"],
+body.palette-vga256 [class*="border-\[\#444466\]"] {
+  border-color: #403b70 !important;
+}
+
+body.palette-vga256 [class*="border-\[\#00FFFF\]"] {
+  border-color: #33e6ff !important;
+}
+
+body.palette-vga256 [class*="border-\[\#FFFF00\]"] {
+  border-color: #ffe033 !important;
 }
 
 /* Retro text shadows & phosphor bloom */
@@ -163,6 +305,21 @@ body.crt-curvature-active {
   }
   .portrait-grid-height {
     height: 61% !important;
+  }
+  .matchup-horizontal-layout {
+    display: none !important;
+  }
+  .matchup-vertical-layout {
+    display: flex !important;
+  }
+}
+
+@media (orientation: landscape) and (min-aspect-ratio: 1/1) {
+  .matchup-horizontal-layout {
+    display: flex !important;
+  }
+  .matchup-vertical-layout {
+    display: none !important;
   }
 }
 

@@ -5,15 +5,79 @@
     :title="title"
     @click="$emit('click')"
   >
+    <!-- Invisible measuring element for accurate title width calculation -->
     <span
-      ref="textRef"
-      class="inline-block font-black hover:underline transition-colors"
+      ref="measureRef"
+      class="invisible absolute pointer-events-none whitespace-nowrap font-black"
+      :class="customClasses"
+      aria-hidden="true"
+    >
+      {{ title }}
+    </span>
+
+    <!-- Continuous One-Direction Scrolling Marquee with Repeating Title -->
+    <div
+      v-if="isOverflowing"
+      class="inline-flex items-center whitespace-nowrap animate-headline-marquee will-change-transform"
+      :style="marqueeStyle"
+    >
+      <!-- Block 1 (Reference Block) -->
+      <span ref="firstBlockRef" class="inline-flex items-center shrink-0">
+        <span
+          class="inline-block font-black hover:underline transition-colors shrink-0"
+          :class="[
+            customClasses,
+            hasTicket ? 'text-[#00FF00]' : 'text-[#FFFF00]'
+          ]"
+        >
+          {{ title }}
+        </span>
+        <span class="inline-block mx-5 text-[#00FFFF] font-black shrink-0 select-none opacity-80">
+          //
+        </span>
+      </span>
+
+      <!-- Block 2 (Repeat) -->
+      <span class="inline-flex items-center shrink-0" aria-hidden="true">
+        <span
+          class="inline-block font-black hover:underline transition-colors shrink-0"
+          :class="[
+            customClasses,
+            hasTicket ? 'text-[#00FF00]' : 'text-[#FFFF00]'
+          ]"
+        >
+          {{ title }}
+        </span>
+        <span class="inline-block mx-5 text-[#00FFFF] font-black shrink-0 select-none opacity-80">
+          //
+        </span>
+      </span>
+
+      <!-- Block 3 (Buffer for Wide Grid Cells) -->
+      <span class="inline-flex items-center shrink-0" aria-hidden="true">
+        <span
+          class="inline-block font-black hover:underline transition-colors shrink-0"
+          :class="[
+            customClasses,
+            hasTicket ? 'text-[#00FF00]' : 'text-[#FFFF00]'
+          ]"
+        >
+          {{ title }}
+        </span>
+        <span class="inline-block mx-5 text-[#00FFFF] font-black shrink-0 select-none opacity-80">
+          //
+        </span>
+      </span>
+    </div>
+
+    <!-- Static Truncated Fallback for Short Non-Overflowing Titles -->
+    <span
+      v-else
+      class="truncate block font-black hover:underline transition-colors"
       :class="[
         customClasses,
-        hasTicket ? 'text-[#00FF00]' : 'text-[#FFFF00]',
-        isOverflowing ? 'animate-headline-marquee' : 'truncate block'
+        hasTicket ? 'text-[#00FF00]' : 'text-[#FFFF00]'
       ]"
-      :style="isOverflowing ? marqueeStyle : undefined"
     >
       {{ title }}
     </span>
@@ -40,34 +104,39 @@ defineEmits<{
 }>()
 
 const containerRef = ref<HTMLElement | null>(null)
-const textRef = ref<HTMLElement | null>(null)
+const measureRef = ref<HTMLElement | null>(null)
+const firstBlockRef = ref<HTMLElement | null>(null)
 const isOverflowing = ref(false)
-const overflowDistance = ref(0)
-const marqueeDuration = ref(6)
+const repeatDistance = ref(0)
+const marqueeDuration = ref(8)
 
 let resizeObserver: ResizeObserver | null = null
 
 const marqueeStyle = computed(() => {
   return {
-    '--overflow-distance': `${overflowDistance.value}px`,
+    '--repeat-distance': `${repeatDistance.value}px`,
     '--marquee-duration': `${marqueeDuration.value}s`,
   }
 })
 
 function checkOverflow() {
-  if (!containerRef.value || !textRef.value) return
+  if (!containerRef.value || !measureRef.value) return
   const containerWidth = containerRef.value.clientWidth
-  const textWidth = textRef.value.scrollWidth
+  const textWidth = measureRef.value.offsetWidth
 
   if (textWidth > containerWidth + 4) {
     isOverflowing.value = true
-    const diff = textWidth - containerWidth
-    overflowDistance.value = diff
-    // Smooth reading velocity: ~28px/second plus reading pauses
-    marqueeDuration.value = Math.max(5, Math.round(diff / 28) + 3)
+    nextTick(() => {
+      if (firstBlockRef.value) {
+        const dist = firstBlockRef.value.offsetWidth
+        repeatDistance.value = dist
+        // Balanced reading speed: ~30px per second plus 2.2s pause at start
+        marqueeDuration.value = Math.max(6, Math.round(dist / 30) + 2)
+      }
+    })
   } else {
     isOverflowing.value = false
-    overflowDistance.value = 0
+    repeatDistance.value = 0
   }
 }
 
@@ -101,16 +170,16 @@ onBeforeUnmount(() => {
 
 <style scoped>
 @keyframes prevue-headline-marquee {
-  0%, 20% {
+  0%, 18% {
     transform: translateX(0);
   }
-  80%, 100% {
-    transform: translateX(calc(-1 * var(--overflow-distance)));
+  98%, 100% {
+    transform: translateX(calc(-1 * var(--repeat-distance)));
   }
 }
 
 .animate-headline-marquee {
-  animation: prevue-headline-marquee var(--marquee-duration) ease-in-out infinite alternate;
+  animation: prevue-headline-marquee var(--marquee-duration) cubic-bezier(0.42, 0, 0.58, 1) infinite;
   will-change: transform;
 }
 
