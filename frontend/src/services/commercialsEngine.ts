@@ -6,7 +6,7 @@
 
 import { ref } from "vue";
 import { audioSynth } from "./audioSynth";
-import { deleteCommercialClipFile, fetchCommercialClips, uploadCommercialClipFile } from "../api/client";
+import { deleteCommercialClipFile, fetchCommercialClips, updateSetting, uploadCommercialClipFile } from "../api/client";
 
 export interface CommercialClip {
   id: string;
@@ -29,6 +29,7 @@ class CommercialsEngine {
   public commercialSource = ref<'youtube' | 'local' | 'combined'>('youtube');
   public youtubeSourceUrl = ref<string>('https://www.youtube.com/playlist?list=PLQ82R4ElALew');
   private timer: ReturnType<typeof setInterval> | null = null;
+  private lastIntervalMs: number | null = null;
   private timeoutTimer: ReturnType<typeof setTimeout> | null = null;
   private wasAudioPlayingBeforeVideo: boolean = false;
 
@@ -188,15 +189,8 @@ class CommercialsEngine {
     this.currentClip.value = clip;
     this.isPlayingCommercial.value = true;
 
-    // Duck / Pause background audio during commercial break
-    const audioState = audioSynth.getPlaybackState();
-    this.wasAudioPlayingBeforeVideo = audioState.isAudioActive || audioState.isAudioStreamPlaying;
-    if (this.wasAudioPlayingBeforeVideo) {
-      audioSynth.pauseAudioStream();
-      audioSynth.stopTapeHiss();
-    }
-
-    // Safety fallback timeout: if clip runs longer than 90 seconds, auto-conclude commercial break
+    // Safety fallback timeout, armed FIRST: if anything below throws or the
+    // clip never reports back, the break still concludes after 90 seconds.
     if (this.timeoutTimer) {
       clearTimeout(this.timeoutTimer);
     }
@@ -205,6 +199,17 @@ class CommercialsEngine {
         this.onCommercialFinished();
       }
     }, 90000);
+
+    // Heartbeat so any operator screen can prove breaks are airing.
+    updateSetting("last_commercial_break", new Date().toISOString()).catch(() => {});
+
+    // Duck / Pause background audio during commercial break
+    const audioState = audioSynth.getPlaybackState();
+    this.wasAudioPlayingBeforeVideo = audioState.isAudioActive || audioState.isAudioStreamPlaying;
+    if (this.wasAudioPlayingBeforeVideo) {
+      audioSynth.pauseAudioStream();
+      audioSynth.stopTapeHiss();
+    }
   }
 
   public onCommercialFinished(): void {
@@ -227,16 +232,30 @@ class CommercialsEngine {
   }
 
   public restartTimer(): void {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
+    if (!this.isEnabled.value) {
+      if (this.timer) {
+        clearInterval(this.timer);
+        this.timer = null;
+      }
+      this.lastIntervalMs = null;
+      return;
     }
-
-    if (!this.isEnabled.value) return;
 
     // Frequency: 1 - 10 per hour
     // e.g., 4 per hour = every 900 seconds (15 minutes)
     const intervalMs = Math.round((3600 / this.frequencyPerHour.value) * 1000);
+
+    // The dashboard re-arms this on every 60s refresh and every settings
+    // broadcast. Recreating the interval each time would reset the countdown
+    // faster than it can ever elapse (shortest cadence is 6 minutes), so
+    // scheduled breaks would never fire. Only recreate when the cadence
+    // actually changed.
+    if (this.timer && this.lastIntervalMs === intervalMs) return;
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    this.lastIntervalMs = intervalMs;
     this.timer = setInterval(() => {
       this.playRandomCommercial();
     }, intervalMs);
@@ -247,6 +266,7 @@ class CommercialsEngine {
       clearInterval(this.timer);
       this.timer = null;
     }
+    this.lastIntervalMs = null;
     if (this.timeoutTimer) {
       clearTimeout(this.timeoutTimer);
       this.timeoutTimer = null;

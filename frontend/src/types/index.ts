@@ -225,5 +225,6 @@ export interface SystemSettings {
   commercials_enabled?: string
   commercials_frequency_per_hour?: string
   commercials_source?: 'youtube' | 'local' | 'combined' | string
+  last_commercial_break?: string
   [key: string]: string | undefined
 }

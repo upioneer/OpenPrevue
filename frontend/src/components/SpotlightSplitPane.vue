@@ -34,6 +34,7 @@
           autoplay
           class="max-w-full max-h-full"
           @ended="emit('commercialFinished')"
+          @error="emit('commercialFinished')"
         />
       </div>
     </div>

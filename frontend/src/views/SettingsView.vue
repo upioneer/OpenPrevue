@@ -619,6 +619,16 @@
             <p class="text-[11px] text-[#A0A0C0]">
               {{ commercialsFrequency }} breaks per hour from {{ commercialsSource === 'youtube' ? 'the curated 90s YouTube reel' : (commercialsSource === 'local' ? 'local dropzone files' : 'YouTube + local rotation') }}. Queue: {{ commercialsEngine.clips.value.length }} local clips. Full schedule, sources, and uploads live in Tab 4 [ RETRO COMMERCIALS ].
             </p>
+            <p v-if="!commercialsEnabled" class="text-[11px] font-bold text-[#FF4444]">
+              * Breaks are DISABLED, so no featured ads will air in this mode.
+              <button
+                type="button"
+                class="text-[11px] font-black text-[#00FF00] hover:text-white border border-[#00FF00] px-2 py-0.5 uppercase cursor-pointer ml-2"
+                @click="commercialsEnabled = true; handleCommercialsConfigChange()"
+              >
+                [ ENABLE NOW ]
+              </button>
+            </p>
           </div>
 
           <!-- YouTube Configuration Controls -->
@@ -1355,6 +1365,12 @@
               />
               <span>{{ commercialsEnabled ? '[ ENABLED ]' : '[ DISABLED ]' }}</span>
             </label>
+          </div>
+
+          <div class="text-[11px] font-mono bg-[#000022] p-2 border border-[#333366]">
+            <span class="text-[#8888AA]">LAST AIRED BREAK: </span>
+            <span class="font-bold" :class="form.last_commercial_break ? 'text-[#00FF00]' : 'text-[#8888AA]'">{{ lastCommercialBreakDisplay }}</span>
+            <span v-if="commercialsEnabled" class="text-[#8888AA]"> // NEXT BREAK ~ EVERY {{ Math.round(60 / commercialsFrequency) }} MIN</span>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -4192,6 +4208,14 @@ watch(
   },
   { deep: true }
 )
+
+const lastCommercialBreakDisplay = computed(() => {
+  const raw = form.last_commercial_break
+  if (!raw) return 'NEVER'
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return raw
+  return d.toLocaleString()
+})
 
 const computedSpotifyEmbedUrl = computed(() => {
   const url = form.spotify_playlist_url || 'https://open.spotify.com/playlist/3jiPmIT4RugR8TPhli5Obk?si=22d007e309134d4f'

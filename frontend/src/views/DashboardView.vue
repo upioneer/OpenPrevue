@@ -44,6 +44,7 @@
               autoplay
               class="max-w-full max-h-full"
               @ended="commercialsEngine.onCommercialFinished()"
+              @error="commercialsEngine.onCommercialFinished()"
             />
           </div>
           <SpotlightPane
@@ -120,6 +121,7 @@
                 autoplay
                 class="max-w-full max-h-full"
                 @ended="commercialsEngine.onCommercialFinished()"
+                @error="commercialsEngine.onCommercialFinished()"
               />
             </div>
             <SpotlightPane
@@ -212,6 +214,7 @@
             autoplay
             class="max-w-full max-h-full"
             @ended="commercialsEngine.onCommercialFinished()"
+            @error="commercialsEngine.onCommercialFinished()"
           />
         </div>
         <SpotlightPane
@@ -471,6 +474,11 @@ const youtubeAspectRatio = computed(() => {
 function handleYouTubeError(code: number) {
   console.warn('YouTube player error:', code, 'Falling back to Featured Events Showcase.')
   youtubeError.value = true
+  // A failed commercial must not trap the guide on a dead player until the
+  // 90s safety net. Conclude the break immediately so the next one can air.
+  if (isCommercialActive.value) {
+    commercialsEngine.onCommercialFinished()
+  }
 }
 
 watch(

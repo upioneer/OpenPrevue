@@ -1,8 +1,10 @@
 <template>
   <div
     class="h-full w-full bg-[#000033] flex flex-col overflow-hidden relative select-none font-mono"
-    @mouseenter="isHoverPaused = true"
-    @mouseleave="isHoverPaused = false"
+    @mouseenter="handlePointerEnter"
+    @mouseleave="handlePointerLeave"
+    @touchstart.passive="handleTouchStart"
+    @touchend.passive="handleTouchEnd"
   >
     <!-- Fixed Column Headers (3-day 3x3x3x3 or 2-day 4x4x4 12-Column Grid) -->
     <div
@@ -731,6 +733,44 @@ const scrollContainer = ref<HTMLElement | null>(null)
 const scrollContent = ref<HTMLElement | null>(null)
 const isHoverPaused = ref(false)
 let animationFrameId: number | null = null
+let touchResumeTimer: ReturnType<typeof setTimeout> | null = null
+
+function hoverCapable(): boolean {
+  return typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(hover: hover)').matches
+}
+
+function handlePointerEnter() {
+  // Touchscreens fire mouseenter on tap without a matching leave, which would
+  // freeze scrolling forever. Only mouse-like pointers pause on hover.
+  if (hoverCapable()) {
+    isHoverPaused.value = true
+  }
+}
+
+function handlePointerLeave() {
+  isHoverPaused.value = false
+}
+
+function handleTouchStart() {
+  if (touchResumeTimer) {
+    clearTimeout(touchResumeTimer)
+    touchResumeTimer = null
+  }
+  isHoverPaused.value = true
+}
+
+function handleTouchEnd() {
+  // Auto-resume shortly after the touch ends so wall displays never stick.
+  if (touchResumeTimer) {
+    clearTimeout(touchResumeTimer)
+  }
+  touchResumeTimer = setTimeout(() => {
+    isHoverPaused.value = false
+    touchResumeTimer = null
+  }, 15000)
+}
 
 // Authentic 1990s Content-Quantized Row Snapping State Machine
 let scrollPhase: 'scrolling' | 'pausing' = 'pausing'
@@ -883,7 +923,7 @@ const displayedVenues = computed(() => {
 })
 
 function getCategoryColor(category: string): string {
-  switch (category.toLowerCase()) {
+  switch ((category || '').toLowerCase()) {
     case 'music':
       return 'bg-[#00FFFF]' // Cyan
     case 'sports':
@@ -900,7 +940,7 @@ function getCategoryColor(category: string): string {
 }
 
 function getSportsDetails(evt: EventItem): { league?: string; teamA: TeamBranding; teamB: TeamBranding } | null {
-  if (evt.category.toLowerCase() !== 'sports') return null
+  if ((evt.category || '').toLowerCase() !== 'sports') return null
   const parsed = parseMatchup(evt.title)
   if (!parsed) return null
   return {
@@ -1087,5 +1127,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (animationFrameId) cancelAnimationFrame(animationFrameId)
+  if (touchResumeTimer) clearTimeout(touchResumeTimer)
 })
 </script>
