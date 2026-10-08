@@ -23,6 +23,12 @@ async def lifespan(app: FastAPI):
     logger.info("OpenPrevue backend initializing...")
     await init_db()
     await seed_initial_data()
+    try:
+        from backend.app.services.ingestion import ingestion_service
+
+        await ingestion_service.purge_expired_events()
+    except Exception as exc:
+        logger.warning("Startup expired-event purge skipped: %s", exc)
     await start_scheduler()
     await telegram_service.start()
     logger.info("OpenPrevue backend initialized and services running.")
@@ -34,7 +40,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="OpenPrevue API",
-    version="0.29.1",
+    version="0.29.2",
     description="Self-hosted local event aggregator and interactive retro display backend.",
     lifespan=lifespan,
 )
@@ -76,6 +82,7 @@ if __name__ == "__main__":
         port=settings.PORT,
         reload=True,
     )
+
 
 
 

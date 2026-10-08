@@ -1,6 +1,6 @@
 """Ingestion orchestrator, normalization, circuit breaker protection, and deduplication engine."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import math
 import re
 import aiosqlite
@@ -225,6 +225,67 @@ class IngestionService:
             logger.info("Purged %d out-of-market or disabled sports league events.", purged_count)
         return purged_count
 
+    async def purge_expired_events(self) -> int:
+        """Delete events that can no longer appear in any listing window.
+
+        An event is purged only when its end time is more than 12 hours past,
+        or (when no end time exists) its start time is more than 24 hours past.
+        The 24-hour start grace keeps purged rows at yesterday-or-earlier in
+        every US timezone, so Today/Tomorrow/Tonight slots are never touched.
+        User-ticketed events and rows with unparseable timestamps are always
+        kept. Provider outages cannot trigger purges: the rule uses event time
+        only, never last-seen data. Venues are left untouched.
+        """
+        end_cutoff = datetime.now(timezone.utc) - timedelta(hours=12)
+        start_cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+        purge_ids: list[str] = []
+
+        def _parse(value: str | None) -> datetime | None:
+            if not value:
+                return None
+            try:
+                parsed = datetime.fromisoformat(value)
+            except ValueError:
+                return None
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed
+
+        async with get_db() as db:
+            async with db.execute(
+                "SELECT id, start_time, end_time FROM events "
+                "WHERE COALESCE(has_ticket, 0) != 1"
+            ) as cursor:
+                rows = await cursor.fetchall()
+
+            for row in rows:
+                ended_at = _parse(row["end_time"])
+                if ended_at is not None:
+                    if ended_at < end_cutoff:
+                        purge_ids.append(row["id"])
+                    continue
+                started_at = _parse(row["start_time"])
+                if started_at is not None and started_at < start_cutoff:
+                    purge_ids.append(row["id"])
+
+            # Bound each pass so a jumped clock cannot wipe the table at once.
+            # Legitimate backlogs drain over subsequent cycles.
+            purge_ids = purge_ids[:5000]
+            if purge_ids:
+                placeholders = ",".join("?" for _ in purge_ids)
+                await db.execute(
+                    f"DELETE FROM ticket_links WHERE event_id IN ({placeholders})",
+                    purge_ids,
+                )
+                await db.execute(
+                    f"DELETE FROM events WHERE id IN ({placeholders})", purge_ids
+                )
+                await db.commit()
+
+        if purge_ids:
+            logger.info("Purged %d expired events past all listing windows.", len(purge_ids))
+        return len(purge_ids)
+
     async def sync_provider(
         self,
         provider: BaseProvider,
@@ -335,6 +396,15 @@ class IngestionService:
                 ),
             )
             await db.commit()
+
+        # Expired-event purge rides every sync so dead listings leave in the
+        # same cycle fresh ones land. Guarded: purge failure must never fail sync.
+        try:
+            await self.purge_expired_events()
+        except Exception as exc:
+            logger.warning(
+                "Expired-event purge skipped after %s sync: %s", provider.provider_name, exc
+            )
 
         return {
             "provider": provider.provider_name,
