@@ -185,20 +185,29 @@ class CommercialsEngine {
     this.playClip(clip);
   }
 
+  public armSafetyTimeout(seconds: number = 300): void {
+    if (this.timeoutTimer) {
+      clearTimeout(this.timeoutTimer);
+      this.timeoutTimer = null;
+    }
+    const safeSeconds = Math.max(30, Math.round(seconds));
+    this.timeoutTimer = setTimeout(() => {
+      if (this.isPlayingCommercial.value) {
+        console.warn(`Commercial safety fallback timer elapsed (${safeSeconds}s). Resuming guide.`);
+        this.onCommercialFinished();
+      }
+    }, safeSeconds * 1000);
+  }
+
   public playClip(clip: CommercialClip): void {
     this.currentClip.value = clip;
     this.isPlayingCommercial.value = true;
 
-    // Safety fallback timeout, armed FIRST: if anything below throws or the
-    // clip never reports back, the break still concludes after 90 seconds.
-    if (this.timeoutTimer) {
-      clearTimeout(this.timeoutTimer);
-    }
-    this.timeoutTimer = setTimeout(() => {
-      if (this.isPlayingCommercial.value) {
-        this.onCommercialFinished();
-      }
-    }, 90000);
+    // Safety fallback timeout: initialize with a generous 300s (5 min) ceiling
+    // so no long commercial or infomercial is cut short prematurely.
+    // As soon as the active player loads metadata or duration, armSafetyTimeout
+    // is dynamically refined to (duration + 15) seconds.
+    this.armSafetyTimeout(300);
 
     // Heartbeat so any operator screen can prove breaks are airing.
     updateSetting("last_commercial_break", new Date().toISOString()).catch(() => {});

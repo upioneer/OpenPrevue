@@ -66,7 +66,7 @@
           v-if="isCommercialBreak"
           type="button"
           class="text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 border cursor-pointer transition-colors bg-[#000044] text-[#FFFF00] border-[#FFFF00] hover:bg-[#FFFF00] hover:text-[#000033]"
-          @click="emit('commercialFinished')"
+          @click="finishCommercialClip"
           title="Return to regular guide programming"
         >
           [ RETURN TO GUIDE ]
@@ -99,6 +99,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { audioSynth } from '../services/audioSynth'
+import { commercialsEngine } from '../services/commercialsEngine'
 
 const props = withDefaults(
   defineProps<{
@@ -128,6 +129,31 @@ const playerId = `yt-player-${Math.random().toString(36).substring(2, 9)}`
 let playerInstance: any = null
 const currentVideoTitle = ref<string>('')
 const isPlaying = ref(false)
+
+let initialTrackedVideoId: string | null = null
+let hasStartedPlayback = false
+let clipCheckInterval: ReturnType<typeof setInterval> | null = null
+
+function cleanupClipMonitor(): void {
+  if (clipCheckInterval) {
+    clearInterval(clipCheckInterval)
+    clipCheckInterval = null
+  }
+}
+
+function finishCommercialClip(): void {
+  cleanupClipMonitor()
+  if (playerInstance) {
+    try {
+      if (typeof playerInstance.pauseVideo === 'function') {
+        playerInstance.pauseVideo()
+      }
+    } catch {
+      // Ignore pause error
+    }
+  }
+  emit('commercialFinished')
+}
 
 const isShuffleOn = computed(() => {
   return props.shuffleEnabled === true || props.shuffleEnabled === '1' || props.shuffleEnabled === 'true'
@@ -241,6 +267,10 @@ async function mountPlayer() {
     return
   }
 
+  cleanupClipMonitor()
+  initialTrackedVideoId = null
+  hasStartedPlayback = false
+
   await initYouTubeApi()
 
   if (playerInstance) {
@@ -289,10 +319,10 @@ async function mountPlayer() {
   if (isPlaylist) {
     playerVars.listType = 'playlist'
     playerVars.list = parsedResource.value.id
-    playerVars.loop = 1
+    playerVars.loop = props.isCommercialBreak ? 0 : 1
   } else {
     playerVars.playlist = parsedResource.value.id
-    playerVars.loop = 1
+    playerVars.loop = props.isCommercialBreak ? 0 : 1
   }
 
   // NOTE: the videoId key must be omitted entirely for playlist players.
@@ -328,13 +358,63 @@ async function mountPlayer() {
         if (e.data === 1) {
           isPlaying.value = true
           updateTitle()
+
+          if (props.isCommercialBreak) {
+            const videoData = typeof e.target.getVideoData === 'function' ? e.target.getVideoData() : null
+            const currentVidId = videoData?.video_id
+
+            if (!initialTrackedVideoId && currentVidId) {
+              initialTrackedVideoId = currentVidId
+              hasStartedPlayback = true
+              const dur = typeof e.target.getDuration === 'function' ? e.target.getDuration() : 0
+              if (dur > 0) {
+                commercialsEngine.armSafetyTimeout(dur + 15)
+              }
+            } else if (hasStartedPlayback && currentVidId && initialTrackedVideoId && currentVidId !== initialTrackedVideoId) {
+              // YouTube playlist auto-advanced past initial clip to a subsequent video.
+              // Conclude the commercial break immediately so only one ad airs.
+              finishCommercialClip()
+              return
+            }
+
+            if (!clipCheckInterval) {
+              clipCheckInterval = setInterval(() => {
+                if (!playerInstance || !props.isCommercialBreak) {
+                  cleanupClipMonitor()
+                  return
+                }
+                try {
+                  const curTime = typeof playerInstance.getCurrentTime === 'function' ? playerInstance.getCurrentTime() : 0
+                  const dur = typeof playerInstance.getDuration === 'function' ? playerInstance.getDuration() : 0
+
+                  if (dur > 0 && curTime >= dur - 0.35) {
+                    finishCommercialClip()
+                    return
+                  }
+
+                  const data = typeof playerInstance.getVideoData === 'function' ? playerInstance.getVideoData() : null
+                  if (hasStartedPlayback && data?.video_id && initialTrackedVideoId && data.video_id !== initialTrackedVideoId) {
+                    finishCommercialClip()
+                    return
+                  }
+                } catch {
+                  // Ignore polling errors
+                }
+              }, 200)
+            }
+          }
         } else if (e.data === 0) {
           if (props.isCommercialBreak) {
-            emit('commercialFinished')
+            finishCommercialClip()
           } else if (isPlaylist) {
             e.target.nextVideo()
           } else {
             e.target.playVideo()
+          }
+        } else if (props.isCommercialBreak && hasStartedPlayback && (e.data === 3 || e.data === -1)) {
+          const data = typeof e.target.getVideoData === 'function' ? e.target.getVideoData() : null
+          if (data?.video_id && initialTrackedVideoId && data.video_id !== initialTrackedVideoId) {
+            finishCommercialClip()
           }
         }
       },
@@ -428,11 +508,21 @@ watch(() => props.sourceUrl, () => {
   mountPlayer()
 })
 
+// Cleanly remount player when entering a commercial break on an already mounted component
+watch(() => props.isCommercialBreak, (isActive) => {
+  if (isActive) {
+    mountPlayer()
+  } else {
+    cleanupClipMonitor()
+  }
+})
+
 onMounted(() => {
   mountPlayer()
 })
 
 onUnmounted(() => {
+  cleanupClipMonitor()
   if (playerInstance) {
     try {
       playerInstance.destroy()

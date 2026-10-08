@@ -26,6 +26,7 @@
           />
           <YouTubePane
             v-else-if="shouldShowYouTube"
+            :key="isCommercialActive ? 'yt-commercial' : 'yt-ambient'"
             :source-url="activeYouTubeUrl"
             :audio-mode="isCommercialActive ? 'audio' : youtubeAudioMode"
             :aspect-ratio="youtubeAspectRatio"
@@ -43,6 +44,7 @@
               :src="commercialsEngine.currentClip.value.url"
               autoplay
               class="max-w-full max-h-full"
+              @loadedmetadata="onLocalVideoMetadata"
               @ended="commercialsEngine.onCommercialFinished()"
               @error="commercialsEngine.onCommercialFinished()"
             />
@@ -103,6 +105,7 @@
             />
             <YouTubePane
               v-else-if="shouldShowYouTube"
+              :key="isCommercialActive ? 'yt-commercial' : 'yt-ambient'"
               :source-url="activeYouTubeUrl"
               :audio-mode="isCommercialActive ? 'audio' : youtubeAudioMode"
               :aspect-ratio="youtubeAspectRatio"
@@ -120,6 +123,7 @@
                 :src="commercialsEngine.currentClip.value.url"
                 autoplay
                 class="max-w-full max-h-full"
+                @loadedmetadata="onLocalVideoMetadata"
                 @ended="commercialsEngine.onCommercialFinished()"
                 @error="commercialsEngine.onCommercialFinished()"
               />
@@ -197,6 +201,7 @@
         />
         <YouTubePane
           v-else-if="shouldShowYouTube"
+          :key="isCommercialActive ? 'yt-commercial' : 'yt-ambient'"
           :source-url="activeYouTubeUrl"
           :audio-mode="isCommercialActive ? 'audio' : youtubeAudioMode"
           :aspect-ratio="youtubeAspectRatio"
@@ -213,6 +218,7 @@
             :src="commercialsEngine.currentClip.value.url"
             autoplay
             class="max-w-full max-h-full"
+            @loadedmetadata="onLocalVideoMetadata"
             @ended="commercialsEngine.onCommercialFinished()"
             @error="commercialsEngine.onCommercialFinished()"
           />
@@ -465,6 +471,13 @@ const youtubeAspectRatio = computed(() => {
   }
   return settings.value?.youtube_aspect_ratio || '4:3'
 })
+
+function onLocalVideoMetadata(e: Event) {
+  const target = e.target as HTMLVideoElement
+  if (target?.duration && !isNaN(target.duration) && target.duration > 0) {
+    commercialsEngine.armSafetyTimeout(target.duration + 15)
+  }
+}
 
 function handleYouTubeError(code: number) {
   console.warn('YouTube player error:', code, 'Falling back to Featured Events Showcase.')

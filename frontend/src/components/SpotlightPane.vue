@@ -448,6 +448,7 @@
                 :src="props.adUrl"
                 autoplay
                 class="max-w-full max-h-full"
+                @loadedmetadata="onLocalVideoMetadata"
                 @ended="emit('commercialFinished')"
                 @error="emit('commercialFinished')"
               />
@@ -662,6 +663,14 @@ import {
 import { openSpotifyModal } from '../services/spotifyModalState'
 import type { EventItem } from '../types'
 import YouTubePane from './YouTubePane.vue'
+import { commercialsEngine } from '../services/commercialsEngine'
+
+function onLocalVideoMetadata(e: Event) {
+  const target = e.target as HTMLVideoElement
+  if (target?.duration && !isNaN(target.duration) && target.duration > 0) {
+    commercialsEngine.armSafetyTimeout(target.duration + 15)
+  }
+}
 
 const props = withDefaults(
   defineProps<{
