@@ -7,6 +7,9 @@
     <div class="flex-1 w-full flex flex-row items-stretch min-h-0 overflow-hidden px-2 pt-1.5 gap-3">
       <!-- ARTWORK COLUMN (48%, rendered right): FEATURED EVENT ARTWORK / CRT GRAPHICS / SPORTS MATCHUP VS CARD -->
       <div data-testid="showcase-art" class="w-[48%] h-full flex flex-col justify-between border-2 border-[#00FFFF] bg-[#000022] overflow-hidden relative shadow-inner order-2">
+        <!-- Retro ad break consumes this pane, then the artwork resumes. The
+             column container stays mounted so the copy side never resizes. -->
+        <template v-if="!props.adTakeover">
         <!-- 1. Live Sports Matchup Graphic Card (When Category is Sports and teams are parsed) -->
         <div
           v-if="isSportsCategory && matchupTeams"
@@ -423,6 +426,34 @@
             <span class="text-[#FFFF00] text-[11px]">[ {{ providerBranding.badgeText }} ]</span>
           </div>
         </div>
+        </template>
+        <template v-else>
+          <div data-testid="art-takeover" class="w-full h-full min-h-0 overflow-hidden">
+            <YouTubePane
+              v-if="props.adType === 'youtube'"
+              :source-url="props.adUrl"
+              audio-mode="audio"
+              :aspect-ratio="props.adAspectRatio"
+              shuffle-enabled="1"
+              :is-ultrawide="props.isUltrawide"
+              :is-commercial-break="true"
+              @error="emit('error', $event)"
+              @commercial-finished="emit('commercialFinished')"
+            />
+            <div
+              v-else
+              class="w-full h-full bg-black flex items-center justify-center relative"
+            >
+              <video
+                :src="props.adUrl"
+                autoplay
+                class="max-w-full max-h-full"
+                @ended="emit('commercialFinished')"
+                @error="emit('commercialFinished')"
+              />
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- COPY COLUMN (52%, rendered left): RETRO CABLE BULLETIN TEXT, DETAILS & TICKET PASS -->
@@ -630,19 +661,33 @@ import {
 } from '../services/sportsTheme'
 import { openSpotifyModal } from '../services/spotifyModalState'
 import type { EventItem } from '../types'
+import YouTubePane from './YouTubePane.vue'
 
 const props = withDefaults(
   defineProps<{
     events: EventItem[]
     rotationSeconds?: number
     isUltrawide?: boolean
+    adTakeover?: boolean
+    adType?: 'youtube' | 'local' | string
+    adUrl?: string
+    adAspectRatio?: string
   }>(),
   {
     events: () => [],
     rotationSeconds: 20,
     isUltrawide: false,
+    adTakeover: false,
+    adType: 'youtube',
+    adUrl: '',
+    adAspectRatio: '4:3',
   }
 )
+
+const emit = defineEmits<{
+  (e: 'error', code: number): void
+  (e: 'commercialFinished'): void
+}>()
 
 const currentIndex = ref(0)
 const qrCodeDataUrl = ref<string | null>(null)

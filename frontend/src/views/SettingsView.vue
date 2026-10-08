@@ -583,7 +583,7 @@
             >
               <div class="font-black text-xs sm:text-sm uppercase tracking-wider">[ SHOWCASE + RETRO ADS ]</div>
               <div class="text-[11px] text-[#E0E0E0] mt-1">
-                Split spotlight: featured cards keep rolling on one side while periodic retro ad breaks air on the other. Narrow screens fall back to full-takeover breaks.
+                Event info stays put on the left while periodic retro ad breaks take over the right visuals pane, then it resumes. Same behavior at every width, portrait included.
               </div>
             </button>
 

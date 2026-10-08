@@ -12,15 +12,15 @@
       <template v-if="ultrawidePriority === 'feature'">
         <!-- Top: Video or SpotlightPane fills primary display height -->
         <div class="flex-1 w-full min-h-0 overflow-hidden relative">
-          <SpotlightSplitPane
-            v-if="isSplitAdBreak"
+          <SpotlightPane
+            v-if="isFeaturedAdsPanel"
             :events="events"
             :rotation-seconds="marqueeRotationSeconds"
             :is-ultrawide="true"
-            :source-url="activeYouTubeUrl"
-            :aspect-ratio="youtubeAspectRatio"
-            :commercial-type="commercialsEngine.currentClip.value?.type || 'youtube'"
-            :commercial-url="commercialsEngine.currentClip.value?.url || ''"
+            :ad-takeover="isCommercialActive"
+            :ad-type="commercialsEngine.currentClip.value?.type || 'youtube'"
+            :ad-url="commercialsEngine.currentClip.value?.url || ''"
+            :ad-aspect-ratio="youtubeAspectRatio"
             @error="handleYouTubeError"
             @commercial-finished="commercialsEngine.onCommercialFinished()"
           />
@@ -89,15 +89,15 @@
         </div>
         <div class="flex-1 flex flex-row w-full min-h-0 overflow-hidden">
           <div class="w-1/2 h-full shrink-0 overflow-hidden relative">
-            <SpotlightSplitPane
-              v-if="isSplitAdBreak"
+            <SpotlightPane
+              v-if="isFeaturedAdsPanel"
               :events="events"
               :rotation-seconds="marqueeRotationSeconds"
               :is-ultrawide="true"
-              :source-url="activeYouTubeUrl"
-              :aspect-ratio="youtubeAspectRatio"
-              :commercial-type="commercialsEngine.currentClip.value?.type || 'youtube'"
-              :commercial-url="commercialsEngine.currentClip.value?.url || ''"
+              :ad-takeover="isCommercialActive"
+              :ad-type="commercialsEngine.currentClip.value?.type || 'youtube'"
+              :ad-url="commercialsEngine.currentClip.value?.url || ''"
+              :ad-aspect-ratio="youtubeAspectRatio"
               @error="handleYouTubeError"
               @commercial-finished="commercialsEngine.onCommercialFinished()"
             />
@@ -184,14 +184,14 @@
           ? 'flex-1 min-h-0'
           : 'h-[45%] portrait-spotlight-height'"
       >
-        <SpotlightSplitPane
-          v-if="isSplitAdBreak"
+        <SpotlightPane
+          v-if="isFeaturedAdsPanel"
           :events="events"
           :rotation-seconds="marqueeRotationSeconds"
-          :source-url="activeYouTubeUrl"
-          :aspect-ratio="youtubeAspectRatio"
-          :commercial-type="commercialsEngine.currentClip.value?.type || 'youtube'"
-          :commercial-url="commercialsEngine.currentClip.value?.url || ''"
+          :ad-takeover="isCommercialActive"
+          :ad-type="commercialsEngine.currentClip.value?.type || 'youtube'"
+          :ad-url="commercialsEngine.currentClip.value?.url || ''"
+          :ad-aspect-ratio="youtubeAspectRatio"
           @error="handleYouTubeError"
           @commercial-finished="commercialsEngine.onCommercialFinished()"
         />
@@ -266,7 +266,6 @@ import { useRoute } from 'vue-router'
 import { audioSynth } from '../services/audioSynth'
 import { commercialsEngine } from '../services/commercialsEngine'
 import SpotlightPane from '../components/SpotlightPane.vue'
-import SpotlightSplitPane from '../components/SpotlightSplitPane.vue'
 import YouTubePane from '../components/YouTubePane.vue'
 import DividerRibbon from '../components/DividerRibbon.vue'
 import TimelineGrid from '../components/TimelineGrid.vue'
@@ -286,10 +285,6 @@ const venues = ref<VenueItem[]>([])
 const settings = ref<SystemSettings | null>(null)
 const isUltrawideDetected = ref(false)
 const youtubeError = ref(false)
-// Split spotlight (showcase + retro ad side by side) requires this viewport
-// width; narrower screens fall back to full-takeover commercial breaks.
-const SPLIT_MIN_WIDTH_PX = 1024
-const isSplitWideEnough = ref(false)
 let refreshInterval: ReturnType<typeof setInterval> | null = null
 let unsubscribeEventsWs: (() => void) | null = null
 let unsubscribeSettingsWs: (() => void) | null = null
@@ -315,15 +310,8 @@ function checkUltrawideRatio() {
   }
 }
 
-function checkSplitWidth() {
-  if (typeof window !== 'undefined') {
-    isSplitWideEnough.value = window.innerWidth >= SPLIT_MIN_WIDTH_PX
-  }
-}
-
 function handleViewportResize() {
   checkUltrawideRatio()
-  checkSplitWidth()
 }
 
 const isUltrawideActive = computed(() => {
@@ -416,10 +404,17 @@ const isCommercialActive = computed(() => {
   return commercialsEngine.isPlayingCommercial.value && commercialsEngine.currentClip.value !== null
 })
 
-const isSplitAdBreak = computed(() => {
-  return isCommercialActive.value &&
-    settings.value?.spotlight_mode === 'featured_ads' &&
-    isSplitWideEnough.value
+const videoQueryForcesYouTube = computed(() => {
+  const queryVideo = route.query.video
+  return queryVideo === '1' || queryVideo === 'youtube'
+})
+
+// Featured Ads panel: event info copy persists on the left while the right
+// visuals pane swaps to the retro ad for the break, then resumes. The panel
+// stays mounted across breaks so the copy side never resizes, at any width.
+const isFeaturedAdsPanel = computed(() => {
+  return settings.value?.spotlight_mode === 'featured_ads' &&
+    (isCommercialActive.value || !videoQueryForcesYouTube.value)
 })
 
 const activeYouTubeUrl = computed(() => {
@@ -537,7 +532,6 @@ function handleSetupCompleted() {
 
 onMounted(() => {
   checkUltrawideRatio()
-  checkSplitWidth()
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', handleViewportResize)
   }
