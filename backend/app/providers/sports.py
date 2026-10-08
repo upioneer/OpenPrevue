@@ -1,10 +1,11 @@
 """Motorsport and major sports league event provider (Formula 1, NASCAR, IndyCar, MotoGP, NFL, NBA, MLB, MLS)."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any
 import httpx
 
 from backend.app.core.logging import logger
+from backend.app.core.timezone import resolve_app_timezone
 from backend.app.providers.base import BaseProvider, GeoPoint, RawEvent
 from backend.app.services.ingestion import calculate_haversine_distance
 
@@ -285,7 +286,9 @@ class SportsLeagueProvider(BaseProvider):
             return []
 
         events: list[RawEvent] = []
-        now = datetime.now(timezone.utc)
+        # Fixture days anchor to the declared local zone so schedule content
+        # flips at local midnight. Live ESPN absolutes are unaffected.
+        now = datetime.now(await resolve_app_timezone())
 
         # 1. Ingest live ESPN scoreboards with authentic kickoff/tipoff accuracy
         live_events = await self._fetch_live_espn_events(location, radius_miles)

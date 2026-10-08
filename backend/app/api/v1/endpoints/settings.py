@@ -7,7 +7,10 @@ from pydantic import BaseModel
 
 from backend.app.db.session import get_db
 from backend.app.services.ingestion import ingestion_service
-from backend.app.services.scheduler import reschedule_sync_interval
+from backend.app.services.scheduler import (
+    reschedule_midnight_sync,
+    reschedule_sync_interval,
+)
 from backend.app.services.weather import weather_service
 from backend.app.services.websocket import connection_manager
 
@@ -58,6 +61,13 @@ async def update_setting(key: str, payload: SettingUpdate) -> SettingItem:
         try:
             reschedule_sync_interval(int(payload.value))
         except ValueError:
+            pass
+
+    # Move the local-midnight rollover job when the declared timezone updates
+    if key == "timezone":
+        try:
+            reschedule_midnight_sync(payload.value)
+        except Exception:
             pass
 
     # Broadcast settings update to all active dashboard displays

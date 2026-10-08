@@ -193,6 +193,7 @@ export interface SystemSettings {
   vhs_tracking_noise: string
   color_palette?: string
   time_format: string
+  timezone?: string
   sync_interval_hours: string
   update_check_interval?: string
   auto_update_notifs?: string

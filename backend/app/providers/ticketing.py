@@ -1,7 +1,8 @@
 """Secondary ticketing market and promoter provider (Live Nation, Vivid Seats, StubHub, Viator)."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from backend.app.core.logging import logger
+from backend.app.core.timezone import resolve_app_timezone
 from backend.app.providers.base import BaseProvider, GeoPoint, RawEvent
 from backend.app.services.ingestion import calculate_haversine_distance
 
@@ -14,7 +15,9 @@ class SecondaryTicketingProvider(BaseProvider):
     async def fetch_events(self, location: GeoPoint, radius_miles: float) -> list[RawEvent]:
         """Fetch promoter and marketplace inventory filtered by location radius."""
         events: list[RawEvent] = []
-        now = datetime.now(timezone.utc)
+        # Fixture days anchor to the declared local zone so schedule content
+        # flips at local midnight instead of UTC midnight.
+        now = datetime.now(await resolve_app_timezone())
 
         listings = [
             # New Orleans Listings

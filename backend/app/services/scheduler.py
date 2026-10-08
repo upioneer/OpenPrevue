@@ -3,10 +3,12 @@
 import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.schedulers.base import STATE_RUNNING, STATE_STOPPED
+from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from backend.app.core.config import settings
 from backend.app.core.logging import logger
+from backend.app.core.timezone import resolve_app_timezone
 from backend.app.db.session import get_db
 from backend.app.providers.base import GeoPoint
 from backend.app.providers.registry import provider_registry
@@ -18,6 +20,7 @@ from backend.app.services.websocket import connection_manager
 
 scheduler = AsyncIOScheduler()
 JOB_ID_SYNC = "recurring_provider_sync"
+JOB_ID_MIDNIGHT_SYNC = "local_midnight_rollover_sync"
 JOB_ID_WEATHER = "recurring_weather_refresh"
 JOB_ID_EAS = "recurring_eas_poll"
 JOB_ID_UPDATES = "recurring_update_check"
@@ -120,6 +123,17 @@ async def start_scheduler() -> None:
         replace_existing=True,
     )
 
+    # Local-midnight rollover: re-slot fixture days within minutes of the flip
+    # instead of waiting for the next interval tick.
+    scheduler.add_job(
+        execute_scheduled_sync,
+        trigger=CronTrigger(
+            hour=0, minute=5, timezone=await resolve_app_timezone()
+        ),
+        id=JOB_ID_MIDNIGHT_SYNC,
+        replace_existing=True,
+    )
+
     scheduler.add_job(
         execute_scheduled_weather_refresh,
         trigger=IntervalTrigger(minutes=15),
@@ -165,6 +179,25 @@ def reschedule_sync_interval(interval_hours: int) -> None:
             JOB_ID_SYNC,
             trigger=IntervalTrigger(hours=interval_hours),
         )
+
+
+def reschedule_midnight_sync(tz_name: str) -> None:
+    """Move the local-midnight rollover job when the declared timezone updates."""
+    global scheduler
+    if not (scheduler.running and scheduler.get_job(JOB_ID_MIDNIGHT_SYNC)):
+        return
+    from zoneinfo import ZoneInfo
+
+    try:
+        zone = ZoneInfo((tz_name or "").strip())
+    except Exception:
+        logger.warning("Ignoring invalid timezone for midnight sync: %r", tz_name)
+        return
+    logger.info("Rescheduling midnight rollover sync to zone %s.", zone)
+    scheduler.reschedule_job(
+        JOB_ID_MIDNIGHT_SYNC,
+        trigger=CronTrigger(hour=0, minute=5, timezone=zone),
+    )
 
 
 async def shutdown_scheduler() -> None:

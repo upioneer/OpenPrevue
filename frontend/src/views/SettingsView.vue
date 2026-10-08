@@ -217,6 +217,20 @@
                 class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
               />
             </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-[#A0A0C0] block">
+                Display Timezone:
+                <span class="text-[#00FFFF] block text-[10px]">
+                  (IANA name, e.g. America/Chicago. Schedule days flip at local midnight. Must match the display device timezone.)
+                </span>
+              </label>
+              <input
+                v-model="form.timezone"
+                type="text"
+                class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#E0E0E0] focus:border-[#00FFFF] outline-none"
+              />
+            </div>
           </div>
 
           <div v-if="locationResolutionMsg" class="p-2 border text-xs" :class="locationResolutionIsError ? 'bg-[#330000] border-[#FF4444] text-[#FF8888]' : 'bg-[#003300] border-[#00FF00] text-[#00FF00] font-bold'">
@@ -4070,6 +4084,7 @@ const form = reactive<SystemSettings>({
   latitude: '40.7128',
   longitude: '-74.0060',
   radius_miles: '25',
+  timezone: 'America/New_York',
   autoscroll_speed: '30',
   grid_density: 'balanced',
   grid_filter_mode: 'active_only',

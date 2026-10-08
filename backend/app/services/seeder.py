@@ -14,6 +14,7 @@ DEFAULT_SETTINGS: dict[str, str] = {
     "latitude": str(settings.DEFAULT_LATITUDE),
     "longitude": str(settings.DEFAULT_LONGITUDE),
     "radius_miles": str(settings.DEFAULT_RADIUS_MILES),
+    "timezone": settings.TZ,
     "autoscroll_speed": "30",
     "grid_density": "balanced",
     "grid_filter_mode": "active_only",
