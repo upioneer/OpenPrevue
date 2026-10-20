@@ -34,55 +34,58 @@
           </div>
 
           <!-- Vertical Layout Format (Stacked Vertically on Portrait / Vertical Screens) -->
-          <div class="matchup-vertical-layout hidden flex-col items-center justify-between my-auto w-full px-1.5 py-1 space-y-1.5 flex-1 min-h-0">
-            <!-- Home Team Card -->
-            <div
-              class="flex items-center space-x-2.5 sm:space-x-3 w-full bg-[#000033]/90 border-2 px-2.5 py-1.5 rounded-xs shadow-md transition-transform hover:scale-[1.02]"
-              :style="{
-                borderColor: teamABranding?.secondaryColor || '#FFFF00',
-                boxShadow: `0 0 14px ${teamABranding?.secondaryColor || 'rgba(255,255,0,0.4)'}`
-              }"
-            >
+          <div class="matchup-vertical-layout hidden flex-col items-center justify-center w-full px-1.5 py-1 flex-1 min-h-0">
+            <!-- Top Half: Centered between top header and center divider -->
+            <div class="flex-1 w-full flex items-center justify-center min-h-0 py-1">
+              <!-- Home Team Card -->
               <div
-                class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-2 p-1.5 flex items-center justify-center font-black relative overflow-hidden shadow-lg shrink-0"
+                class="flex items-center space-x-2.5 sm:space-x-3 w-full bg-[#000033]/90 border-2 px-2.5 py-1.5 rounded-xs shadow-md transition-transform hover:scale-[1.02]"
                 :style="{
                   borderColor: teamABranding?.secondaryColor || '#FFFF00',
-                  backgroundColor: teamABranding?.primaryColor || '#000044'
+                  boxShadow: `0 0 14px ${teamABranding?.secondaryColor || 'rgba(255,255,0,0.4)'}`
                 }"
               >
-                <img
-                  v-if="teamABranding?.logoUrl && !teamALogoError"
-                  :src="teamABranding.logoUrl"
-                  :alt="teamABranding.name"
-                  referrerpolicy="no-referrer"
-                  class="w-full h-full object-contain drop-shadow"
-                  @error="teamALogoError = true"
-                />
                 <div
-                  v-else-if="teamABranding?.logoSvg"
-                  class="w-full h-full flex items-center justify-center p-0.5"
-                  v-html="teamABranding.logoSvg"
-                ></div>
-                <span
-                  v-else
-                  class="font-black text-sm sm:text-base tracking-wider"
-                  :style="{ color: teamABranding?.textColor || '#FFFFFF' }"
+                  class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-2 p-1.5 flex items-center justify-center font-black relative overflow-hidden shadow-lg shrink-0"
+                  :style="{
+                    borderColor: teamABranding?.secondaryColor || '#FFFF00',
+                    backgroundColor: teamABranding?.primaryColor || '#000044'
+                  }"
                 >
-                  {{ teamABranding?.shortName || matchupTeams.teamA.slice(0, 3).toUpperCase() }}
-                </span>
-              </div>
-              <div class="flex-1 min-w-0 text-left">
-                <span class="text-xs sm:text-sm md:text-base font-black text-[#FFFFFF] block truncate uppercase drop-shadow">
-                  {{ teamABranding?.name || matchupTeams.teamA }}
-                </span>
-                <span class="text-[10px] sm:text-xs text-[#FFFF00] font-black uppercase tracking-wider block">
-                  HOME FRANCHISE
-                </span>
+                  <img
+                    v-if="teamABranding?.logoUrl && !teamALogoError"
+                    :src="teamABranding.logoUrl"
+                    :alt="teamABranding.name"
+                    referrerpolicy="no-referrer"
+                    class="w-full h-full object-contain drop-shadow"
+                    @error="teamALogoError = true"
+                  />
+                  <div
+                    v-else-if="teamABranding?.logoSvg"
+                    class="w-full h-full flex items-center justify-center p-0.5"
+                    v-html="teamABranding.logoSvg"
+                  ></div>
+                  <span
+                    v-else
+                    class="font-black text-sm sm:text-base tracking-wider"
+                    :style="{ color: teamABranding?.textColor || '#FFFFFF' }"
+                  >
+                    {{ teamABranding?.shortName || matchupTeams.teamA.slice(0, 3).toUpperCase() }}
+                  </span>
+                </div>
+                <div class="flex-1 min-w-0 text-left">
+                  <span class="text-xs sm:text-sm md:text-base font-black text-[#FFFFFF] block truncate uppercase drop-shadow">
+                    {{ teamABranding?.name || matchupTeams.teamA }}
+                  </span>
+                  <span class="text-[10px] sm:text-xs text-[#FFFF00] font-black uppercase tracking-wider block">
+                    HOME FRANCHISE
+                  </span>
+                </div>
               </div>
             </div>
 
-            <!-- Prominent VS Lightning Divider Badge -->
-            <div class="flex items-center justify-center space-x-2 w-full shrink-0 py-0.5">
+            <!-- Prominent VS Lightning Divider Badge (Dead Center) -->
+            <div class="flex items-center justify-center space-x-2 w-full shrink-0 py-1">
               <div class="h-0.5 flex-1 bg-gradient-to-r from-transparent via-[#FF4444] to-[#FF4444]"></div>
               <div class="flex items-center space-x-1.5 px-3 py-0.5 bg-[#FF0000]/20 border border-[#FF4444] rounded-xs shadow-[0_0_10px_rgba(255,68,68,0.5)]">
                 <span class="font-black text-sm sm:text-base md:text-lg text-[#FF4444] animate-pulse drop-shadow-[0_0_8px_rgba(255,68,68,0.9)]">
@@ -93,49 +96,52 @@
               <div class="h-0.5 flex-1 bg-gradient-to-l from-transparent via-[#FF4444] to-[#FF4444]"></div>
             </div>
 
-            <!-- Away Team Card -->
-            <div
-              class="flex items-center space-x-2.5 sm:space-x-3 w-full bg-[#000033]/90 border-2 px-2.5 py-1.5 rounded-xs shadow-md transition-transform hover:scale-[1.02]"
-              :style="{
-                borderColor: teamBBranding?.secondaryColor || '#00FFFF',
-                boxShadow: `0 0 14px ${teamBBranding?.secondaryColor || 'rgba(0,255,255,0.4)'}`
-              }"
-            >
+            <!-- Bottom Half: Centered between center divider and bottom footer -->
+            <div class="flex-1 w-full flex items-center justify-center min-h-0 py-1">
+              <!-- Away Team Card -->
               <div
-                class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-2 p-1.5 flex items-center justify-center font-black relative overflow-hidden shadow-lg shrink-0"
+                class="flex items-center space-x-2.5 sm:space-x-3 w-full bg-[#000033]/90 border-2 px-2.5 py-1.5 rounded-xs shadow-md transition-transform hover:scale-[1.02]"
                 :style="{
                   borderColor: teamBBranding?.secondaryColor || '#00FFFF',
-                  backgroundColor: teamBBranding?.primaryColor || '#000044'
+                  boxShadow: `0 0 14px ${teamBBranding?.secondaryColor || 'rgba(0,255,255,0.4)'}`
                 }"
               >
-                <img
-                  v-if="teamBBranding?.logoUrl && !teamBLogoError"
-                  :src="teamBBranding.logoUrl"
-                  :alt="teamBBranding.name"
-                  referrerpolicy="no-referrer"
-                  class="w-full h-full object-contain drop-shadow"
-                  @error="teamBLogoError = true"
-                />
                 <div
-                  v-else-if="teamBBranding?.logoSvg"
-                  class="w-full h-full flex items-center justify-center p-0.5"
-                  v-html="teamBBranding.logoSvg"
-                ></div>
-                <span
-                  v-else
-                  class="font-black text-sm sm:text-base tracking-wider"
-                  :style="{ color: teamBBranding?.textColor || '#FFFFFF' }"
+                  class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-2 p-1.5 flex items-center justify-center font-black relative overflow-hidden shadow-lg shrink-0"
+                  :style="{
+                    borderColor: teamBBranding?.secondaryColor || '#00FFFF',
+                    backgroundColor: teamBBranding?.primaryColor || '#000044'
+                  }"
                 >
-                  {{ teamBBranding?.shortName || matchupTeams.teamB.slice(0, 3).toUpperCase() }}
-                </span>
-              </div>
-              <div class="flex-1 min-w-0 text-left">
-                <span class="text-xs sm:text-sm md:text-base font-black text-[#FFFFFF] block truncate uppercase drop-shadow">
-                  {{ teamBBranding?.name || matchupTeams.teamB }}
-                </span>
-                <span class="text-[10px] sm:text-xs text-[#00FFFF] font-black uppercase tracking-wider block">
-                  AWAY FRANCHISE
-                </span>
+                  <img
+                    v-if="teamBBranding?.logoUrl && !teamBLogoError"
+                    :src="teamBBranding.logoUrl"
+                    :alt="teamBBranding.name"
+                    referrerpolicy="no-referrer"
+                    class="w-full h-full object-contain drop-shadow"
+                    @error="teamBLogoError = true"
+                  />
+                  <div
+                    v-else-if="teamBBranding?.logoSvg"
+                    class="w-full h-full flex items-center justify-center p-0.5"
+                    v-html="teamBBranding.logoSvg"
+                  ></div>
+                  <span
+                    v-else
+                    class="font-black text-sm sm:text-base tracking-wider"
+                    :style="{ color: teamBBranding?.textColor || '#FFFFFF' }"
+                  >
+                    {{ teamBBranding?.shortName || matchupTeams.teamB.slice(0, 3).toUpperCase() }}
+                  </span>
+                </div>
+                <div class="flex-1 min-w-0 text-left">
+                  <span class="text-xs sm:text-sm md:text-base font-black text-[#FFFFFF] block truncate uppercase drop-shadow">
+                    {{ teamBBranding?.name || matchupTeams.teamB }}
+                  </span>
+                  <span class="text-[10px] sm:text-xs text-[#00FFFF] font-black uppercase tracking-wider block">
+                    AWAY FRANCHISE
+                  </span>
+                </div>
               </div>
             </div>
           </div>

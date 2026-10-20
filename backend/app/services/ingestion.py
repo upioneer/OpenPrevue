@@ -8,9 +8,25 @@ import aiosqlite
 from backend.app.core.circuit_breaker import circuit_registry
 from backend.app.core.config import settings
 from backend.app.core.logging import logger
+from backend.app.core.timezone import resolve_app_timezone
 from backend.app.db.session import get_db
 from backend.app.providers.base import BaseProvider, GeoPoint, RawEvent
 from backend.app.services.telegram.bot import telegram_service
+
+
+def normalize_timestamp_to_tz(value: str | None, tz) -> str | None:
+    """Normalize an ISO timestamp string to the declared application timezone."""
+    if not value:
+        return value
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=tz)
+        else:
+            parsed = parsed.astimezone(tz)
+        return parsed.isoformat()
+    except Exception:
+        return value
 
 
 def calculate_haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -154,6 +170,7 @@ class IngestionService:
 
         # Purge out-of-market or disabled sports events before syncing
         await self.purge_out_of_market_sports(center, radius, sports_mode)
+        await self.purge_legacy_undated_fixtures()
 
         total_inserted = 0
         total_updated = 0
@@ -167,6 +184,29 @@ class IngestionService:
             "events_inserted": total_inserted,
             "events_updated": total_updated,
         }
+
+    async def purge_legacy_undated_fixtures(self) -> int:
+        """Remove legacy undated sliding-offset fixture rows so only calendar-anchored rows remain."""
+        async with get_db() as db:
+            async with db.execute(
+                """
+                SELECT id FROM events
+                WHERE (
+                    source IN ('mock', 'secondary_ticketing')
+                    OR (source = 'sports_leagues' AND id NOT LIKE 'sports_leagues-espn-%')
+                )
+                  AND id NOT GLOB '*-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+                  AND COALESCE(has_ticket, 0) != 1
+                """
+            ) as cursor:
+                rows = await cursor.fetchall()
+            legacy_ids = [r["id"] for r in rows]
+            if legacy_ids:
+                placeholders = ",".join("?" for _ in legacy_ids)
+                await db.execute(f"DELETE FROM ticket_links WHERE event_id IN ({placeholders})", legacy_ids)
+                await db.execute(f"DELETE FROM events WHERE id IN ({placeholders})", legacy_ids)
+                await db.commit()
+        return len(legacy_ids)
 
     async def purge_out_of_market_sports(
         self,
@@ -324,9 +364,12 @@ class IngestionService:
         try:
             raw_events = await provider.fetch_events(center, radius_miles)
             events_fetched = len(raw_events)
+            app_tz = await resolve_app_timezone()
 
             async with get_db() as db:
                 for raw in raw_events:
+                    raw.start_time = normalize_timestamp_to_tz(raw.start_time, app_tz) or raw.start_time
+                    raw.end_time = normalize_timestamp_to_tz(raw.end_time, app_tz)
                     # Geo-filter if coordinates are provided (exempt custom travel wishlists which are explicitly curated trips)
                     if provider.provider_name != "travel_wishlist":
                         if raw.venue_latitude is not None and raw.venue_longitude is not None:

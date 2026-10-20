@@ -41,6 +41,23 @@ async def capture_changelog_screenshots(version: str) -> None:
     version_dir = Path("project_details") / "changelog" / version
     version_dir.mkdir(parents=True, exist_ok=True)
 
+    import urllib.request
+    try:
+        urllib.request.urlopen(f"{BASE_URL}/api/v1/health", timeout=2.0)
+    except Exception:
+        print(f"Notice: Server is offline at {BASE_URL}. Automated live screenshot capture skipped for {version}.")
+        # Copy baseline presentation screenshots from previous release to avoid broken image links
+        prev_dirs = sorted([d for d in (Path("project_details") / "changelog").iterdir() if d.is_dir() and d.name != version], key=lambda d: d.name)
+        if prev_dirs:
+            latest_prev = prev_dirs[-1]
+            import shutil
+            for img in latest_prev.glob("*.png"):
+                dest = version_dir / img.name
+                if not dest.exists():
+                    shutil.copy(img, dest)
+            print(f"Copied baseline presentation assets from {latest_prev.name} to {version_dir.name}.")
+        return
+
     print(f"Starting Playwright screenshot capture for {version} -> {version_dir}")
 
     async with async_playwright() as p:

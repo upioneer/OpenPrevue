@@ -18,6 +18,10 @@ class ApplyUpdateRequest(BaseModel):
 @router.get("/status")
 async def get_update_status() -> dict:
     """Fetch current system version, latest release version, and update status."""
+    if update_service.last_checked is None:
+        interval = await update_service.get_update_interval_setting()
+        if interval != "disabled":
+            await update_service.check_for_updates()
     return await update_service.get_status()
 
 

@@ -106,6 +106,45 @@
           </div>
         </div>
 
+        <!-- Recommended Terminal CLI Callout -->
+        <div class="bg-[#000022] border-2 border-[#00FFFF] p-3 space-y-2">
+          <div class="flex items-center justify-between border-b border-[#222255] pb-1">
+            <span class="text-xs font-black text-[#00FFFF] uppercase tracking-wider">
+              [ RECOMMENDED UPGRADE: HOST TERMINAL CLI ]
+            </span>
+            <span class="text-[10px] bg-[#003300] border border-[#00FF00] text-[#00FF00] px-2 py-0.2 font-bold uppercase">
+              SAFEST & MOST RELIABLE
+            </span>
+          </div>
+          <p class="text-[11px] text-[#A0A0C0] leading-relaxed">
+            Running upgrades via host CLI is strongly recommended. It eliminates container socket exposure, avoids process interruption mid-flight, and guarantees complete terminal rollback capability:
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px]">
+            <div class="bg-[#000011] p-2 border border-[#333366] flex flex-col justify-between space-y-1.5">
+              <span class="text-[#8888AA] font-bold">DOCKER COMPOSE:</span>
+              <code class="text-[#00FF00] font-mono text-[10px] select-all">docker compose pull && docker compose up -d</code>
+              <button
+                type="button"
+                @click="copySnippet('docker compose pull && docker compose up -d', 'docker')"
+                class="self-start text-[10px] text-[#FFFF00] hover:underline font-bold cursor-pointer"
+              >
+                [ {{ copiedSnippet === 'docker' ? 'COPIED TO CLIPBOARD' : 'COPY DOCKER COMMAND' }} ]
+              </button>
+            </div>
+            <div class="bg-[#000011] p-2 border border-[#333366] flex flex-col justify-between space-y-1.5">
+              <span class="text-[#8888AA] font-bold">GIT / BARE-METAL:</span>
+              <code class="text-[#00FF00] font-mono text-[10px] select-all">git pull origin main && npm --prefix frontend run build</code>
+              <button
+                type="button"
+                @click="copySnippet('git pull origin main && npm --prefix frontend run build', 'git')"
+                class="self-start text-[10px] text-[#FFFF00] hover:underline font-bold cursor-pointer"
+              >
+                [ {{ copiedSnippet === 'git' ? 'COPIED TO CLIPBOARD' : 'COPY GIT COMMAND' }} ]
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Multi-Step Progress Matrix -->
         <div class="bg-[#000022] border border-[#333366] p-3 space-y-2.5">
           <div class="flex items-center justify-between text-[11px]">
@@ -281,6 +320,21 @@ const currentStep = ref(1)
 const reloadCountdown = ref<number | null>(null)
 const logLines = ref<LogEntry[]>([])
 const terminalRef = ref<HTMLDivElement | null>(null)
+const copiedSnippet = ref<string | null>(null)
+let copySnippetTimer: ReturnType<typeof setTimeout> | null = null
+
+async function copySnippet(text: string, id: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    copiedSnippet.value = id
+    if (copySnippetTimer) clearTimeout(copySnippetTimer)
+    copySnippetTimer = setTimeout(() => {
+      copiedSnippet.value = null
+    }, 2500)
+  } catch {
+    // Ignore clipboard errors
+  }
+}
 
 // Retro Segmented LED Progress Bar State & Scanner Animation
 const totalSegments = 24
@@ -649,5 +703,10 @@ onMounted(() => {
   if (props.isOpen) {
     loadCapability()
   }
+})
+
+onUnmounted(() => {
+  if (copySnippetTimer) clearTimeout(copySnippetTimer)
+  stopScanner()
 })
 </script>

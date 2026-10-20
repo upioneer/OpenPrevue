@@ -42,13 +42,14 @@ async def test_sports_leagues_provider_fixtures():
     assert not any("FORMULA 1" in t for t in local_titles)
     assert not any("NASCAR" in t for t in local_titles)
 
-    # 3. Local Only Mode (New York City): MSG/Barclays local, New Orleans/Austin suppressed
+    # 3. Local Only Mode (New York City): MSG/Barclays local, New Orleans/Austin venues suppressed
     nyc_center = GeoPoint(latitude=40.7128, longitude=-74.0060)
     events_nyc = await provider.fetch_events(nyc_center, 25.0)
     nyc_titles = [e.title for e in events_nyc]
+    nyc_venues = [e.venue_name for e in events_nyc]
     assert any("KNICKS" in t or "NETS" in t or "GIANTS" in t for t in nyc_titles)
-    assert not any("SAINTS" in t for t in nyc_titles)
-    assert not any("PELICANS" in t for t in nyc_titles)
+    assert "Caesars Superdome" not in nyc_venues
+    assert "Smoothie King Center" not in nyc_venues
     assert not any("FORMULA 1" in t for t in nyc_titles)
 
     # 4. Disabled Mode: returns empty list

@@ -1,88 +1,98 @@
-"""Mock event ingestion provider with realistic, dynamically location-anchored listings."""
+"""Mock event ingestion provider with realistic, calendar-anchored listings."""
 
-from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta
+from backend.app.core.timezone import resolve_app_timezone
 from backend.app.providers.base import BaseProvider, GeoPoint, RawEvent
 
 
 class MockEventProvider(BaseProvider):
-    """Mock event provider generating realistic, time-anchored event listings dynamically matched to location."""
+    """Mock event provider generating realistic, calendar-anchored event listings dynamically matched to location."""
 
     provider_name: str = "mock"
 
     async def fetch_events(self, location: GeoPoint, radius_miles: float) -> list[RawEvent]:
-        """Generate mock events relative to current timestamp and target coordinates."""
-        # Determine if target coordinates match New York City or another metro
+        """Generate mock events anchored to explicit calendar dates in the declared timezone."""
         is_nyc = abs(location.latitude - 40.7128) < 1.0 and abs(location.longitude - (-74.0060)) < 1.0
         is_nola = abs(location.latitude - 29.9511) < 1.0 and abs(location.longitude - (-90.0715)) < 1.0
 
-        tz = ZoneInfo("America/Chicago" if is_nola else ("America/New_York" if is_nyc else "UTC"))
-        now_local = datetime.now(tz)
-        today = now_local.date()
+        tz = await resolve_app_timezone()
+        today = datetime.now(tz).date()
 
-        # Build dates relative to today
-        t_today_2pm = datetime(today.year, today.month, today.day, 14, 0, tzinfo=tz)
-        t_today_7pm = datetime(today.year, today.month, today.day, 19, 0, tzinfo=tz)
-        t_today_8pm = datetime(today.year, today.month, today.day, 20, 0, tzinfo=tz)
-        t_today_9pm = datetime(today.year, today.month, today.day, 21, 0, tzinfo=tz)
+        def cal_dt(day_offset: int, hour: int) -> tuple[str, datetime]:
+            d = today + timedelta(days=day_offset)
+            return d.isoformat(), datetime(d.year, d.month, d.day, hour, 0, tzinfo=tz)
 
-        d_tomorrow = today + timedelta(days=1)
-        t_tom_8pm = datetime(d_tomorrow.year, d_tomorrow.month, d_tomorrow.day, 20, 0, tzinfo=tz)
-
-        d_in2days = today + timedelta(days=2)
-        t_in2_8pm = datetime(d_in2days.year, d_in2days.month, d_in2days.day, 20, 0, tzinfo=tz)
-
-        d_sunday = today + timedelta(days=(6 - today.weekday()) % 7)
-        if d_sunday == today:
-            d_sunday = today + timedelta(days=7)
-        t_sun_12pm = datetime(d_sunday.year, d_sunday.month, d_sunday.day, 12, 0, tzinfo=tz)
+        days_to_sunday = (6 - today.weekday()) % 7
 
         if is_nola:
             city = "New Orleans"
             state = "LA"
             postal = "70112"
-            venues = [
-                ("Caesars Superdome", "1500 Sugar Bowl Dr", 29.9511, -90.0812, "NFL: New Orleans Saints vs Atlanta Falcons", "sports", t_sun_12pm, 75.0, 420.0, 1, "https://www.neworleanssaints.com/tickets"),
-                ("The Fillmore New Orleans", "6 Canal St", 29.9502, -90.0638, "Khruangbin: A La Sala World Tour", "music", t_today_8pm, 65.0, 165.0, 1, "https://www.fillmorenola.com/events"),
-                ("Tipitina's", "501 Napoleon Ave", 29.9182, -90.1011, "Galactic: Live Uptown Funk Showcase", "music", t_today_9pm, 35.0, 65.0, 1, "https://www.tipitinas.com"),
-                ("Saenger Theatre", "1111 Canal St", 29.9548, -90.0722, "Wicked: Broadway Landmark Musical", "theater", t_today_2pm, 79.0, 245.0, 0, "https://www.saengernola.com/events"),
-                ("Preservation Hall", "726 St Peter", 29.9584, -90.0655, "Preservation Hall Jazz All-Stars", "music", t_today_7pm, 30.0, 50.0, 0, "https://www.preservationhall.com"),
-                ("Joy Theater", "1200 Canal St", 29.9555, -90.0735, "French Quarter Comedy Showcase", "comedy", t_in2_8pm, 25.0, 40.0, 0, "https://thejoytheater.com"),
+            schedule = [
+                # Today (day_offset = 0)
+                ("Saenger Theatre", "1111 Canal St", 29.9548, -90.0722, "Wicked: Broadway Landmark Musical", "theater", 0, 14, 79.0, 245.0, 0, "https://www.saengernola.com/events"),
+                ("Preservation Hall", "726 St Peter", 29.9584, -90.0655, "Preservation Hall Jazz All-Stars", "music", 0, 19, 30.0, 50.0, 0, "https://www.preservationhall.com"),
+                ("The Fillmore New Orleans", "6 Canal St", 29.9502, -90.0638, "Khruangbin: A La Sala World Tour", "music", 0, 20, 65.0, 165.0, 1, "https://www.fillmorenola.com/events"),
+                ("Tipitina's", "501 Napoleon Ave", 29.9182, -90.1011, "Galactic: Live Uptown Funk Showcase", "music", 0, 21, 35.0, 65.0, 1, "https://www.tipitinas.com"),
+                # Tomorrow (day_offset = 1)
+                ("Saenger Theatre", "1111 Canal St", 29.9548, -90.0722, "Wicked: Broadway Evening Performance", "theater", 1, 19, 79.0, 245.0, 0, "https://www.saengernola.com/events"),
+                ("Preservation Hall", "726 St Peter", 29.9584, -90.0655, "Traditional Acoustic Brass Sessions", "music", 1, 19, 30.0, 50.0, 0, "https://www.preservationhall.com"),
+                ("Joy Theater", "1200 Canal St", 29.9555, -90.0735, "French Quarter Comedy Showcase", "comedy", 1, 20, 25.0, 40.0, 0, "https://thejoytheater.com"),
+                ("Tipitina's", "501 Napoleon Ave", 29.9182, -90.1011, "Rebirth Brass Band: Uptown Residency", "music", 1, 21, 30.0, 55.0, 1, "https://www.tipitinas.com"),
+                # Day +2 (day_offset = 2)
+                ("Joy Theater", "1200 Canal St", 29.9555, -90.0735, "Canal Street Late Night Standup", "comedy", 2, 20, 25.0, 40.0, 0, "https://thejoytheater.com"),
+                ("The Fillmore New Orleans", "6 Canal St", 29.9502, -90.0638, "Trombone Shorty & Orleans Avenue", "music", 2, 20, 55.0, 145.0, 1, "https://www.fillmorenola.com/events"),
+                # Upcoming Sunday NFL Anchor
+                ("Caesars Superdome", "1500 Sugar Bowl Dr", 29.9511, -90.0812, "NFL: New Orleans Saints vs Atlanta Falcons", "sports", days_to_sunday, 12, 75.0, 420.0, 1, "https://www.neworleanssaints.com/tickets"),
             ]
         elif is_nyc:
             city = "New York"
             state = "NY"
             postal = "10001"
-            venues = [
-                ("Madison Square Garden", "4 Pennsylvania Plaza", 40.7505, -73.9934, "NBA: New York Knicks vs Boston Celtics", "sports", t_sun_12pm, 85.0, 450.0, 1, "https://www.msg.com/madison-square-garden"),
-                ("Radio City Music Hall", "1260 6th Ave", 40.7599, -73.9799, "Khruangbin: A La Sala World Tour", "music", t_today_8pm, 65.0, 165.0, 1, "https://www.msg.com/radio-city-music-hall"),
-                ("Brooklyn Steel", "319 Frost St", 40.7193, -73.9388, "Japanese Breakfast: Live in Williamsburg", "music", t_today_9pm, 35.0, 75.0, 1, "https://www.bowerypresents.com/brooklyn-steel"),
-                ("Beacon Theatre", "2124 Broadway", 40.7806, -73.9813, "Trey Anastasio: Solo Acoustic Residency", "music", t_tom_8pm, 55.0, 140.0, 0, "https://www.msg.com/beacon-theatre"),
-                ("Gershwin Theatre", "222 W 51st St", 40.7624, -73.9851, "Wicked: Broadway Landmark Musical", "theater", t_today_2pm, 79.0, 245.0, 0, "https://wickedthemusical.com"),
-                ("Blue Note Jazz Club", "131 W 3rd St", 40.7308, -74.0006, "Ron Carter Quintet: Greenwich Village Sets", "music", t_today_7pm, 30.0, 55.0, 0, "https://www.bluenotejazz.com/nyc"),
-                ("Comedy Cellar", "117 MacDougal St", 40.7300, -74.0002, "MacDougal Street Standup Showcase", "comedy", t_in2_8pm, 25.0, 35.0, 0, "https://www.comedycellar.com"),
+            schedule = [
+                # Today (day_offset = 0)
+                ("Gershwin Theatre", "222 W 51st St", 40.7624, -73.9851, "Wicked: Broadway Landmark Musical", "theater", 0, 14, 79.0, 245.0, 0, "https://wickedthemusical.com"),
+                ("Blue Note Jazz Club", "131 W 3rd St", 40.7308, -74.0006, "Ron Carter Quintet: Greenwich Village Sets", "music", 0, 19, 30.0, 55.0, 0, "https://www.bluenotejazz.com/nyc"),
+                ("Radio City Music Hall", "1260 6th Ave", 40.7599, -73.9799, "Khruangbin: A La Sala World Tour", "music", 0, 20, 65.0, 165.0, 1, "https://www.msg.com/radio-city-music-hall"),
+                ("Brooklyn Steel", "319 Frost St", 40.7193, -73.9388, "Japanese Breakfast: Live in Williamsburg", "music", 0, 21, 35.0, 75.0, 1, "https://www.bowerypresents.com/brooklyn-steel"),
+                # Tomorrow (day_offset = 1)
+                ("Gershwin Theatre", "222 W 51st St", 40.7624, -73.9851, "Wicked: Broadway Evening Performance", "theater", 1, 19, 79.0, 245.0, 0, "https://wickedthemusical.com"),
+                ("Beacon Theatre", "2124 Broadway", 40.7806, -73.9813, "Trey Anastasio: Solo Acoustic Residency", "music", 1, 20, 55.0, 140.0, 1, "https://www.msg.com/beacon-theatre"),
+                ("Comedy Cellar", "117 MacDougal St", 40.7300, -74.0002, "MacDougal Street Standup Showcase", "comedy", 1, 20, 25.0, 35.0, 0, "https://www.comedycellar.com"),
+                # Day +2 (day_offset = 2)
+                ("Comedy Cellar", "117 MacDougal St", 40.7300, -74.0002, "Village Underground Late Night Showcase", "comedy", 2, 20, 25.0, 35.0, 0, "https://www.comedycellar.com"),
+                # Upcoming Sunday NBA Anchor
+                ("Madison Square Garden", "4 Pennsylvania Plaza", 40.7505, -73.9934, "NBA: New York Knicks vs Boston Celtics", "sports", days_to_sunday, 12, 85.0, 450.0, 1, "https://www.msg.com/madison-square-garden"),
             ]
         else:
-            # Generic local anchoring around target lat/lon
             city = "Local Metro"
             state = "US"
             postal = "00000"
             lat = location.latitude
             lon = location.longitude
-            venues = [
-                ("Metro Arena", "100 Arena Way", lat + 0.01, lon + 0.01, "Pro Basketball: Home Showdown", "sports", t_sun_12pm, 45.0, 250.0, 1, "https://www.nba.com/tickets"),
-                ("Grand City Theatre", "250 Main St", lat - 0.01, lon - 0.01, "Headliner Live Concert Tour", "music", t_today_8pm, 55.0, 150.0, 1, "https://www.ticketmaster.com"),
-                ("Downtown Concert Hall", "500 Center Ave", lat + 0.015, lon - 0.01, "Symphony Orchestra Gala", "music", t_today_7pm, 40.0, 95.0, 1, "https://www.ticketmaster.com"),
-                ("Civic Center Playhouse", "700 Civic Blvd", lat - 0.015, lon + 0.01, "Broadway Touring Musical", "theater", t_today_2pm, 65.0, 180.0, 0, "https://www.broadway.org"),
-                ("The Underground Club", "42 Arts District", lat + 0.005, lon - 0.005, "Standup Comedy Headliners", "comedy", t_in2_8pm, 25.0, 45.0, 0, "https://www.ticketmaster.com"),
+            schedule = [
+                # Today (day_offset = 0)
+                ("Civic Center Playhouse", "700 Civic Blvd", lat - 0.015, lon + 0.01, "Broadway Touring Musical", "theater", 0, 14, 65.0, 180.0, 0, "https://www.broadway.org"),
+                ("Downtown Concert Hall", "500 Center Ave", lat + 0.015, lon - 0.01, "Symphony Orchestra Gala", "music", 0, 19, 40.0, 95.0, 1, "https://www.ticketmaster.com"),
+                ("Grand City Theatre", "250 Main St", lat - 0.01, lon - 0.01, "Headliner Live Concert Tour", "music", 0, 20, 55.0, 150.0, 1, "https://www.ticketmaster.com"),
+                # Tomorrow (day_offset = 1)
+                ("Civic Center Playhouse", "700 Civic Blvd", lat - 0.015, lon + 0.01, "Broadway Touring Evening Show", "theater", 1, 19, 65.0, 180.0, 0, "https://www.broadway.org"),
+                ("The Underground Club", "42 Arts District", lat + 0.005, lon - 0.005, "Standup Comedy Headliners", "comedy", 1, 20, 25.0, 45.0, 0, "https://www.ticketmaster.com"),
+                ("Grand City Theatre", "250 Main St", lat - 0.01, lon - 0.01, "Indie Rock Showcase", "music", 1, 20, 45.0, 110.0, 1, "https://www.ticketmaster.com"),
+                # Day +2 (day_offset = 2)
+                ("The Underground Club", "42 Arts District", lat + 0.005, lon - 0.005, "Late Night Improv & Standup", "comedy", 2, 20, 25.0, 45.0, 0, "https://www.ticketmaster.com"),
+                # Upcoming Sunday Sports Anchor
+                ("Metro Arena", "100 Arena Way", lat + 0.01, lon + 0.01, "Pro Basketball: Home Showdown", "sports", days_to_sunday, 12, 45.0, 250.0, 1, "https://www.nba.com/tickets"),
             ]
 
         mock_raw_data: list[RawEvent] = []
-        for v_name, v_addr, v_lat, v_lon, title, cat, st_time, p_min, p_max, is_feat, t_url in venues:
+        for v_name, v_addr, v_lat, v_lon, title, cat, day_off, hour, p_min, p_max, is_feat, t_url in schedule:
+            date_key, st_time = cal_dt(day_off, hour)
+            venue_slug = v_name.lower().replace("'", "").replace(" ", "-")
             mock_raw_data.append(
                 RawEvent(
                     source="mock",
-                    source_event_id=f"mock-{v_name.lower().replace(' ', '-')}",
+                    source_event_id=f"mock-{venue_slug}-{date_key}",
                     venue_name=v_name,
                     venue_address=v_addr,
                     venue_city=city,

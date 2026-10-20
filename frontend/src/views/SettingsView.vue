@@ -2957,10 +2957,10 @@
                 v-model="form.update_check_interval"
                 class="w-full bg-[#000022] border border-[#333366] px-2 py-1 text-xs text-[#FFFF00] focus:border-[#00FFFF] outline-none"
               >
-                <option value="disabled">Disabled (Default: Zero External Network Calls)</option>
-                <option value="weekly">Weekly Check (Recommended for Homelab Deployments)</option>
-                <option value="daily">Daily Check (Ultra Low Bandwidth)</option>
+                <option value="weekly">Weekly Check (Recommended: Low Bandwidth, 6-hr Cached)</option>
+                <option value="daily">Daily Check (Frequent Check)</option>
                 <option value="on_boot">Check on Server Startup Only</option>
+                <option value="disabled">Disabled (Zero Outbound Calls)</option>
               </select>
             </div>
           </div>

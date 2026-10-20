@@ -76,6 +76,7 @@
             :day-columns="gridDayColumns"
             :pause-duration-seconds="pauseDurationSeconds"
             :page-interval-seconds="pageIntervalSeconds"
+            :timezone="settings?.timezone || ''"
             @ticket-toggled="handleTicketToggled"
           />
         </div>
@@ -146,6 +147,7 @@
               :day-columns="gridDayColumns"
               :pause-duration-seconds="pauseDurationSeconds"
               :page-interval-seconds="pageIntervalSeconds"
+              :timezone="settings?.timezone || ''"
               @ticket-toggled="handleTicketToggled"
             />
           </div>
@@ -173,6 +175,7 @@
             :day-columns="gridDayColumns"
             :pause-duration-seconds="pauseDurationSeconds"
             :page-interval-seconds="pageIntervalSeconds"
+            :timezone="settings?.timezone || ''"
             @ticket-toggled="handleTicketToggled"
           />
         </div>
@@ -259,6 +262,7 @@
           :day-columns="gridDayColumns"
           :pause-duration-seconds="pauseDurationSeconds"
           :page-interval-seconds="pageIntervalSeconds"
+          :timezone="settings?.timezone || ''"
           @ticket-toggled="handleTicketToggled"
         />
       </div>

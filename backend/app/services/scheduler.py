@@ -31,29 +31,9 @@ async def execute_scheduled_sync() -> None:
     logger.info("Executing scheduled recurring ingestion synchronization...")
 
     try:
-        async with get_db() as db:
-            async with db.execute(
-                "SELECT key, value FROM settings WHERE key IN ('latitude', 'longitude', 'radius_miles')"
-            ) as cursor:
-                rows = await cursor.fetchall()
-                settings_map = {row["key"]: row["value"] for row in rows}
-
-        lat = float(settings_map.get("latitude", settings.DEFAULT_LATITUDE))
-        lon = float(settings_map.get("longitude", settings.DEFAULT_LONGITUDE))
-        radius = float(settings_map.get("radius_miles", settings.DEFAULT_RADIUS_MILES))
-
-        center = GeoPoint(latitude=lat, longitude=lon)
-
-        for provider in provider_registry.get_all():
-            try:
-                res = await ingestion_service.sync_provider(provider, center, radius)
-                logger.info("Scheduled sync result for [%s]: %s", provider.provider_name, res.get("status"))
-                await connection_manager.broadcast(
-                    "events_updated", {"provider": provider.provider_name, "status": res.get("status")}
-                )
-            except Exception as exc:
-                logger.error("Error during scheduled sync for [%s]: %s", provider.provider_name, exc)
-
+        res = await ingestion_service.sync_all_registered_providers()
+        logger.info("Scheduled sync completed: %s", res)
+        await connection_manager.broadcast("events_updated", res)
     except Exception as exc:
         logger.error("Scheduled sync job failed: %s", exc, exc_info=True)
 

@@ -79,3 +79,36 @@ async def test_sports_fixtures_anchor_to_declared_zone():
             )
     finally:
         await _set_timezone(settings.TZ)
+
+
+@pytest.mark.asyncio
+async def test_calendar_based_today_and_tomorrow_coverage():
+    """Verify calendar-based providers populate both Today and Tomorrow in the declared timezone."""
+    from datetime import datetime, timedelta
+    from backend.app.providers.mock import MockEventProvider
+
+    await init_db()
+    await _set_timezone("America/Chicago")
+    try:
+        tz = await resolve_app_timezone()
+        today_str = datetime.now(tz).date().isoformat()
+        tomorrow_str = (datetime.now(tz).date() + timedelta(days=1)).isoformat()
+
+        slidell_center = GeoPoint(latitude=30.2784, longitude=-89.7712)
+        mock_events = await MockEventProvider().fetch_events(slidell_center, 100.0)
+        ticketing_events = await SecondaryTicketingProvider().fetch_events(slidell_center, 100.0)
+
+        mock_dates = {e.start_time[:10] for e in mock_events}
+        ticketing_dates = {e.start_time[:10] for e in ticketing_events}
+
+        assert today_str in mock_dates
+        assert tomorrow_str in mock_dates
+        assert today_str in ticketing_dates
+        assert tomorrow_str in ticketing_dates
+
+        for e in mock_events:
+            assert e.source_event_id.endswith(e.start_time[:10])
+        for e in ticketing_events:
+            assert e.source_event_id.endswith(e.start_time[:10])
+    finally:
+        await _set_timezone(settings.TZ)

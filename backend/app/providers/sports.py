@@ -290,15 +290,18 @@ class SportsLeagueProvider(BaseProvider):
         # flips at local midnight. Live ESPN absolutes are unaffected.
         now = datetime.now(await resolve_app_timezone())
 
-        # 1. Ingest live ESPN scoreboards with authentic kickoff/tipoff accuracy
-        live_events = await self._fetch_live_espn_events(location, radius_miles)
+        # 1. Ingest live ESPN scoreboards across the 7-day local calendar window
+        live_events = await self._fetch_live_espn_events(location, radius_miles, now=now)
         if live_events:
             events.extend(live_events)
             logger.info("SportsLeagueProvider loaded %d live events from official league scoreboards.", len(live_events))
 
         # 2. Add canonical motorsport broadcasts (F1, NASCAR, IndyCar, MotoGP) and regional fixtures
         existing_keys = {self._canonical_match_key(e.title, e.venue_name) for e in events}
-        calendar_fixtures = self._get_calendar_fixtures(now, location, radius_miles, existing_keys)
+        existing_venue_dates = {(e.venue_name.lower(), e.start_time[:10]) for e in events if e.start_time}
+        calendar_fixtures = self._get_calendar_fixtures(
+            now, location, radius_miles, existing_keys, existing_venue_dates
+        )
         events.extend(calendar_fixtures)
 
         logger.info(
@@ -316,8 +319,13 @@ class SportsLeagueProvider(BaseProvider):
         clean_title = title.lower().replace("nfl:", "").replace("nba:", "").replace("mlb:", "").replace("mls:", "").strip()
         return f"{venue_name.lower()}:{clean_title}"
 
-    async def _fetch_live_espn_events(self, location: GeoPoint, radius_miles: float) -> list[RawEvent]:
-        """Query official public unauthenticated ESPN scoreboard feeds for live schedule accuracy."""
+    async def _fetch_live_espn_events(
+        self,
+        location: GeoPoint,
+        radius_miles: float,
+        now: datetime | None = None,
+    ) -> list[RawEvent]:
+        """Query official public unauthenticated ESPN scoreboard feeds across the 7-day calendar window."""
         endpoints = [
             ("NFL", "football/nfl"),
             ("NBA", "basketball/nba"),
@@ -325,93 +333,110 @@ class SportsLeagueProvider(BaseProvider):
             ("MLS", "soccer/usa.1"),
         ]
         results: list[RawEvent] = []
+        anchor = now or datetime.now(await resolve_app_timezone())
+        today_param = anchor.strftime("%Y%m%d")
+        tomorrow_param = (anchor + timedelta(days=1)).strftime("%Y%m%d")
 
         async with httpx.AsyncClient(timeout=4.0) as client:
             for league, path in endpoints:
-                url = f"https://site.api.espn.com/apis/site/v2/sports/{path}/scoreboard"
-                try:
-                    resp = await client.get(url, headers={"User-Agent": "OpenPrevue/1.0"})
-                    if resp.status_code != 200:
-                        continue
-                    data = resp.json()
-                    raw_items = data.get("events", [])
-                    for item in raw_items:
-                        comp = item.get("competitions", [{}])[0]
-                        venue_dict = comp.get("venue", {})
-                        raw_venue_name = venue_dict.get("fullName") or "Arena / Stadium"
-                        address_dict = venue_dict.get("address", {})
-                        raw_city = address_dict.get("city") or "Metro"
-                        raw_state = address_dict.get("state") or "US"
-
-                        # Resolve coordinates via comprehensive stadium and city dictionary
-                        lat, lon, city, state, postal = self.resolve_venue_location(raw_venue_name, raw_city, raw_state)
-                        venue_name = raw_venue_name
-
-                        # Distance filtering logic based on coverage_mode
-                        if lat is not None and lon is not None:
-                            dist = calculate_haversine_distance(location.latitude, location.longitude, lat, lon)
-                            if self.coverage_mode == "local_only" and dist > radius_miles:
-                                # Out of market stadium: suppress from local guide
-                                continue
-                            is_national = dist > radius_miles
-                        else:
-                            # Coordinates could not be resolved
-                            if self.coverage_mode == "local_only":
-                                # In local_only mode, unconfirmed locations cannot be assumed local
-                                logger.debug("Skipping unverified sports venue in local_only mode: %s", raw_venue_name)
-                                continue
-                            is_national = True
-
-                        # Competitors formatting
-                        competitors = comp.get("competitors", [])
-                        if len(competitors) >= 2:
-                            home_team = next((c["team"]["displayName"] for c in competitors if c.get("homeAway") == "home"), competitors[0]["team"]["displayName"])
-                            away_team = next((c["team"]["displayName"] for c in competitors if c.get("homeAway") == "away"), competitors[1]["team"]["displayName"])
-                            event_title = f"{league}: {home_team.upper()} VS {away_team.upper()}"
-                        else:
-                            event_title = f"{league}: {item.get('name', 'Live Game').upper()}"
-
-                        # Start and end ISO timestamps directly from league feed
-                        start_iso = item.get("date")
-                        if not start_iso:
+                # NFL bare scoreboard returns the full week's slate; daily leagues query Today + Tomorrow calendar dates
+                urls = (
+                    [f"https://site.api.espn.com/apis/site/v2/sports/{path}/scoreboard"]
+                    if league == "NFL"
+                    else [
+                        f"https://site.api.espn.com/apis/site/v2/sports/{path}/scoreboard?dates={today_param}",
+                        f"https://site.api.espn.com/apis/site/v2/sports/{path}/scoreboard?dates={tomorrow_param}",
+                    ]
+                )
+                for url in urls:
+                    try:
+                        resp = await client.get(url, headers={"User-Agent": "OpenPrevue/1.0"})
+                        if resp.status_code != 200:
                             continue
-                        try:
-                            start_dt = datetime.fromisoformat(start_iso.replace("Z", "+00:00"))
-                            end_iso = (start_dt + timedelta(hours=3)).isoformat()
-                        except ValueError:
-                            end_iso = None
+                        data = resp.json()
+                        raw_items = data.get("events", [])
+                        for item in raw_items:
+                            comp = item.get("competitions", [{}])[0]
+                            venue_dict = comp.get("venue", {})
+                            raw_venue_name = venue_dict.get("fullName") or "Arena / Stadium"
+                            address_dict = venue_dict.get("address", {})
+                            raw_city = address_dict.get("city") or "Metro"
+                            raw_state = address_dict.get("state") or "US"
 
-                        # Ticket URL fallback
-                        ticket_url = "https://www.espn.com"
-                        tickets = comp.get("tickets", [])
-                        if tickets and tickets[0].get("links"):
-                            ticket_url = tickets[0]["links"][0].get("href", ticket_url)
+                            # Resolve coordinates via comprehensive stadium and city dictionary
+                            lat, lon, city, state, postal = self.resolve_venue_location(raw_venue_name, raw_city, raw_state)
+                            venue_name = raw_venue_name
 
-                        results.append(
-                            RawEvent(
-                                source="sports_leagues",
-                                source_event_id=f"espn-{league.lower()}-{item.get('id', start_iso)}",
-                                venue_name=venue_name,
-                                venue_address=address_dict.get("address", None),
-                                venue_city=city,
-                                venue_state=state,
-                                venue_postal_code=postal,
-                                venue_latitude=lat,
-                                venue_longitude=lon,
-                                title=event_title,
-                                description=f"Official {league} regular season/playoff live broadcast.",
-                                category="sports",
-                                start_time=start_iso,
-                                end_time=end_iso,
-                                price_min=45.0,
-                                price_max=350.0,
-                                currency="USD",
-                                ticket_url=ticket_url,
-                                is_featured=1 if is_national else 0,
+                            # Distance filtering logic based on coverage_mode
+                            if lat is not None and lon is not None:
+                                dist = calculate_haversine_distance(location.latitude, location.longitude, lat, lon)
+                                if self.coverage_mode == "local_only" and dist > radius_miles:
+                                    # Out of market stadium: suppress from local guide
+                                    continue
+                                is_national = dist > radius_miles
+                            else:
+                                # Coordinates could not be resolved
+                                if self.coverage_mode == "local_only":
+                                    # In local_only mode, unconfirmed locations cannot be assumed local
+                                    logger.debug("Skipping unverified sports venue in local_only mode: %s", raw_venue_name)
+                                    continue
+                                is_national = True
+
+                            # Competitors formatting
+                            competitors = comp.get("competitors", [])
+                            if len(competitors) >= 2:
+                                home_team = next((c["team"]["displayName"] for c in competitors if c.get("homeAway") == "home"), competitors[0]["team"]["displayName"])
+                                away_team = next((c["team"]["displayName"] for c in competitors if c.get("homeAway") == "away"), competitors[1]["team"]["displayName"])
+                                event_title = f"{league}: {home_team.upper()} VS {away_team.upper()}"
+                            else:
+                                event_title = f"{league}: {item.get('name', 'Live Game').upper()}"
+
+                            # Start and end ISO timestamps normalized to the declared local timezone
+                            start_iso = item.get("date")
+                            if not start_iso:
+                                continue
+                            try:
+                                start_dt = datetime.fromisoformat(start_iso.replace("Z", "+00:00"))
+                                if anchor.tzinfo is not None:
+                                    start_dt = start_dt.astimezone(anchor.tzinfo)
+                                if start_dt.date() < anchor.date():
+                                    continue
+                                start_iso = start_dt.isoformat()
+                                end_iso = (start_dt + timedelta(hours=3)).isoformat()
+                            except ValueError:
+                                end_iso = None
+
+                            # Ticket URL fallback
+                            ticket_url = "https://www.espn.com"
+                            tickets = comp.get("tickets", [])
+                            if tickets and tickets[0].get("links"):
+                                ticket_url = tickets[0]["links"][0].get("href", ticket_url)
+
+                            results.append(
+                                RawEvent(
+                                    source="sports_leagues",
+                                    source_event_id=f"espn-{league.lower()}-{item.get('id', start_iso)}",
+                                    venue_name=venue_name,
+                                    venue_address=address_dict.get("address", None),
+                                    venue_city=city,
+                                    venue_state=state,
+                                    venue_postal_code=postal,
+                                    venue_latitude=lat,
+                                    venue_longitude=lon,
+                                    title=event_title,
+                                    description=f"Official {league} regular season/playoff live broadcast.",
+                                    category="sports",
+                                    start_time=start_iso,
+                                    end_time=end_iso,
+                                    price_min=45.0,
+                                    price_max=350.0,
+                                    currency="USD",
+                                    ticket_url=ticket_url,
+                                    is_featured=1 if is_national else 0,
+                                )
                             )
-                        )
-                except Exception as ex:
-                    logger.debug("Live ESPN feed for %s skipped: %s", league, ex)
+                    except Exception as ex:
+                        logger.debug("Live ESPN feed for %s skipped: %s", league, ex)
 
         return results
 
@@ -421,6 +446,7 @@ class SportsLeagueProvider(BaseProvider):
         location: GeoPoint,
         radius_miles: float,
         existing_keys: set[str],
+        existing_venue_dates: set[tuple[str, str]] | None = None,
     ) -> list[RawEvent]:
         """Provide verified motorsport broadcasts and regional fallback fixtures with anchor days."""
         weekday = now.weekday()  # Monday=0, Sunday=6
@@ -541,7 +567,7 @@ class SportsLeagueProvider(BaseProvider):
                 "postal": "70113",
                 "lat": 29.9490,
                 "lon": -90.0821,
-                "days_offset": days_to_saturday,
+                "days_offset": 1,
                 "hour": 19,
                 "price_min": 45.0,
                 "price_max": 380.0,
@@ -579,7 +605,7 @@ class SportsLeagueProvider(BaseProvider):
                 "postal": "11217",
                 "lat": 40.6826,
                 "lon": -73.9754,
-                "days_offset": days_to_sunday,
+                "days_offset": 1,
                 "hour": 19,
                 "price_min": 45.0,
                 "price_max": 320.0,
@@ -643,13 +669,16 @@ class SportsLeagueProvider(BaseProvider):
 
             event_date = now + timedelta(days=fix["days_offset"])
             event_dt = event_date.replace(hour=fix["hour"], minute=0, second=0, microsecond=0)
+            date_key = event_dt.date().isoformat()
+            if existing_venue_dates and (fix["venue_name"].lower(), date_key) in existing_venue_dates:
+                continue
             iso_start = event_dt.isoformat()
             iso_end = (event_dt + timedelta(hours=3)).isoformat()
 
             is_national = dist > radius_miles
             raw_event = RawEvent(
                 source="sports_leagues",
-                source_event_id=fix["id"],
+                source_event_id=f"{fix['id']}-{date_key}",
                 venue_name=fix["venue_name"],
                 venue_address=fix["address"],
                 venue_city=fix["city"],

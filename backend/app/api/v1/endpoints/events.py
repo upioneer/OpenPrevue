@@ -5,10 +5,11 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 import aiosqlite
 
+from backend.app.core.timezone import resolve_app_timezone
 from backend.app.db.session import get_db
 from backend.app.providers.base import GeoPoint
 from backend.app.schemas.event import EventResponse, EventUpdate, TicketLinkResponse
-from backend.app.services.ingestion import calculate_haversine_distance
+from backend.app.services.ingestion import calculate_haversine_distance, normalize_timestamp_to_tz
 
 router = APIRouter()
 
@@ -84,6 +85,9 @@ async def list_events(
     query += " ORDER BY e.start_time ASC"
 
     results: list[EventResponse] = []
+    app_tz = await resolve_app_timezone()
+    today_date = datetime.now(app_tz).date()
+
     async with get_db() as db:
         # Load user geographic settings for proximity enforcement
         center_lat = 40.7128
@@ -116,6 +120,24 @@ async def list_events(
                     dist = calculate_haversine_distance(center_lat, center_lon, float(v_lat), float(v_lon))
                     if dist > radius_miles:
                         continue
+
+                # Normalize timestamps to the declared application timezone and filter expired calendar days
+                norm_start = normalize_timestamp_to_tz(row_dict.get("start_time"), app_tz)
+                if norm_start:
+                    row_dict["start_time"] = norm_start
+                norm_end = normalize_timestamp_to_tz(row_dict.get("end_time"), app_tz)
+                if norm_end:
+                    row_dict["end_time"] = norm_end
+
+                if status == "active" and not row_dict.get("has_ticket"):
+                    try:
+                        check_iso = row_dict.get("end_time") or row_dict.get("start_time")
+                        if check_iso:
+                            dt_local = datetime.fromisoformat(check_iso)
+                            if dt_local.date() < today_date:
+                                continue
+                    except ValueError:
+                        pass
 
                 # Remove raw lat/lon not part of EventResponse model
                 row_dict.pop("venue_latitude", None)

@@ -69,7 +69,7 @@ class UpdateService:
                         return row["value"]
         except Exception as e:
             logger.debug("Failed reading update_check_interval setting: %s", e)
-        return "disabled"
+        return "weekly"
 
     async def get_status(self) -> dict:
         """Return current cached update status with plain-English user messaging."""

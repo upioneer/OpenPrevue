@@ -12,9 +12,9 @@
       :class="headerClasses"
     >
       <div :class="[venueSpanClass, 'uppercase border-r-2 border-[#333366] pr-2 truncate']">VENUE / CHANNEL</div>
-      <div :class="[daySpanClass, 'uppercase border-r-2 border-[#333366] px-2 text-[#00FFFF] truncate']">TODAY</div>
-      <div v-if="showTonightColumn" :class="[daySpanClass, 'uppercase border-r-2 border-[#333366] px-2 text-[#00FFFF] truncate']">TONIGHT</div>
-      <div :class="[daySpanClass, 'uppercase pl-2 text-[#00FFFF] truncate']">TOMORROW</div>
+      <div :class="[daySpanClass, 'uppercase border-r-2 border-[#333366] px-2 text-[#00FFFF] truncate']">{{ col1Header }}</div>
+      <div v-if="showTonightColumn" :class="[daySpanClass, 'uppercase border-r-2 border-[#333366] px-2 text-[#00FFFF] truncate']">{{ col2Header }}</div>
+      <div :class="[daySpanClass, 'uppercase pl-2 text-[#00FFFF] truncate']">{{ col3Header }}</div>
     </div>
 
     <!-- Scrolling Grid Area -->
@@ -61,12 +61,12 @@
             </div>
           </div>
 
-          <!-- Today Events (< 5 PM, or full day in 2-day mode) -->
+          <!-- Slot 1 Events (Today daytime / Tonight evening) -->
           <div :class="[daySpanClass, 'border-r-2 border-[#333366] px-2 min-w-0 overflow-hidden']">
-            <template v-if="getVenueSlotEvents(venue.id, 'today').length > 0">
+            <template v-if="getVenueSlotEvents(venue.id, 'slot1').length > 0">
               <template v-if="isMultilineMode">
                 <div
-                  v-for="evt in getVenueSlotEvents(venue.id, 'today')"
+                  v-for="evt in getVenueSlotEvents(venue.id, 'slot1')"
                   :key="evt.id"
                   class="flex flex-col justify-center min-w-0 py-0.5 group cursor-pointer hover:bg-[#000088]/40 px-1 rounded-xs transition-colors"
                   @click="openEventModal(evt)"
@@ -172,7 +172,7 @@
               <!-- Single-Line Fallback for single_row Rack Bar Density -->
               <template v-else>
                 <div
-                  v-for="evt in getVenueSlotEvents(venue.id, 'today')"
+                  v-for="evt in getVenueSlotEvents(venue.id, 'slot1')"
                   :key="evt.id"
                   class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group cursor-pointer hover:bg-[#000088]/40 px-1 rounded-xs transition-colors"
                   @click="openEventModal(evt)"
@@ -271,12 +271,12 @@
             <span v-else class="text-[#555577] italic" :class="emptySlotClasses">[ Box Office Open ]</span>
           </div>
 
-          <!-- Tonight Events (>= 5 PM, hidden in 2-day mode) -->
+          <!-- Slot 2 Events (Tonight daytime / Tomorrow evening in 3-day mode) -->
           <div v-if="showTonightColumn" :class="[daySpanClass, 'border-r-2 border-[#333366] px-2 min-w-0 overflow-hidden']">
-            <template v-if="getVenueSlotEvents(venue.id, 'tonight').length > 0">
+            <template v-if="getVenueSlotEvents(venue.id, 'slot2').length > 0">
               <template v-if="isMultilineMode">
                 <div
-                  v-for="evt in getVenueSlotEvents(venue.id, 'tonight')"
+                  v-for="evt in getVenueSlotEvents(venue.id, 'slot2')"
                   :key="evt.id"
                   class="flex flex-col justify-center min-w-0 py-0.5 group cursor-pointer hover:bg-[#000088]/40 px-1 rounded-xs transition-colors"
                   @click="openEventModal(evt)"
@@ -382,7 +382,7 @@
               <!-- Single-Line Fallback for single_row Rack Bar Density -->
               <template v-else>
                 <div
-                  v-for="evt in getVenueSlotEvents(venue.id, 'tonight')"
+                  v-for="evt in getVenueSlotEvents(venue.id, 'slot2')"
                   :key="evt.id"
                   class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group cursor-pointer hover:bg-[#000088]/40 px-1 rounded-xs transition-colors"
                   @click="openEventModal(evt)"
@@ -481,12 +481,12 @@
             <span v-else class="text-[#555577] italic" :class="emptySlotClasses">[ Box Office Open ]</span>
           </div>
 
-          <!-- Tomorrow Events -->
+          <!-- Slot 3 Events (Tomorrow / Day After tomorrow in evening 3-day mode) -->
           <div :class="[daySpanClass, 'pl-2 min-w-0 overflow-hidden']">
-            <template v-if="getVenueSlotEvents(venue.id, 'tomorrow').length > 0">
+            <template v-if="getVenueSlotEvents(venue.id, 'slot3').length > 0">
               <template v-if="isMultilineMode">
                 <div
-                  v-for="evt in getVenueSlotEvents(venue.id, 'tomorrow')"
+                  v-for="evt in getVenueSlotEvents(venue.id, 'slot3')"
                   :key="evt.id"
                   class="flex flex-col justify-center min-w-0 py-0.5 group cursor-pointer hover:bg-[#000088]/40 px-1 rounded-xs transition-colors"
                   @click="openEventModal(evt)"
@@ -592,7 +592,7 @@
               <!-- Single-Line Fallback for single_row Rack Bar Density -->
               <template v-else>
                 <div
-                  v-for="evt in getVenueSlotEvents(venue.id, 'tomorrow')"
+                  v-for="evt in getVenueSlotEvents(venue.id, 'slot3')"
                   :key="evt.id"
                   class="truncate text-[#FFFF00] flex items-center space-x-1.5 sm:space-x-2 group cursor-pointer hover:bg-[#000088]/40 px-1 rounded-xs transition-colors"
                   @click="openEventModal(evt)"
@@ -714,6 +714,7 @@ const props = withDefaults(
     dayColumns?: '3day' | '2day' | string
     pauseDurationSeconds?: number
     pageIntervalSeconds?: number
+    timezone?: string
   }>(),
   {
     scrollSpeed: 30,
@@ -722,6 +723,7 @@ const props = withDefaults(
     dayColumns: '3day',
     pauseDurationSeconds: 4,
     pageIntervalSeconds: 6,
+    timezone: '',
   }
 )
 
@@ -732,8 +734,10 @@ const emit = defineEmits<{
 const scrollContainer = ref<HTMLElement | null>(null)
 const scrollContent = ref<HTMLElement | null>(null)
 const isHoverPaused = ref(false)
+const currentNow = ref(new Date())
 let animationFrameId: number | null = null
 let touchResumeTimer: ReturnType<typeof setTimeout> | null = null
+let clockTickInterval: ReturnType<typeof setInterval> | null = null
 
 function hoverCapable(): boolean {
   return typeof window !== 'undefined' &&
@@ -791,6 +795,38 @@ const isTwoDayColumns = computed(() => {
 
 const showTonightColumn = computed(() => {
   return !isTwoDayColumns.value
+})
+
+const isEvening = computed(() => {
+  return getCalendarParts(currentNow.value).hour >= 17
+})
+
+const col1Header = computed(() => {
+  return isEvening.value ? 'TONIGHT' : 'TODAY'
+})
+
+const col2Header = computed(() => {
+  return isEvening.value ? 'TOMORROW' : 'TONIGHT'
+})
+
+const dayAfterWeekdayName = computed(() => {
+  const nowParts = getCalendarParts(currentNow.value)
+  const dayAfterUtc = new Date(Date.UTC(nowParts.year, nowParts.month - 1, nowParts.day + 2, 12, 0, 0))
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'UTC',
+      weekday: 'long',
+    }).format(dayAfterUtc).toUpperCase()
+  } catch {
+    return 'DAY AFTER'
+  }
+})
+
+const col3Header = computed(() => {
+  if (isTwoDayColumns.value) {
+    return 'TOMORROW'
+  }
+  return isEvening.value ? dayAfterWeekdayName.value : 'TOMORROW'
 })
 
 const venueSpanClass = computed(() => {
@@ -893,11 +929,11 @@ const filteredVenues = computed(() => {
   if (props.gridFilterMode !== 'active_only') {
     return props.venues
   }
-  // Curated Active Mode: Keep only venues that have scheduled events in the timeline window (today, tonight, tomorrow)
+  // Curated Active Mode: Keep only venues that have scheduled events in the timeline window
   const active = props.venues.filter(v =>
-    getVenueSlotEvents(v.id, 'today').length > 0 ||
-    getVenueSlotEvents(v.id, 'tonight').length > 0 ||
-    getVenueSlotEvents(v.id, 'tomorrow').length > 0
+    getVenueSlotEvents(v.id, 'slot1').length > 0 ||
+    (!isTwoDayColumns.value && getVenueSlotEvents(v.id, 'slot2').length > 0) ||
+    getVenueSlotEvents(v.id, 'slot3').length > 0
   )
   // Fallback: If no venues have events scheduled in the window, show all venues so grid is never empty
   return active.length > 0 ? active : props.venues
@@ -989,49 +1025,122 @@ function formatDisplayTitle(evt: EventItem): string {
 function formatEventTime(isoString: string): string {
   try {
     const d = new Date(isoString)
-    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    const opts: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' }
+    if (props.timezone) {
+      opts.timeZone = props.timezone
+    }
+    return d.toLocaleTimeString('en-US', opts)
   } catch {
-    return ''
+    try {
+      return new Date(isoString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    } catch {
+      return ''
+    }
   }
 }
 
-function getLocalDateKey(d: Date): string {
+function getCalendarParts(d: Date): { dateKey: string; year: number; month: number; day: number; hour: number } {
+  if (props.timezone) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: props.timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        hourCycle: 'h23',
+      }).formatToParts(d)
+      const map: Record<string, string> = {}
+      for (const p of parts) {
+        map[p.type] = p.value
+      }
+      const year = Number(map.year)
+      const month = Number(map.month)
+      const day = Number(map.day)
+      const hour = Number(map.hour) % 24
+      return {
+        dateKey: `${map.year}-${map.month}-${map.day}`,
+        year,
+        month,
+        day,
+        hour,
+      }
+    } catch {
+      // Fallback to browser local time if timezone string is unrecognized
+    }
+  }
   const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  const month = d.getMonth() + 1
+  const day = d.getDate()
+  const hour = d.getHours()
+  return {
+    dateKey: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+    year,
+    month,
+    day,
+    hour,
+  }
 }
 
-function getVenueSlotEvents(venueId: string, slot: 'today' | 'tonight' | 'tomorrow'): EventItem[] {
-  const now = new Date()
-  const todayDateStr = getLocalDateKey(now)
+function getVenueSlotEvents(venueId: string, slot: 'slot1' | 'slot2' | 'slot3'): EventItem[] {
+  const nowParts = getCalendarParts(currentNow.value)
+  const todayDateStr = nowParts.dateKey
 
-  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-  const tomorrowDateStr = getLocalDateKey(tomorrow)
+  const tomorrowUtc = new Date(Date.UTC(nowParts.year, nowParts.month - 1, nowParts.day + 1, 12, 0, 0))
+  const tomorrowDateStr = `${tomorrowUtc.getUTCFullYear()}-${String(tomorrowUtc.getUTCMonth() + 1).padStart(2, '0')}-${String(tomorrowUtc.getUTCDate()).padStart(2, '0')}`
+
+  const dayAfterUtc = new Date(Date.UTC(nowParts.year, nowParts.month - 1, nowParts.day + 2, 12, 0, 0))
+  const dayAfterDateStr = `${dayAfterUtc.getUTCFullYear()}-${String(dayAfterUtc.getUTCMonth() + 1).padStart(2, '0')}-${String(dayAfterUtc.getUTCDate()).padStart(2, '0')}`
+
+  const evening = nowParts.hour >= 17
 
   const matches = props.events.filter(e => {
     if (e.venue_id !== venueId) return false
     const eventDate = new Date(e.start_time)
     if (isNaN(eventDate.getTime())) return false
 
-    const eventDateStr = getLocalDateKey(eventDate)
-    const eventHour = eventDate.getHours()
+    const evtParts = getCalendarParts(eventDate)
+    const eventDateStr = evtParts.dateKey
+    const eventHour = evtParts.hour
 
-    if (slot === 'today') {
-      // 2-day mode merges tonight into today for wider cells
-      if (isTwoDayColumns.value) return eventDateStr === todayDateStr
-      return eventDateStr === todayDateStr && eventHour < 17
-    } else if (slot === 'tonight') {
-      return eventDateStr === todayDateStr && eventHour >= 17
-    } else if (slot === 'tomorrow') {
-      return eventDateStr === tomorrowDateStr
+    if (slot === 'slot1') {
+      if (isTwoDayColumns.value) {
+        // 2-day mode merges tonight into today; during evening, focus on tonight's events or committed tickets
+        if (!evening) {
+          return eventDateStr === todayDateStr
+        } else {
+          return eventDateStr === todayDateStr && (eventHour >= 17 || e.has_ticket === 1)
+        }
+      } else {
+        if (!evening) {
+          return eventDateStr === todayDateStr && eventHour < 17
+        } else {
+          return eventDateStr === todayDateStr && eventHour >= 17
+        }
+      }
+    } else if (slot === 'slot2') {
+      // Middle column in 3-day mode (shifts from tonight -> tomorrow in evening)
+      if (!evening) {
+        return eventDateStr === todayDateStr && eventHour >= 17
+      } else {
+        return eventDateStr === tomorrowDateStr
+      }
+    } else if (slot === 'slot3') {
+      // Rightmost column: tomorrow in 2-day mode; tomorrow -> day after in 3-day mode
+      if (isTwoDayColumns.value) {
+        return eventDateStr === tomorrowDateStr
+      } else {
+        if (!evening) {
+          return eventDateStr === tomorrowDateStr
+        } else {
+          return eventDateStr === dayAfterDateStr
+        }
+      }
     }
     return false
   })
 
-  if (slot === 'today' && isTwoDayColumns.value) {
-    matches.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
-  }
+  matches.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
   return matches
 }
 
@@ -1123,10 +1232,14 @@ function startAutoScroll() {
 
 onMounted(() => {
   startAutoScroll()
+  clockTickInterval = setInterval(() => {
+    currentNow.value = new Date()
+  }, 30000)
 })
 
 onUnmounted(() => {
   if (animationFrameId) cancelAnimationFrame(animationFrameId)
   if (touchResumeTimer) clearTimeout(touchResumeTimer)
+  if (clockTickInterval) clearInterval(clockTickInterval)
 })
 </script>
