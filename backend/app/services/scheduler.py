@@ -145,6 +145,9 @@ async def start_scheduler() -> None:
 
     scheduler.start()
 
+    # Trigger initial non-blocking synchronization cycle on boot so fixtures are immediately populated
+    asyncio.create_task(execute_scheduled_sync())
+
     # Trigger initial non-blocking update check if not disabled
     if update_interval != "disabled":
         asyncio.create_task(update_service.check_for_updates())

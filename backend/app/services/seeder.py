@@ -1,7 +1,9 @@
 """Database seeder for default settings and initial mock data."""
 
+from datetime import datetime, timedelta
 from backend.app.core.config import settings
 from backend.app.core.logging import logger
+from backend.app.core.timezone import resolve_app_timezone
 from backend.app.db.session import get_db
 from backend.app.providers.base import GeoPoint
 from backend.app.providers.registry import provider_registry
@@ -154,17 +156,28 @@ async def seed_initial_data() -> None:
     # Ensure disk backup reflects current state
     await backup_settings_to_disk()
 
-    if event_count == 0:
-        logger.info("Datastore has 0 events. Executing initial mock ingestion...")
-        mock_provider = provider_registry.get("mock")
-        if mock_provider:
-            center = GeoPoint(
-                latitude=settings.DEFAULT_LATITUDE,
-                longitude=settings.DEFAULT_LONGITUDE,
-            )
-            result = await ingestion_service.sync_provider(
-                mock_provider,
-                center,
-                settings.DEFAULT_RADIUS_MILES,
-            )
-            logger.info("Initial seed completed: %s", result)
+    # Verify active events exist for today and tomorrow in the declared application timezone
+    app_tz = await resolve_app_timezone()
+    today_dt = datetime.now(app_tz).date()
+    tomorrow_dt = today_dt + timedelta(days=1)
+
+    tomorrow_count = 0
+    async with get_db() as db:
+        async with db.execute(
+            "SELECT COUNT(*) AS count FROM events WHERE start_time LIKE ?",
+            (f"{tomorrow_dt.isoformat()}%",),
+        ) as cursor:
+            row = await cursor.fetchone()
+            tomorrow_count = row["count"] if row else 0
+
+    if event_count == 0 or tomorrow_count == 0:
+        logger.info(
+            "Datastore requires fixture replenishment (total=%d, tomorrow=%d). Executing full provider sync...",
+            event_count,
+            tomorrow_count,
+        )
+        try:
+            result = await ingestion_service.sync_all_registered_providers()
+            logger.info("Startup replenishment sync completed: %s", result)
+        except Exception as exc:
+            logger.warning("Startup replenishment sync encountered error: %s", exc)

@@ -1,10 +1,12 @@
 """Event management and retrieval API endpoints with geographic radius enforcement."""
 
-from datetime import datetime, timezone
+import asyncio
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 import aiosqlite
 
+from backend.app.core.logging import logger
 from backend.app.core.timezone import resolve_app_timezone
 from backend.app.db.session import get_db
 from backend.app.providers.base import GeoPoint
@@ -149,6 +151,19 @@ async def list_events(
 
                 if len(results) >= limit:
                     break
+
+    # Proactive self-healing: if tomorrow has 0 active events, trigger replenishment sync
+    if status == "active":
+        tomorrow_date = today_date + timedelta(days=1)
+        has_tomorrow = any(
+            (datetime.fromisoformat(r.start_time).date() == tomorrow_date)
+            for r in results
+            if r.start_time
+        )
+        if not has_tomorrow:
+            from backend.app.services.ingestion import ingestion_service
+            logger.info("Events endpoint detected 0 active fixtures for tomorrow (%s). Triggering self-healing sync pass...", tomorrow_date)
+            asyncio.create_task(ingestion_service.sync_all_registered_providers())
 
     return results
 

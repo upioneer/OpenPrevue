@@ -75,8 +75,8 @@ async def update_setting(key: str, payload: SettingUpdate) -> SettingItem:
 
     from backend.app.services.activity import log_activity
 
-    # If location coordinate or sports coverage mode changed, refresh weather & re-sync events immediately
-    if key in ("latitude", "longitude", "metro_label", "postal_code", "radius_miles", "sports_coverage_mode"):
+    # If location coordinate, timezone, or sports coverage mode changed, refresh weather & re-sync events immediately
+    if key in ("latitude", "longitude", "metro_label", "postal_code", "radius_miles", "sports_coverage_mode", "timezone"):
         try:
             weather = await weather_service.get_current_weather(force_refresh=True)
             await connection_manager.broadcast("weather_updated", weather.to_dict())

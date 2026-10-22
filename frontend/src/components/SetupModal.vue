@@ -183,6 +183,7 @@ const emit = defineEmits<{
 const isOpen = ref(false)
 const isSaving = ref(false)
 const selectedPreset = ref('NYC')
+const selectedTimezone = ref('America/New_York')
 const enableAudioOnBoot = ref(true)
 
 const metroLabel = ref('NEW YORK CITY')
@@ -197,6 +198,7 @@ const geocodeIsError = ref(false)
 
 function applyPreset(preset: RegionalPreset) {
   selectedPreset.value = preset.label
+  selectedTimezone.value = preset.timezone
   metroLabel.value = preset.metro
   postalCode.value = preset.zip
   latitude.value = preset.lat.toString()
@@ -258,6 +260,9 @@ async function saveAndInitialize() {
     await updateSetting('latitude', latitude.value)
     await updateSetting('longitude', longitude.value)
     await updateSetting('radius_miles', radiusMiles.value)
+    const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York'
+    const tzToSave = selectedTimezone.value || detectedTz
+    await updateSetting('timezone', tzToSave)
     await updateSetting('initial_setup_completed', '1')
 
     // Refresh weather immediately for new location
@@ -283,6 +288,8 @@ async function saveAndInitialize() {
 
 async function dismissDefault() {
   try {
+    const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York'
+    await updateSetting('timezone', detectedTz)
     await updateSetting('initial_setup_completed', '1')
   } catch {
     // Ignore

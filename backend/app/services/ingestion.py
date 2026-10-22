@@ -468,9 +468,37 @@ class IngestionService:
             if alias_row:
                 return alias_row["venue_id"]
 
-        async with db.execute("SELECT id FROM venues WHERE id = ?", (canonical_id,)) as cursor:
+        async with db.execute("SELECT id, latitude, longitude FROM venues WHERE id = ?", (canonical_id,)) as cursor:
             venue_row = await cursor.fetchone()
             if venue_row:
+                if raw.venue_latitude is not None and raw.venue_longitude is not None:
+                    if (
+                        venue_row["latitude"] != raw.venue_latitude
+                        or venue_row["longitude"] != raw.venue_longitude
+                    ):
+                        await db.execute(
+                            """
+                            UPDATE venues SET
+                                name = ?,
+                                address = COALESCE(?, address),
+                                city = COALESCE(?, city),
+                                state = COALESCE(?, state),
+                                postal_code = COALESCE(?, postal_code),
+                                latitude = ?,
+                                longitude = ?
+                            WHERE id = ?
+                            """,
+                            (
+                                raw.venue_name,
+                                raw.venue_address,
+                                raw.venue_city,
+                                raw.venue_state,
+                                raw.venue_postal_code,
+                                raw.venue_latitude,
+                                raw.venue_longitude,
+                                canonical_id,
+                            ),
+                        )
                 return venue_row["id"]
 
         # Insert new canonical venue
@@ -505,16 +533,18 @@ class IngestionService:
         async with db.execute("SELECT id, updated_at FROM events WHERE id = ?", (event_id,)) as cursor:
             existing = await cursor.fetchone()
 
-        # Fuzzy match title and venue within 24 hours to prevent cross-provider duplicates
+        # Fuzzy match title and venue within 4 hours on the same calendar day to deduplicate across different providers
         if not existing:
             async with db.execute(
                 """
                 SELECT id FROM events
                 WHERE venue_id = ?
                 AND lower(title) = lower(?)
-                AND abs(strftime('%s', start_time) - strftime('%s', ?)) < 86400
+                AND source != ?
+                AND substr(start_time, 1, 10) = substr(?, 1, 10)
+                AND abs(strftime('%s', start_time) - strftime('%s', ?)) < 14400
                 """,
-                (venue_id, raw.title, raw.start_time),
+                (venue_id, raw.title, raw.source, raw.start_time, raw.start_time),
             ) as cursor:
                 fuzzy_match = await cursor.fetchone()
                 if fuzzy_match:
